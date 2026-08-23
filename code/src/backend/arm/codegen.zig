@@ -8,7 +8,6 @@ const Block = common.ir.BasicBlock;
 const ConstValue = common.ir.ConstValue;
 const Function = common.ir.Function;
 const ValueRef = common.ir.ValueRef;
-const getElementType = common.types.getElementType;
 const ColoredGraph = @import("middle").color.ColoredGraph;
 const Abi = @import("../cpu_abi.zig").CpuAbi;
 const RegisterType = @import("common").ir.RegisterType;
@@ -342,14 +341,22 @@ fn emitFunction(
                             }
                         },
                         .cast => |c| {
+                            const dst = try abi.regFor(c.dst.operand, colors);
+                            const src = try abi.regFor(c.src.operand, colors);
                             // type a -> type b
                             switch (c.src.type) {
                                 .i64 => switch (c.dst_target_type) {
-                                    .float => {
-                                        const dst = try abi.regFor(c.dst.operand, colors);
-                                        const src = try abi.regFor(c.src.operand, colors);
-                                        try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src });
+                                    .float => try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src }),
+                                    else => {
+                                        std.debug.print("unsupported cast: {s} -> {s}\n", .{
+                                            @tagName(c.src.type),
+                                            @tagName(c.dst_target_type),
+                                        });
+                                        return error.UnsupportedCast;
                                     },
+                                },
+                                .i32 => switch (c.dst_target_type) {
+                                    .i64 => try out.print(alloc, "\tsxtw {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
@@ -359,14 +366,22 @@ fn emitFunction(
                                     },
                                 },
                                 .float => switch (c.dst_target_type) {
-                                    .i64 => {
-                                        const dst = try abi.regFor(c.dst.operand, colors);
-                                        const src = try abi.regFor(c.src.operand, colors);
-                                        try out.print(alloc, "\tfcvtzs {s}, {s}\n", .{ dst, src });
+                                    .i64 => try out.print(alloc, "\tfcvtzs {s}, {s}\n", .{ dst, src }),
+                                    else => {
+                                        std.debug.print("unsupported cast: {s} -> {s}\n", .{
+                                            @tagName(c.src.type),
+                                            @tagName(c.dst_target_type),
+                                        });
+                                        return error.UnsupportedCast;
                                     },
-                                    else => return error.UnsupportedCast,
                                 },
-                                else => return error.UnsupportedCast,
+                                else => {
+                                    std.debug.print("unsupported cast: {s} -> {s}\n", .{
+                                        @tagName(c.src.type),
+                                        @tagName(c.dst_target_type),
+                                    });
+                                    return error.UnsupportedCast;
+                                },
                             }
                         },
                         .stack_alloc => |sa| {
