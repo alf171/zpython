@@ -21,24 +21,24 @@ print(vw + audi)
 
 performance report: (ORIGIN=user)
 number of asm lines: 187
-mov count: 81
+mov count: 79
 memory load count: 3
 memory store count: 18
-branch count: 9
+branch count: 11
 call count: 14
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 525
-mov count: 224
-memory load count: 4
-memory store count: 47
-branch count: 39
-call count: 31
+number of asm lines: 537
+mov count: 215
+memory load count: 10
+memory store count: 41
+branch count: 48
+call count: 28
 spill count: 0
 
 actual output:
 30
 20
 50
-[!!memory report!!]: allocs=10 frees=10 allocated_bytes=113 freed_bytes=113
+[!!memory report!!]: allocs=7 frees=7 allocated_bytes=86 freed_bytes=86

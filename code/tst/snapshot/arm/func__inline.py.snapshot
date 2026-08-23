@@ -1,29 +1,24 @@
 running program: (OPTIM=true)
 
-a = 5
-x = 0
 
-if a < 10: #or False:
-    x = 1
-    y = 100
-    z = 200
-    print(y + z)
-else:
-    x = 2
+@inline
+def f(x: int) -> int:
+    return x + 42
 
+x = f(5)
 print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 67
-mov count: 30
+number of asm lines: 59
+mov count: 19
 memory load count: 0
-memory store count: 6
+memory store count: 3
 branch count: 5
-call count: 5
+call count: 3
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 538
+number of asm lines: 537
 mov count: 215
 memory load count: 10
 memory store count: 41
@@ -32,6 +27,5 @@ call count: 28
 spill count: 0
 
 actual output:
-300
-1
-[!!memory report!!]: allocs=2 frees=2 allocated_bytes=20 freed_bytes=20
+47
+[!!memory report!!]: allocs=1 frees=1 allocated_bytes=10 freed_bytes=10
