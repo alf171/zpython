@@ -422,7 +422,10 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                     const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
                     break :blk return_type;
                 },
-                else => try lhs.type.clone(alloc),
+                else => blk: {
+                    if (expected_type) |t| break :blk try t.clone(alloc);
+                    break :blk try lhs.type.clone(alloc);
+                },
             };
 
             const dst: TypedOperand = .{

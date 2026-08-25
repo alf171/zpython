@@ -32,8 +32,7 @@ class Tensor[T]:
 
     @staticmethod
     def fill[U](shape: tuple[i32, i32], value: U) -> Tensor[U]:
-        # FIXME: shouldnt need a cast here
-        count =  int(shape[0]) * int(shape[1])
+        count: int =  shape[0] * shape[1]
         return Tensor([value] * count, shape)
 
     @gpu
