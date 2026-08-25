@@ -346,29 +346,35 @@ fn walkAnnotatedAssignment(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.me
     const target = c.PyObject_GetAttrString(stmt, "target");
     std.debug.assert(target != null);
 
-    const target_id_obj = c.PyObject_GetAttrString(target, "id");
-    const target_id = c.PyUnicode_AsUTF8(target_id_obj);
-
     const annotation = c.PyObject_GetAttrString(stmt, "annotation");
     const annotation_type = try parseTypeAnnotation(annotation, irBuilder, alloc);
     defer annotation_type.deinit(alloc);
     const rhs = c.PyObject_GetAttrString(stmt, "value");
     const rhs_value = try walkExpr(rhs, irBuilder, annotation_type, alloc);
 
-    const local = try irBuilder.getOrCreateLocal(
-        std.mem.span(target_id),
-        annotation_type,
-        alloc,
-    );
-    try irBuilder.local_values.put(local, rhs_value);
-    try irBuilder.emit(.{ .lir = .{ .store_local = .{
-        .local = .{
-            .id = local,
-            .name = try alloc.dupe(u8, std.mem.span(target_id)),
-            .type = try annotation_type.clone(alloc),
+    switch (getExprKind(target)) {
+        .Name => {
+            const target_id_obj = c.PyObject_GetAttrString(target, "id");
+            std.debug.assert(target_id_obj != null);
+            const target_id = c.PyUnicode_AsUTF8(target_id_obj);
+            const local = try irBuilder.getOrCreateLocal(
+                std.mem.span(target_id),
+                annotation_type,
+                alloc,
+            );
+            try irBuilder.local_values.put(local, rhs_value);
+            try irBuilder.emit(.{ .lir = .{ .store_local = .{
+                .local = .{
+                    .id = local,
+                    .name = try alloc.dupe(u8, std.mem.span(target_id)),
+                    .type = try annotation_type.clone(alloc),
+                },
+                .src = try rhs_value.clone(alloc),
+            } } }, alloc);
         },
-        .src = try rhs_value.clone(alloc),
-    } } }, alloc);
+        .Attribute => try storeAssignmentTarget(target, rhs_value, irBuilder, alloc),
+        else => return error.UnsupportedTarget,
+    }
 }
 
 pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo, alloc: std.mem.Allocator) !TypedOperand {
