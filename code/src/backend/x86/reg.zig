@@ -42,6 +42,6 @@ pub const X86Abi = Abi.init(
     &fp_function_param_regs,
     &fp_caller_save_regs,
     &fp_callee_save_regs,
-    6,
+    0,
     &.{fp_scratch_reg},
 );

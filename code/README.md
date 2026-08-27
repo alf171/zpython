@@ -60,9 +60,9 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [x] relu
   - [x] ewise sub/mul
   - [x] Tensor * scalar (div too)?
-  - [ ] transpose
+  - [x] transpose
+  - [wip] exp
   - [ ] sum/max (axis=1, keepdim=True)
-  - [ ] exp
   - [ ] broadcasting
   - [ ] stable softmax
   - [ ] backwards pass
