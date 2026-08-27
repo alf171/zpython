@@ -142,13 +142,14 @@ fn emitFunction(
                                             const dst = try abi.regFor(m.dst.operand, colors);
                                             try out.print(alloc, "\tmov {s}, #{d}\n", .{ dst, value });
                                         },
-                                        .float => |value| {
+                                        .f64 => |value| {
                                             const dst = try abi.regFor(m.dst.operand, colors);
                                             const bits: u64 = @bitCast(value);
                                             const scratch_reg = try abi.scratchReg(0, .gp);
                                             try emitMovUnsigned(out, scratch_reg, bits, alloc);
                                             try out.print(alloc, "\tfmov {s}, {s}\n", .{ dst, scratch_reg });
                                         },
+                                        else => return error.NotImpl,
                                     }
                                 },
                                 .top => |src_top| {
@@ -161,7 +162,7 @@ fn emitFunction(
                                                     const src = try abi.regFor(src_top.operand, colors);
                                                     if (std.mem.eql(u8, dst, src)) continue;
                                                     switch (m.dst.type) {
-                                                        .float => try out.print(alloc, "\tfmov {s}, {s}\n", .{ dst, src }),
+                                                        .f64 => try out.print(alloc, "\tfmov {s}, {s}\n", .{ dst, src }),
                                                         else => try out.print(alloc, "\tmov {s}, {s}\n", .{ dst, src }),
                                                     }
                                                 },
@@ -246,27 +247,27 @@ fn emitFunction(
                             switch (binop.op) {
                                 .add => {
                                     switch (binop.dst.type) {
-                                        .float => try out.print(alloc, "\tfadd ", .{}),
+                                        .f64, .f32 => try out.print(alloc, "\tfadd ", .{}),
                                         else => try out.print(alloc, "\tadd ", .{}),
                                     }
                                     try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
                                 },
                                 .sub => {
                                     switch (binop.dst.type) {
-                                        .float => try out.print(alloc, "\tfsub ", .{}),
+                                        .f64, .f32 => try out.print(alloc, "\tfsub ", .{}),
                                         else => try out.print(alloc, "\tsub ", .{}),
                                     }
                                     try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
                                 },
                                 .mul => {
                                     switch (binop.dst.type) {
-                                        .float => try out.print(alloc, "\tfmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                        .f64, .f32 => try out.print(alloc, "\tfmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
                                         else => try out.print(alloc, "\tmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
                                     }
                                 },
                                 .div => {
                                     switch (binop.dst.type) {
-                                        .float => try out.print(alloc, "\tfdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                        .f64, .f32 => try out.print(alloc, "\tfdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
                                         else => try out.print(alloc, "\tsdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
                                     }
                                 },
@@ -299,7 +300,7 @@ fn emitFunction(
                         .compare => |c| {
                             const dst = try abi.regFor(c.dst.operand, colors);
                             switch (c.lhs.type) {
-                                .float => {
+                                .f64, .f32 => {
                                     const lhs = try abi.regFor(c.lhs.operand, colors);
                                     const rhs = try abi.regFor(c.rhs.operand, colors);
                                     try out.print(alloc, "\tfcmp {s}, {s}\n", .{ lhs, rhs });
@@ -327,7 +328,7 @@ fn emitFunction(
                         .unaryop => |u| {
                             switch (u.op) {
                                 .neg => switch (u.dst.type) {
-                                    .float => {
+                                    .f64, .f32 => {
                                         const dst = try abi.regFor(u.dst.operand, colors);
                                         const src = try abi.regFor(u.src.operand, colors);
                                         try out.print(alloc, "\tfneg {s}, {s}\n", .{ dst, src });
@@ -346,7 +347,7 @@ fn emitFunction(
                             // type a -> type b
                             switch (c.src.type) {
                                 .i64 => switch (c.dst_target_type) {
-                                    .float => try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src }),
+                                    .f64 => try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
@@ -365,7 +366,7 @@ fn emitFunction(
                                         return error.UnsupportedCast;
                                     },
                                 },
-                                .float => switch (c.dst_target_type) {
+                                .f64 => switch (c.dst_target_type) {
                                     .i64 => try out.print(alloc, "\tfcvtzs {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
@@ -670,7 +671,7 @@ fn valueToReg(
         .top => |top| return abi.regFor(top.operand, colors),
         .constant => |c| {
             switch (c) {
-                .float => |f| {
+                .f64, .f32 => |f| {
                     try out.print(alloc, "fmov {s}, #{}\n", .{ cur_scratch_reg, f });
                     return cur_scratch_reg;
                 },

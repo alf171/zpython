@@ -65,7 +65,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                                 .args = args,
                             } });
                         },
-                        .float => {
+                        .f64, .f32 => {
                             try new_instructions.append(alloc, .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "print_float") },

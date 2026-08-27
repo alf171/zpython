@@ -223,14 +223,15 @@ pub const ConstValue = union(enum) {
     i64: i64,
     i32: i32,
     bool: bool,
-    float: f64,
+    f64: f64,
+    f32: f32,
     char: u8,
 
     pub fn print(self: @This()) void {
         switch (self) {
             .i64, .i32 => |i| std.debug.print("{d}", .{i}),
             .bool => |b| std.debug.print("{}", .{b}),
-            .float => |f| std.debug.print("{}", .{f}),
+            .f64, .f32 => |f| std.debug.print("{}", .{f}),
             .char => |c| std.debug.print("{}", .{c}),
         }
     }
@@ -249,7 +250,8 @@ pub const ConstValue = union(enum) {
             .i64 => .i64,
             .i32 => .i32,
             .bool => .bool,
-            .float => .float,
+            .f64 => .f64,
+            .f32 => .f32,
             .char => .char,
         };
     }
@@ -260,7 +262,7 @@ pub const ConstValue = union(enum) {
             .i32 => |v| @intCast(v),
             .bool => |v| @intFromBool(v),
             .char => |v| @intCast(v),
-            .float => return error.BadState,
+            .f64, .f32 => return error.BadState,
         };
     }
 };

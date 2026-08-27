@@ -1020,7 +1020,7 @@ fn walkNamedCall(
                 const dst_type: TypeInfo = switch (t) {
                     .Int => .i64,
                     .I32 => .i32,
-                    .Float => .float,
+                    .Float => .f64,
                     else => unreachable,
                 };
                 const value = try walkExpr(arg0, irBuilder, null, alloc);
@@ -1095,7 +1095,7 @@ fn walkNamedCall(
                 callee_args[0] = try walkExpr(arg, irBuilder, null, alloc);
                 const dst: TypedOperand = .{
                     .operand = irBuilder.nextTemp(),
-                    .type = .float,
+                    .type = .f64,
                 };
                 try irBuilder.emit(.{ .function_call = .{
                     .dst = dst,
@@ -1953,7 +1953,7 @@ fn parseConstant(
         const value: ConstValue = .{ .i64 = c.PyLong_AsLong(value_obj) };
         return .{ .immediate = value };
     } else if (std.mem.eql(u8, value_type, "float")) {
-        const value: ConstValue = .{ .float = c.PyFloat_AsDouble(value_obj) };
+        const value: ConstValue = .{ .f64 = c.PyFloat_AsDouble(value_obj) };
         return .{ .immediate = value };
     } else if (std.mem.eql(u8, value_type, "bool")) {
         const value: ConstValue = .{ .bool = c.PyObject_IsTrue(value_obj) == 1 };
@@ -2127,7 +2127,9 @@ fn parseTypeAnnotation(
         } else if (std.mem.eql(u8, annotation_name, "bool")) {
             return .bool;
         } else if (std.mem.eql(u8, annotation_name, "float")) {
-            return .float;
+            return .f64;
+        } else if (std.mem.eql(u8, annotation_name, "f32")) {
+            return .f32;
         } else if (std.mem.eql(u8, annotation_name, "char")) {
             return .char;
         } else if (std.mem.eql(u8, annotation_name, "str")) {

@@ -78,14 +78,14 @@ pub const CpuAbi = struct {
 
     pub fn getIndexForType(self: @This(), index: usize, type_info: TypeInfo) !u8 {
         return switch (type_info) {
-            .float => try self.getIndex(index, .f),
+            .f64, .f32 => try self.getIndex(index, .f),
             else => try self.getIndex(index, .gp),
         };
     }
 
     pub fn getFunctionReturnIdx(self: @This(), type_info: TypeInfo) u8 {
         return switch (type_info) {
-            .float => self.fp_function_return_idx,
+            .f64, .f32 => self.fp_function_return_idx,
             else => self.gp_function_return_idx,
         };
     }

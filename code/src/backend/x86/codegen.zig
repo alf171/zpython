@@ -99,16 +99,17 @@ fn emitFunction(
                                         .i32, .i64, .char, .bool => {
                                             try out.print(alloc, "\tmovq ${d}, %{s}\n", .{ try c.valueAsIntImm(), dst });
                                         },
-                                        .float => |f| {
+                                        .f64 => |f| {
                                             const gp_scratch_reg = try abi.scratchReg(0, .gp);
                                             const bits: u64 = @bitCast(f);
                                             try out.print(alloc, "\tmovabsq ${d}, %{s}\n", .{ bits, gp_scratch_reg });
                                             try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ gp_scratch_reg, dst });
                                         },
+                                        else => return error.NotImpl,
                                     }
                                 },
                                 .top => |src_top| {
-                                    const mov_isnt = if (m.dst.type == .float) "movsd" else "movq";
+                                    const mov_isnt = if (m.dst.type == .f64) "movsd" else "movq";
                                     switch (m.dst.operand) {
                                         .temp => {
                                             switch (src_top.operand) {
@@ -196,7 +197,7 @@ fn emitFunction(
 
                             switch (bop.op) {
                                 .add => {
-                                    const add_inst = if (bop.dst.type == .float) "addsd" else "addq";
+                                    const add_inst = if (bop.dst.type == .f64) "addsd" else "addq";
                                     if (std.mem.eql(u8, dst, rhs)) {
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, lhs, dst });
                                     } else if (!std.mem.eql(u8, dst, lhs)) {
@@ -207,8 +208,8 @@ fn emitFunction(
                                     }
                                 },
                                 .sub => {
-                                    const sub_inst = if (bop.dst.type == .float) "subsd" else "subq";
-                                    const mov_inst = if (bop.dst.type == .float) "movsd" else "movq";
+                                    const sub_inst = if (bop.dst.type == .f64) "subsd" else "subq";
+                                    const mov_inst = if (bop.dst.type == .f64) "movsd" else "movq";
                                     if (std.mem.eql(u8, dst, rhs)) {
                                         const scratch_reg = try abi.scratchReg(0, bop.dst.type.toRegisterType(function.kind));
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, rhs, scratch_reg });
@@ -222,7 +223,7 @@ fn emitFunction(
                                     }
                                 },
                                 .mul => {
-                                    const mult_inst = if (bop.dst.type == .float) "mulsd" else "imulq";
+                                    const mult_inst = if (bop.dst.type == .f64) "mulsd" else "imulq";
                                     if (std.mem.eql(u8, dst, lhs)) {
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
                                     } else if (std.mem.eql(u8, dst, rhs)) {
@@ -258,7 +259,7 @@ fn emitFunction(
                                     try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ scratch, dst });
                                 },
                                 .lshift, .rshift => {
-                                    if (bop.lhs.type == .float) {
+                                    if (bop.lhs.type == .f64) {
                                         return error.InvalidFloat;
                                     }
                                     const shift_inst = switch (bop.op) {
@@ -328,7 +329,7 @@ fn emitFunction(
                             try out.print(alloc, "\t movq %{s}, %{s}\n", .{ src, dst });
                             switch (u.op) {
                                 .neg => switch (u.dst.type) {
-                                    .float => {
+                                    .f64, .f32 => {
                                         const fp_scratch_reg = try abi.scratchReg(0, .f);
                                         const gp_scratch_reg = try abi.scratchReg(0, .gp);
                                         try out.print(alloc, "\tmovabsq $0x8000000000000000, %{s}\n", .{gp_scratch_reg});
@@ -344,7 +345,7 @@ fn emitFunction(
                             switch (c.src.type) {
                                 // TODO: consolidate this logic
                                 .i32 => switch (c.dst_target_type) {
-                                    .float => {
+                                    .f64 => {
                                         const dst = try abi.regFor(c.dst.operand, colors);
                                         const src = try abi.regFor(c.src.operand, colors);
                                         try out.print(alloc, "\tcvtsi2sdl %{s}, %{s}\n", .{ reg32(src), dst });
@@ -363,7 +364,7 @@ fn emitFunction(
                                     },
                                 },
                                 .i64 => switch (c.dst_target_type) {
-                                    .float => {
+                                    .f64 => {
                                         const dst = try abi.regFor(c.dst.operand, colors);
                                         const src = try abi.regFor(c.src.operand, colors);
                                         try out.print(alloc, "\tcvtsi2sdq %{s}, %{s}\n", .{ src, dst });
@@ -381,7 +382,7 @@ fn emitFunction(
                                         return error.UnsupportedCast;
                                     },
                                 },
-                                .float => switch (c.dst_target_type) {
+                                .f64 => switch (c.dst_target_type) {
                                     .i64 => {
                                         const dst = try abi.regFor(c.dst.operand, colors);
                                         const src = try abi.regFor(c.src.operand, colors);
@@ -411,8 +412,11 @@ fn emitFunction(
                                 .top => |top| {
                                     const offset = try abi.regFor(top.operand, colors);
                                     switch (lo.dst.type) {
-                                        .float => {
+                                        .f64 => {
                                             try out.print(alloc, "\tmovsd (%{s},%{s}), %{s}\n", .{ offset, src, dst });
+                                        },
+                                        .f32 => {
+                                            try out.print(alloc, "\tmovss (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
                                         .i64, .list => {
                                             try out.print(alloc, "\tmovq (%{s},%{s}), %{s}\n", .{ offset, src, dst });
@@ -750,7 +754,7 @@ pub fn valueToReg(
                     try out.print(alloc, "movq ${d}, %{s}\n", .{ i, cur_scratch_reg });
                     return cur_scratch_reg;
                 },
-                .float => |f| {
+                .f64 => |f| {
                     const bits: u64 = @bitCast(f);
                     try out.print(alloc, "\tmovabsq ${d}, %{s}\n", .{ bits, cur_scratch_reg });
                     return cur_scratch_reg;

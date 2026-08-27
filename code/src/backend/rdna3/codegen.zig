@@ -273,7 +273,7 @@ pub fn emit(
                                 },
                                 .sgpr => {
                                     switch (lo.dst.type) {
-                                        .i64, .list => {
+                                        .i64, .list, .f64 => {
                                             try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v{d}, s[{d}:{d}]\n", .{
                                                 dst.base,
                                                 dst.base + 1,
@@ -283,7 +283,7 @@ pub fn emit(
                                             });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
-                                        .i32 => {
+                                        .i32, .f32 => {
                                             std.debug.assert(dst.width == 1);
                                             std.debug.assert(src.width == 2);
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v{d}, s[{d}:{d}]\n", .{

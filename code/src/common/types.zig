@@ -62,7 +62,8 @@ pub const TypeInfo = union(enum) {
     void,
     i64,
     i32,
-    float,
+    f64,
+    f32,
     bool,
     char,
     /// size is stored in runtime header
@@ -181,7 +182,7 @@ pub const TypeInfo = union(enum) {
                     .args = args,
                 } };
             },
-            .void, .i64, .i32, .bool, .char, .float, .any, .type_variable, .ptr => return self,
+            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr => return self,
             // else => |e| {
             //     std.debug.print("clone does support {s}\n", .{@tagName(e)});
             //     return error.NotImpl;
@@ -193,8 +194,8 @@ pub const TypeInfo = union(enum) {
         return switch (self) {
             // instances are just pointers
             .instance => 8,
-            .i64, .list, .tuple, .ptr, .float => 8,
-            .i32 => 4,
+            .i64, .list, .tuple, .ptr, .f64 => 8,
+            .i32, .f32 => 4,
             .bool, .char => 1,
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
@@ -228,7 +229,7 @@ pub const TypeInfo = union(enum) {
     pub fn toRegisterType(self: @This(), function_kind: FunctionKind) RegisterType {
         return switch (function_kind) {
             .host => switch (self) {
-                .float => .f,
+                .f64, .f32 => .f,
                 else => return .gp,
             },
             .gpu_kernel => .vgpr,
@@ -357,7 +358,8 @@ pub const TypeInfo = union(enum) {
             .i32 => try alloc.dupe(u8, "i32"),
             .bool => try alloc.dupe(u8, "bool"),
             .char => try alloc.dupe(u8, "char"),
-            .float => try alloc.dupe(u8, "float"),
+            .f64 => try alloc.dupe(u8, "f64"),
+            .f32 => try alloc.dupe(u8, "f32"),
             .list => |l| blk: {
                 const elem = try l.element.*.toString(alloc);
                 defer alloc.free(elem);
