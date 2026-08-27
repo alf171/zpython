@@ -1,30 +1,33 @@
 running program: (OPTIM=true)
 
+A = Tensor([1,2,3,4], (2,2))
+B = A.transpose()
+print(B[1,0])
+print(B[0,1])
 
-A_stride: tuple[i32, i32] = (2,2)
-A = Tensor([1,2,3,4], A_stride)
-print(A[1,0])
-print(A[0,1])
+A[0, 1] = 99
+print(B[1,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 123
-mov count: 77
+number of asm lines: 162
+mov count: 107
 memory load count: 0
 memory store count: 0
 branch count: 2
-call count: 10
+call count: 15
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 754
-mov count: 366
+number of asm lines: 870
+mov count: 409
 memory load count: 0
 memory store count: 0
-branch count: 63
-call count: 28
+branch count: 72
+call count: 31
 spill count: 12
 
 actual output:
-3
 2
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=88 freed_bytes=88
+3
+99
+[!!memory report!!]: allocs=6 frees=6 allocated_bytes=118 freed_bytes=118

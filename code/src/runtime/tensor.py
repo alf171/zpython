@@ -4,7 +4,7 @@ class Tensor[T]:
         self.rows = shape[0]
         self.cols = shape[1]
         self.row_stride = shape[1]
-        self.col_stride = 1
+        self.col_stride: i32 = 1
 
     @staticmethod
     def _view[U](data: list[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> Tensor[U]:
@@ -43,7 +43,6 @@ class Tensor[T]:
         return
 
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
-        # FIXME: hack for proper type propogation
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         Tensor._add_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
@@ -57,7 +56,6 @@ class Tensor[T]:
         return
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
-        # FIXME: hack for proper type propogation
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         Tensor._sub_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
@@ -71,7 +69,6 @@ class Tensor[T]:
         return
 
     def __mul__(self, other: Tensor[T]) -> Tensor[T]:
-        # FIXME: hack for proper type propogation
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         Tensor._mul_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
@@ -93,7 +90,6 @@ class Tensor[T]:
         out[i * K + k] = acc
     
     def __matmul__(self, other: Tensor[T]) -> Tensor[T]:
-        # FIXME: hack for proper type propogation
         zero: T = 0
         # (i, k)
         res = Tensor.fill((self.rows, other.cols), zero)
@@ -111,12 +107,10 @@ class Tensor[T]:
     @staticmethod
     def _relu_gpu[U](out: list[U], a: list[U]) -> None:
         i = global_id(0)
-        # hack showing up again
-        zero: U = 0;
+        zero: U = 0
         out[i] = max(a[i], zero)
 
     def relu(self) -> Tensor[T]:
-        # hack
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         Tensor._relu_gpu(

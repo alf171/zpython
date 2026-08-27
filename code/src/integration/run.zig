@@ -311,6 +311,8 @@ pub fn main(init: std.process.Init) !void {
                 "clang",
                 obj_file,
                 "/tmp/malloc.o",
+                // link against libm
+                "-lm",
                 "-o",
                 "/tmp/integration_out",
             })
@@ -321,6 +323,8 @@ pub fn main(init: std.process.Init) !void {
                 "/tmp/malloc.o",
                 "/tmp/gpu.o",
                 "-lhsa-runtime64",
+                // link against libm
+                "-lm",
                 "-o",
                 "/tmp/integration_out",
             });

@@ -41,7 +41,7 @@ const StmtKind = enum { Assign, AnnotatedAssign, Expr, If, While, For, FuncDef, 
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp };
 
 const SubscriberTypes = union(enum) {
     list,
@@ -1114,42 +1114,6 @@ fn walkNamedCall(
         break :blk irBuilder.getFunction(init_method.function_id) orelse {
             return error.CantFindInit;
         };
-        // if (init.params.len != arguments.items.len + 1) {
-        //     return error.InvalidArgCount;
-        // }
-
-        // var bindings: TypeBindings = .init(alloc);
-        // defer bindings.deinit(alloc);
-
-        // for (init.params[1..], arguments.items) |param, arg| {
-        //     try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
-        // }
-
-        // const instance_args = try alloc.alloc(TypeInfo, class.type_params.len);
-        // errdefer alloc.free(instance_args);
-        //
-        // for (class.type_params, 0..) |type_param, i| {
-        //     const bound_type = bindings.get(type_param.id) orelse {
-        //         return error.ExpectedBinding;
-        //     };
-        //     instance_args[i] = try bound_type.clone(alloc);
-        // }
-        //
-        // const dst: TypedOperand = .{
-        //     .operand = irBuilder.nextTemp(),
-        //     .type = .{
-        //         .instance = .{
-        //             .class_id = class.id,
-        //             .args = instance_args,
-        //         },
-        //     },
-        // };
-        // try irBuilder.emit(.{ .class_init = .{
-        //     .dst = dst,
-        //     .class_id = class.id,
-        //     .args = try arguments.toOwnedSlice(alloc),
-        // } }, alloc);
-        // return try dst.clone(alloc);
     } else null;
     if (constructor_init) |init| {
         if (init.params.len != c.PyList_Size(args) + 1) {
@@ -2355,6 +2319,8 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
         return BuiltinCall.GlobalIdx;
     } else if (std.mem.eql(u8, name, "max")) {
         return BuiltinCall.Max;
+    } else if (std.mem.eql(u8, name, "exp")) {
+        return BuiltinCall.Exp;
     }
     return null;
 }

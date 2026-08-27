@@ -31,4 +31,4 @@ spill count: 12
 actual output:
 0
 1
-[!!memory report!!]: allocs=14 frees=14 allocated_bytes=356 freed_bytes=356
+[!!memory report!!]: allocs=14 frees=14 allocated_bytes=340 freed_bytes=340

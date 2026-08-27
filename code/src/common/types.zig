@@ -282,7 +282,18 @@ pub const TypeInfo = union(enum) {
                 },
                 else => return error.TypeMistmatch,
             },
-            else => {},
+            else => {
+                // FIXME: enabling this causing tons of type errors between i64 and i32
+                // need better type propogation to enable this
+                // if (!self.equal(expected)) {
+                //     const self_type = try self.toString(alloc);
+                //     defer alloc.free(self_type);
+                //     const expected_type = try expected.toString(alloc);
+                //     defer alloc.free(expected_type);
+                //     std.debug.print("expected type {s} got {s}\n", .{ self_type, expected_type });
+                //     return error.TypeMismatch;
+                // }
+            },
         }
     }
 
