@@ -322,6 +322,24 @@ pub const TypeInfo = union(enum) {
         }
     }
 
+    pub fn containsGenericVariable(self: @This()) bool {
+        return switch (self) {
+            .type_variable => true,
+            .list => |x| x.element.containsGenericVariable(),
+            .tuple => |t| {
+                for (t.elements) |elem| {
+                    if (elem.containsGenericVariable()) return true;
+                }
+                return false;
+            },
+            .i64, .i32, .char => false,
+            else => |e| {
+                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                unreachable;
+            },
+        };
+    }
+
     pub fn toString(self: @This(), alloc: std.mem.Allocator) ![]const u8 {
         return switch (self) {
             .i64 => try alloc.dupe(u8, "i64"),

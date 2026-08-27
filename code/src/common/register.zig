@@ -18,7 +18,6 @@ pub const RegisterFile = struct {
     forbidden_mask: u32,
 };
 
-// NOTE: eventually, we can push width into this for GPUs?
 pub const RegisterOperand = struct {
     operand: Operand,
     register_type: RegisterType,

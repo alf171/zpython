@@ -302,6 +302,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, irBuilder: *Ir
             std.debug.assert(raw_field_name != null);
 
             const instance_expr = try walkExpr(instance_obj, irBuilder, null, alloc);
+            errdefer instance_expr.deinit(alloc);
             const instance = switch (instance_expr.type) {
                 .instance => |id| id,
                 else => return error.ExpectedInstance,
@@ -1086,6 +1087,73 @@ fn walkNamedCall(
 
                 return try dst.clone(alloc);
             },
+            .Exp => {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const callee_args = try alloc.alloc(TypedOperand, 1);
+                callee_args[0] = try walkExpr(arg, irBuilder, null, alloc);
+                const dst: TypedOperand = .{
+                    .operand = irBuilder.nextTemp(),
+                    .type = .float,
+                };
+                try irBuilder.emit(.{ .function_call = .{
+                    .dst = dst,
+                    .callee = .{ .direct = try alloc.dupe(u8, "exp") },
+                    .args = callee_args,
+                } }, alloc);
+                return try dst.clone(alloc);
+            },
+        }
+    }
+    // class constructor
+    const constructor_init = if (irBuilder.findClass(std.mem.span(name))) |class| blk: {
+        const init_method = class.findMethod("__init__") orelse {
+            return error.CantFindInit;
+        };
+        break :blk irBuilder.getFunction(init_method.function_id) orelse {
+            return error.CantFindInit;
+        };
+        // if (init.params.len != arguments.items.len + 1) {
+        //     return error.InvalidArgCount;
+        // }
+
+        // var bindings: TypeBindings = .init(alloc);
+        // defer bindings.deinit(alloc);
+
+        // for (init.params[1..], arguments.items) |param, arg| {
+        //     try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
+        // }
+
+        // const instance_args = try alloc.alloc(TypeInfo, class.type_params.len);
+        // errdefer alloc.free(instance_args);
+        //
+        // for (class.type_params, 0..) |type_param, i| {
+        //     const bound_type = bindings.get(type_param.id) orelse {
+        //         return error.ExpectedBinding;
+        //     };
+        //     instance_args[i] = try bound_type.clone(alloc);
+        // }
+        //
+        // const dst: TypedOperand = .{
+        //     .operand = irBuilder.nextTemp(),
+        //     .type = .{
+        //         .instance = .{
+        //             .class_id = class.id,
+        //             .args = instance_args,
+        //         },
+        //     },
+        // };
+        // try irBuilder.emit(.{ .class_init = .{
+        //     .dst = dst,
+        //     .class_id = class.id,
+        //     .args = try arguments.toOwnedSlice(alloc),
+        // } }, alloc);
+        // return try dst.clone(alloc);
+    } else null;
+    if (constructor_init) |init| {
+        if (init.params.len != c.PyList_Size(args) + 1) {
+            return error.InvalidArgCount;
         }
     }
 
@@ -1100,7 +1168,16 @@ fn walkNamedCall(
     for (0..@intCast(c.PyList_Size(args))) |i| {
         const arg_obj = c.PyList_GetItem(args, @intCast(i));
         std.debug.assert(arg_obj != null);
-        const arg = try walkExpr(arg_obj, irBuilder, null, alloc);
+        const param_type = if (constructor_init) |init|
+            init.params[i + 1].type
+        else
+            null;
+        // dont infer type from generic args
+        const expected_arg_type = if (param_type) |t|
+            if (!t.containsGenericVariable()) t else null
+        else
+            null;
+        const arg = try walkExpr(arg_obj, irBuilder, expected_arg_type, alloc);
         try arguments.append(alloc, arg);
     }
     const name_slice = std.mem.span(name);
@@ -1136,16 +1213,7 @@ fn walkNamedCall(
 
     // class constructor
     if (irBuilder.findClass(std.mem.span(name))) |class| {
-        const init_method = class.findMethod("__init__") orelse {
-            return error.CantFindInit;
-        };
-        const init = irBuilder.getFunction(init_method.function_id) orelse {
-            return error.CantFindInit;
-        };
-        if (init.params.len != arguments.items.len + 1) {
-            return error.InvalidArgCount;
-        }
-
+        const init = constructor_init orelse return error.CantFindInit;
         var bindings: TypeBindings = .init(alloc);
         defer bindings.deinit(alloc);
 
@@ -1179,6 +1247,7 @@ fn walkNamedCall(
         } }, alloc);
         return try dst.clone(alloc);
     }
+
     std.debug.print("cant find function {s}\n", .{name});
     return error.CantFindFunction;
 }
