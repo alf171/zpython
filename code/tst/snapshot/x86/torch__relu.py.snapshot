@@ -11,8 +11,8 @@ D = C.relu()
 print(D[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 105
-mov count: 63
+number of asm lines: 107
+mov count: 65
 memory load count: 0
 memory store count: 0
 branch count: 2

@@ -31,7 +31,34 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         try alloc.alloc(TypedOperand, 1);
 
                     errdefer alloc.free(args);
-                    args[0] = try p.src.clone(alloc);
+                    args[0] = switch (p.src.type) {
+                        // i32 and f32 require a cast to their 64 bit versions
+                        .f32 => blk: {
+                            const dst: TypedOperand = .{
+                                .operand = function.nextTemp(),
+                                .type = .f64,
+                            };
+                            try new_instructions.append(alloc, .{ .lir = .{ .cast = .{
+                                .dst = dst,
+                                .dst_target_type = .f64,
+                                .src = try p.src.clone(alloc),
+                            } } });
+                            break :blk try dst.clone(alloc);
+                        },
+                        .i32 => blk: {
+                            const dst: TypedOperand = .{
+                                .operand = function.nextTemp(),
+                                .type = .i64,
+                            };
+                            try new_instructions.append(alloc, .{ .lir = .{ .cast = .{
+                                .dst = dst,
+                                .dst_target_type = .i64,
+                                .src = try p.src.clone(alloc),
+                            } } });
+                            break :blk try dst.clone(alloc);
+                        },
+                        else => try p.src.clone(alloc),
+                    };
                     if (p.end) |end| {
                         args[1] = try end.clone(alloc);
                     }

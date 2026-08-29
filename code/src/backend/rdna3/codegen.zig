@@ -92,9 +92,17 @@ pub fn emit(
                                             try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base + 1, high });
                                         }
                                     },
-                                    .i32 => |i| {
+                                    .i32, .f32 => {
+                                        const bits: u32 = switch (c) {
+                                            .i32 => |i| @bitCast(i),
+                                            .f32 => |f| @bitCast(f),
+                                            else => unreachable,
+                                        };
                                         std.debug.assert(dst.width == 1);
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, i });
+                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{
+                                            dst.base,
+                                            bits,
+                                        });
                                     },
                                     else => |e| {
                                         std.debug.print("cant handle {s}\n", .{@tagName(e)});
@@ -154,9 +162,16 @@ pub fn emit(
                                 .mul => {
                                     // TODO: modularize this logic?
                                     std.debug.assert(lhs.reg_type != .sgpr and rhs.reg_type != .sgpr);
-                                    try out.print(alloc, "\tv_mul_lo_u32 v{d}, v{d}, v{d}\n", .{ dst.base, lhs.base, rhs.base });
-                                    if (dst.width == 2)
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                                    switch (bop.dst.type) {
+                                        .f32 => {
+                                            try out.print(alloc, "\tv_mul_f32 v{d}, v{d}, v{d}\n", .{ dst.base, lhs.base, rhs.base });
+                                        },
+                                        else => {
+                                            try out.print(alloc, "\tv_mul_lo_u32 v{d}, v{d}, v{d}\n", .{ dst.base, lhs.base, rhs.base });
+                                        },
+                                    }
+                                    // 0 out bits [32..64]
+                                    if (dst.width == 2) try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                 },
                                 .sub => {
                                     // TODO: modularize this logic?

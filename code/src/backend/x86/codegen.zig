@@ -105,7 +105,13 @@ fn emitFunction(
                                             try out.print(alloc, "\tmovabsq ${d}, %{s}\n", .{ bits, gp_scratch_reg });
                                             try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ gp_scratch_reg, dst });
                                         },
-                                        else => return error.NotImpl,
+                                        .f32 => |f| {
+                                            const gp_scratch_reg = try abi.scratchReg(0, .gp);
+                                            const bits: u32 = @bitCast(f);
+                                            try out.print(alloc, "\tmovl ${d}, %{s}\n", .{ bits, reg32(gp_scratch_reg) });
+                                            try out.print(alloc, "\tmovd %{s}, %{s}\n", .{ reg32(gp_scratch_reg), dst });
+                                        },
+                                        // else => return error.NotImpl,
                                     }
                                 },
                                 .top => |src_top| {
@@ -177,14 +183,24 @@ fn emitFunction(
                                     std.debug.assert(top.type == .i64);
                                     const offset = try abi.regFor(top.operand, colors);
                                     switch (so.src.type) {
+                                        .i64, .list => {
+                                            try out.print(alloc, "\tmovq %{s}, (%{s},%{s})\n", .{ src, dst, offset });
+                                        },
+                                        .f64 => {
+                                            try out.print(alloc, "\tmovsd %{s}, (%{s},%{s})\n", .{ src, dst, offset });
+                                        },
+                                        .f32 => {
+                                            try out.print(alloc, "\tmovss %{s}, (%{s},%{s})\n", .{ src, dst, offset });
+                                        },
                                         .i32 => {
                                             try out.print(alloc, "\tmovl %{s}, (%{s},%{s})\n", .{ reg32(src), dst, offset });
                                         },
-                                        .char => {
+                                        .char, .bool => {
                                             try out.print(alloc, "\tmovb %{s}, (%{s},%{s})\n", .{ reg8(src), dst, offset });
                                         },
-                                        else => {
-                                            try out.print(alloc, "\tmovq %{s}, (%{s},%{s})\n", .{ src, dst, offset });
+                                        else => |e| {
+                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                            return error.NotImpl;
                                         },
                                     }
                                 },
@@ -329,12 +345,19 @@ fn emitFunction(
                             try out.print(alloc, "\t movq %{s}, %{s}\n", .{ src, dst });
                             switch (u.op) {
                                 .neg => switch (u.dst.type) {
-                                    .f64, .f32 => {
+                                    .f64 => {
                                         const fp_scratch_reg = try abi.scratchReg(0, .f);
                                         const gp_scratch_reg = try abi.scratchReg(0, .gp);
                                         try out.print(alloc, "\tmovabsq $0x8000000000000000, %{s}\n", .{gp_scratch_reg});
                                         try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ gp_scratch_reg, fp_scratch_reg });
                                         try out.print(alloc, "\t xorpd %{s}, %{s}\n", .{ fp_scratch_reg, dst });
+                                    },
+                                    .f32 => {
+                                        const fp_scratch_reg = try abi.scratchReg(0, .f);
+                                        const gp_scratch_reg = try abi.scratchReg(0, .gp);
+                                        try out.print(alloc, "\tmovl $0x80000000, %{s}\n", .{reg32(gp_scratch_reg)});
+                                        try out.print(alloc, "\tmovd %{s}, %{s}\n", .{ reg32(gp_scratch_reg), fp_scratch_reg });
+                                        try out.print(alloc, "\t xorps %{s}, %{s}\n", .{ fp_scratch_reg, dst });
                                     },
                                     else => try out.print(alloc, "\tnegq %{s}\n", .{dst}),
                                 },
@@ -388,6 +411,16 @@ fn emitFunction(
                                         const dst = try abi.regFor(c.dst.operand, colors);
                                         const src = try abi.regFor(c.src.operand, colors);
                                         try out.print(alloc, "\tcvttsd2siq %{s}, %{s}\n", .{ src, dst });
+                                    },
+                                    else => {
+                                        return error.UnsupportedCast;
+                                    },
+                                },
+                                .f32 => switch (c.dst_target_type) {
+                                    .f64 => {
+                                        const dst = try abi.regFor(c.dst.operand, colors);
+                                        const src = try abi.regFor(c.src.operand, colors);
+                                        try out.print(alloc, "\tcvtss2sd %{s}, %{s}\n", .{ src, dst });
                                     },
                                     else => {
                                         return error.UnsupportedCast;

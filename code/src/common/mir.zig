@@ -823,5 +823,20 @@ pub const Instruction = union(enum) {
                 .local => {},
             }
         }
+
+        switch (instruction.*) {
+            .lir => |*lir| switch (lir.*) {
+                .move => |*move| switch (move.src) {
+                    .constant => |constant| {
+                        move.src = .{
+                            .constant = try constant.coherce(move.dst.type),
+                        };
+                    },
+                    else => {},
+                },
+                else => {},
+            },
+            else => {},
+        }
     }
 };

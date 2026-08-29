@@ -77,6 +77,7 @@ pub const Instruction = union(enum) {
     },
     cast: struct {
         dst: TypedOperand,
+        // FIXME: remove this
         dst_target_type: TypeInfo,
         src: TypedOperand,
     },

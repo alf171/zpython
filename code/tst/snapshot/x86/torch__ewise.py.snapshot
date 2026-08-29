@@ -11,8 +11,8 @@ D = B - A
 print(D[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 104
-mov count: 64
+number of asm lines: 106
+mov count: 66
 memory load count: 0
 memory store count: 0
 branch count: 2

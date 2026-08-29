@@ -172,6 +172,7 @@ fn createSpecializedFunctionName(
     return out.toOwnedSlice(alloc);
 }
 
+/// clones a generic function applying type bindings
 fn createSpecializedFunction(
     function: *const Function,
     specialized_name: []const u8,

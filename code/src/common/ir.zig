@@ -265,11 +265,38 @@ pub const ConstValue = union(enum) {
             .f64, .f32 => return error.BadState,
         };
     }
+
+    pub fn coherce(self: @This(), expected_type: ?TypeInfo) !@This() {
+        const t = expected_type orelse return self;
+        if (t.containsGenericVariable()) return self;
+        return switch (self) {
+            .i64 => |value| switch (t) {
+                .i64 => self,
+                .i32 => .{ .i32 = @intCast(value) },
+                .f64 => .{ .f64 = @floatFromInt(value) },
+                .f32 => .{ .f32 = @floatFromInt(value) },
+                else => return error.InvalidConstantCohersion,
+            },
+            .f64 => |value| switch (t) {
+                .f64 => self,
+                .f32 => .{ .f32 = @floatCast(value) },
+                else => return error.InvalidConstantCohersion,
+            },
+            else => return self,
+        };
+    }
 };
 
 pub const ValueRef = union(enum) {
     top: TypedOperand,
     constant: ConstValue,
+
+    pub fn toType(self: @This(), alloc: std.mem.Allocator) !TypeInfo {
+        return switch (self) {
+            .constant => |c| c.toType(),
+            .top => |top| try top.type.clone(alloc),
+        };
+    }
 
     pub fn print(self: @This()) void {
         switch (self) {
