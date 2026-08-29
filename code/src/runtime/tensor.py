@@ -116,8 +116,21 @@ class Tensor[T]:
         Tensor._relu_gpu(
             res.data,
             self.data,
-            (self.rows, self.cols)
+            (self.rows * self.cols, 1, 1)
         )
+        return res
+
+    @gpu
+    @staticmethod
+    def _exp_gpu[U](out: list[U], a: list[U]) -> None:
+        i = global_id(0)
+        log2_e: f32 = 1.4426950408889634
+        out[i] = exp2(a[i] * log2_e)
+
+    def exp(self) -> Tensor[T]:
+        zero: T = 0
+        res = Tensor.fill((self.rows, self.cols), zero)
+        Tensor._exp_gpu(res.data, self.data, (self.rows * self.cols, 1, 1))
         return res
 
     def transpose(self) -> Tensor[T]:

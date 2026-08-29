@@ -520,6 +520,11 @@ pub const Instruction = union(enum) {
                 .dst_target_type = try c.dst_target_type.clone(alloc),
                 .src = try c.src.clone(alloc),
             } },
+            .unaryop => |uo| .{ .unaryop = .{
+                .dst = try uo.dst.clone(alloc),
+                .op = uo.op,
+                .src = try uo.src.clone(alloc),
+            } },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 return error.NotImpl;

@@ -338,6 +338,7 @@ fn emitFunction(
                                     },
                                     else => try out.print(alloc, "\tnegq %{s}\n", .{dst}),
                                 },
+                                .exp2 => return error.NotImpl,
                             }
                         },
                         .cast => |c| {

@@ -217,7 +217,7 @@ pub const BinOp = enum {
     }
 };
 
-pub const UnaryOp = enum { neg };
+pub const UnaryOp = enum { neg, exp2 };
 
 pub const ConstValue = union(enum) {
     i64: i64,

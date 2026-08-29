@@ -75,11 +75,14 @@ pub fn emit(
                             if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
                             switch (m.src) {
                                 .constant => |c| switch (c) {
-                                    .i64 => |i| {
-                                        const bits: u64 = @bitCast(i);
+                                    .i64, .f64 => {
+                                        const bits: u64 = switch (c) {
+                                            .i64 => |i| @bitCast(i),
+                                            .f64 => |f| @bitCast(f),
+                                            else => unreachable,
+                                        };
                                         const low: u32 = @truncate(bits);
                                         if (dst.width == 1) {
-                                            std.debug.assert(m.dst.type == .i32);
                                             try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
                                         } else {
                                             std.debug.assert(dst.width == 2);
@@ -195,7 +198,7 @@ pub fn emit(
                                                 base.base + 1,
                                             });
                                         },
-                                        .i32 => {
+                                        .i32, .f32 => {
                                             try out.print(alloc, "\tglobal_store_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
                                                 offset.base,
                                                 src.base,
@@ -353,6 +356,28 @@ pub fn emit(
                                     try out.print(alloc, "v{d}, vcc_lo\n", .{if_value.base});
                                 },
                                 else => return error.NotImpl,
+                            }
+                        },
+                        .unaryop => |uo| {
+                            switch (uo.op) {
+                                .exp2 => {
+                                    const dst = try abi.regFor(uo.dst.operand, colors);
+                                    const src = try abi.regFor(uo.src.operand, colors);
+                                    switch (uo.src.type) {
+                                        .f32 => {
+                                            std.debug.assert(dst.width == 1);
+                                            std.debug.assert(dst.reg_type == .vgpr);
+                                            std.debug.assert(src.width == 1);
+                                            std.debug.assert(src.reg_type == .vgpr);
+                                            try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
+                                        },
+                                        else => return error.NotImpl,
+                                    }
+                                },
+                                else => |e| {
+                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                    return error.NotImpl;
+                                },
                             }
                         },
                         else => |e| {

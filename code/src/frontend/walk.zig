@@ -41,7 +41,7 @@ const StmtKind = enum { Assign, AnnotatedAssign, Expr, If, While, For, FuncDef, 
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp, Exp2, Type };
 
 const SubscriberTypes = union(enum) {
     list,
@@ -1104,6 +1104,41 @@ fn walkNamedCall(
                 } }, alloc);
                 return try dst.clone(alloc);
             },
+            .Exp2 => {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const callee_arg = try walkExpr(arg, irBuilder, null, alloc);
+                const dst: TypedOperand = .{
+                    .operand = irBuilder.nextTemp(),
+                    .type = try callee_arg.type.clone(alloc),
+                };
+                try irBuilder.emit(.{ .lir = .{ .unaryop = .{
+                    .dst = dst,
+                    .op = .exp2,
+                    .src = callee_arg,
+                } } }, alloc);
+                return try dst.clone(alloc);
+            },
+            .Type => {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const value = try walkExpr(arg, irBuilder, null, alloc);
+                const type_name = try value.type.toString(alloc);
+                defer alloc.free(type_name);
+                const string = try makeStringLiteral(type_name, alloc);
+                const composite = string.composite;
+                const dst: TypedOperand = .{
+                    .operand = irBuilder.nextTemp(),
+                    .type = composite.type,
+                };
+                try irBuilder.emit(.{ .list_literal = .{
+                    .dst = dst,
+                    .elements = composite.elements,
+                } }, alloc);
+                return try dst.clone(alloc);
+            },
         }
     }
     // class constructor
@@ -1971,32 +2006,7 @@ fn parseConstant(
             }
         }
 
-        var elements: ArrayList(ValueRef) = .empty;
-        // var element_types: ArrayList(TypeInfo) = .empty;
-        for (bytes) |char| {
-            try elements.append(alloc, .{ .constant = .{
-                .char = char,
-            } });
-            // try element_types.append(alloc, .char);
-        }
-        // null terminator
-        try elements.append(alloc, .{ .constant = .{
-            .char = 0,
-        } });
-        // try element_types.append(alloc, .char);
-
-        const _type = TypeInfo{
-            .list = .{
-                // .elements = try element_types.toOwnedSlice(alloc),
-                .element = try TypeInfo.toOwnedPointer(.char, alloc),
-                // .size = elements.items.len,
-            },
-        };
-
-        return .{ .composite = .{
-            .elements = try elements.toOwnedSlice(alloc),
-            .type = _type,
-        } };
+        return try makeStringLiteral(bytes, alloc);
     }
     std.debug.print("cant handle {s}\n", .{value_type});
     return error.TypeNotImpl;
@@ -2015,6 +2025,35 @@ fn walkReturn(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator) 
     try irBuilder.emit(.{ .function_return = .{
         .value = return_top,
     } }, alloc);
+}
+
+fn makeStringLiteral(bytes: []const u8, alloc: std.mem.Allocator) !ParsedConstant {
+    var elements: ArrayList(ValueRef) = .empty;
+    // var element_types: ArrayList(TypeInfo) = .empty;
+    for (bytes) |char| {
+        try elements.append(alloc, .{ .constant = .{
+            .char = char,
+        } });
+        // try element_types.append(alloc, .char);
+    }
+    // null terminator
+    try elements.append(alloc, .{ .constant = .{
+        .char = 0,
+    } });
+    // try element_types.append(alloc, .char);
+
+    const _type: TypeInfo = .{
+        .list = .{
+            // .elements = try element_types.toOwnedSlice(alloc),
+            .element = try TypeInfo.toOwnedPointer(.char, alloc),
+            // .size = elements.items.len,
+        },
+    };
+
+    return .{ .composite = .{
+        .elements = try elements.toOwnedSlice(alloc),
+        .type = _type,
+    } };
 }
 
 fn getBinOp(expr: *PyObject) !BinOp {
@@ -2323,6 +2362,10 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
         return BuiltinCall.Max;
     } else if (std.mem.eql(u8, name, "exp")) {
         return BuiltinCall.Exp;
+    } else if (std.mem.eql(u8, name, "exp2")) {
+        return BuiltinCall.Exp2;
+    } else if (std.mem.eql(u8, name, "type")) {
+        return BuiltinCall.Type;
     }
     return null;
 }
