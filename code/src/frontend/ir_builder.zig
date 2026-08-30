@@ -19,7 +19,7 @@ const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
 
 const ImportEdge = @import("module.zig").ImportEdge;
-const ModuleId = @import("module.zig").ModuleId;
+const ModuleId = @import("common").module.ModuleId;
 
 pub const LocalValues = std.AutoHashMap(LocalId, TypedOperand);
 

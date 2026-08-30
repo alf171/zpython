@@ -3,7 +3,7 @@ const ArrayList = std.ArrayList;
 const LoadedModule = @import("module.zig").LoadedModule;
 const ImportEdge = @import("module.zig").ImportEdge;
 const PyObject = @import("python.zig").PyObject;
-const ModuleId = @import("module.zig").ModuleId;
+const ModuleId = @import("common").module.ModuleId;
 
 pub const ModuleBuilder = struct {
     modules: ArrayList(LoadedModule),

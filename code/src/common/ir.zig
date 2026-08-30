@@ -7,6 +7,7 @@ const TypedOperand = @import("alloc.zig").TypedOperand;
 const Operand = @import("alloc.zig").Operand;
 const RegisterType = @import("register.zig").RegisterType;
 const RegisterClass = @import("register.zig").RegisterClass;
+const ModuleId = @import("module.zig").ModuleId;
 
 pub const ParsedConstant = union(enum) {
     immediate: ConstValue,
@@ -411,8 +412,7 @@ pub const TypeParam = struct {
 pub const Function = struct {
     name: []const u8,
     id: usize,
-    // FIXME: use ModuleId
-    module_id: ?u16,
+    module_id: ?ModuleId,
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
@@ -443,11 +443,10 @@ pub const Function = struct {
         } };
     }
 
-    // FIXME: use ModuleId
     pub fn init(
         func_name: []const u8,
         id: usize,
-        module_id: ?u16,
+        module_id: ?ModuleId,
         params: []Param,
         type_params: []TypeParam,
         return_type: TypeInfo,

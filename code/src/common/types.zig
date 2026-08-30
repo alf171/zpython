@@ -5,6 +5,7 @@ pub const FunctionKind = @import("ir.zig").FunctionKind;
 pub const ClassId = @import("ir.zig").ClassId;
 pub const ConstValue = @import("ir.zig").ConstValue;
 pub const TypedOperand = @import("alloc.zig").TypedOperand;
+pub const ModuleId = @import("module.zig").ModuleId;
 
 pub const TypeVarId = u32;
 
@@ -88,8 +89,7 @@ pub const TypeInfo = union(enum) {
     },
     instance: ClassInstance,
     type_variable: TypeVarId,
-    // FIXME: use ModuleId
-    module: u16,
+    module: ModuleId,
     any,
 
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {

@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 const python = @import("python.zig");
 const c = python.c;
 const PyObject = c.PyObject;
+const ModuleId = @import("common").module.ModuleId;
 const printAstDump = @import("python.zig").printAstDump;
 const ModuleBuilder = @import("module_builder.zig").ModuleBuilder;
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
@@ -12,8 +13,6 @@ pub const LoadOptions = struct {
     module_root: []const u8,
     std_lib_enabled: bool,
 };
-
-pub const ModuleId = u16;
 
 pub const LoadedModule = struct {
     id: ModuleId,
