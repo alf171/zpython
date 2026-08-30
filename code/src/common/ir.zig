@@ -411,6 +411,8 @@ pub const TypeParam = struct {
 pub const Function = struct {
     name: []const u8,
     id: usize,
+    // FIXME: use ModuleId
+    module_id: ?u16,
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
@@ -441,9 +443,11 @@ pub const Function = struct {
         } };
     }
 
+    // FIXME: use ModuleId
     pub fn init(
         func_name: []const u8,
         id: usize,
+        module_id: ?u16,
         params: []Param,
         type_params: []TypeParam,
         return_type: TypeInfo,
@@ -457,6 +461,7 @@ pub const Function = struct {
         return .{
             .name = try alloc.dupe(u8, func_name),
             .id = id,
+            .module_id = module_id,
             .params = params,
             .type_params = type_params,
             .return_type = return_type,

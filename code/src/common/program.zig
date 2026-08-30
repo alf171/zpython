@@ -20,10 +20,11 @@ pub const Program = struct {
         const entry = BasicBlock.init(0);
         try blocks.append(alloc, entry);
 
-        return Program{
-            .main = Function{
+        return .{
+            .main = .{
                 .name = try alloc.dupe(u8, "main"),
                 .id = 0,
+                .module_id = null,
                 .blocks = blocks,
                 .entry_block = 0,
                 .params = try alloc.alloc(Param, 0),

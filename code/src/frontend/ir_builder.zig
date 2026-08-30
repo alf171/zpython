@@ -1,4 +1,5 @@
 const std = @import("std");
+const ArrayList = std.ArrayList;
 
 const BlockId = @import("common").ir.BlockId;
 const LocalId = @import("common").ir.LocalId;
@@ -17,7 +18,9 @@ const TypedOperand = @import("common").alloc.TypedOperand;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
 
-const ArrayList = std.ArrayList;
+const ImportEdge = @import("module.zig").ImportEdge;
+const ModuleId = @import("module.zig").ModuleId;
+
 pub const LocalValues = std.AutoHashMap(LocalId, TypedOperand);
 
 pub const IrBuilder = struct {
@@ -32,6 +35,9 @@ pub const IrBuilder = struct {
     locals: ArrayList(LocalInfo),
     function_origin: FunctionType,
     active_param_types: []const TypeParam,
+    // imports metadata
+    current_imports: []const ImportEdge,
+    current_module_id: ?ModuleId,
 
     pub fn init(origin: FunctionType, alloc: std.mem.Allocator) !IrBuilder {
         const program = try Program.init(alloc);
@@ -45,6 +51,8 @@ pub const IrBuilder = struct {
             .locals = .empty,
             .function_origin = origin,
             .active_param_types = &.{},
+            .current_imports = &.{},
+            .current_module_id = null,
         };
     }
 
@@ -238,6 +246,24 @@ pub const IrBuilder = struct {
         for (self.active_param_types) |type_param| {
             if (std.mem.eql(u8, type_param.name, name)) {
                 return type_param;
+            }
+        }
+        return null;
+    }
+
+    pub fn findImportModule(self: *const @This(), name: []const u8) ?ModuleId {
+        for (self.current_imports) |import| {
+            if (std.mem.eql(u8, import.name, name)) {
+                return import.to;
+            }
+        }
+        return null;
+    }
+
+    pub fn getModuleFunction(self: *const @This(), id: ModuleId, name: []const u8) ?*Function {
+        for (self.program.functions.items) |*function| {
+            if (function.module_id == id and std.mem.eql(u8, function.name, name)) {
+                return function;
             }
         }
         return null;

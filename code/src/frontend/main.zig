@@ -1,7 +1,7 @@
 const std = @import("std");
 const c = @import("python.zig").c;
 const walkAstIntoBuilder = @import("walk.zig").walkAstIntoBuilder;
-const IrBuilder = @import("builder.zig").IrBuilder;
+const IrBuilder = @import("ir_builder.zig").IrBuilder;
 
 pub fn main(init: std.process.Init) !void {
     c.Py_Initialize();

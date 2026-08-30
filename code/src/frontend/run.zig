@@ -2,7 +2,8 @@ const std = @import("std");
 const c = @import("python.zig").c;
 const PyObject = c.PyObject;
 const Program = @import("common").program.Program;
-const IrBuilder = @import("builder.zig").IrBuilder;
+const IrBuilder = @import("ir_builder.zig").IrBuilder;
+const module = @import("module.zig");
 const walkAstIntoBuilder = @import("walk.zig").walkAstIntoBuilder;
 
 const underline_code = "\x1b[4m";
@@ -16,9 +17,9 @@ pub fn walkAstWithRuntime(
     io: std.Io,
     alloc: std.mem.Allocator,
 ) !Program {
-    var irBuilder = try IrBuilder.init(.runtime, alloc);
-    defer irBuilder.deinit(alloc);
-    errdefer irBuilder.program.deinit(alloc);
+    var ir_builder = try IrBuilder.init(.runtime, alloc);
+    defer ir_builder.deinit(alloc);
+    errdefer ir_builder.program.deinit(alloc);
     // iterate through files in runtime/*
     if (std_lib_enabled) {
         const dir = try std.Io.Dir.cwd().openDir(io, "src/runtime", .{ .iterate = true });
@@ -33,15 +34,32 @@ pub fn walkAstWithRuntime(
             const file_name = try std.fs.path.join(alloc, &.{ "src/runtime", entry.path });
             defer alloc.free(file_name);
             const runtime_obj = try readFile(file_name, false, should_optim, use_escape_codes, io, alloc);
-            try walkAstIntoBuilder(runtime_obj, &irBuilder, alloc);
+            try walkAstIntoBuilder(runtime_obj, &ir_builder, alloc);
         }
     }
+    // print user source
+    if (use_escape_codes) std.debug.print("{s}", .{underline_code});
+    std.debug.print("running program:", .{});
+    if (use_escape_codes) std.debug.print("{s}", .{reset_code});
+    if (should_optim) std.debug.print(" (OPTIM={})", .{should_optim});
+    const code = try std.Io.Dir.cwd().readFileAlloc(
+        io,
+        user_file_name,
+        alloc,
+        .limited(1 << 20),
+    );
+    defer alloc.free(code);
+    std.debug.print("\n\n{s}", .{code});
 
     // walk UserFile
-    irBuilder.function_origin = .user;
-    const user_obj = try readFile(user_file_name, true, should_optim, use_escape_codes, io, alloc);
-    try walkAstIntoBuilder(user_obj, &irBuilder, alloc);
-    return irBuilder.program;
+    var graph = try module.loadGraph(user_file_name, .{
+        .module_root = ".",
+        .std_lib_enabled = std_lib_enabled,
+    }, io, alloc);
+    defer graph.deinit(alloc);
+    ir_builder.function_origin = .user;
+    try graph.walkModule(0, &ir_builder, alloc);
+    return ir_builder.program;
 }
 
 // file system stuff

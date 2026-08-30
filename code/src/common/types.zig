@@ -88,6 +88,8 @@ pub const TypeInfo = union(enum) {
     },
     instance: ClassInstance,
     type_variable: TypeVarId,
+    // FIXME: use ModuleId
+    module: u16,
     any,
 
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
@@ -182,7 +184,7 @@ pub const TypeInfo = union(enum) {
                     .args = args,
                 } };
             },
-            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr => return self,
+            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr, .module => return self,
             // else => |e| {
             //     std.debug.print("clone does support {s}\n", .{@tagName(e)});
             //     return error.NotImpl;
@@ -360,6 +362,7 @@ pub const TypeInfo = union(enum) {
             .char => try alloc.dupe(u8, "char"),
             .f64 => try alloc.dupe(u8, "f64"),
             .f32 => try alloc.dupe(u8, "f32"),
+            .module => try alloc.dupe(u8, "module"),
             .list => |l| blk: {
                 const elem = try l.element.*.toString(alloc);
                 defer alloc.free(elem);

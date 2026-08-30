@@ -1,6 +1,10 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const c = @import("python.zig").c;
+const StmtKind = @import("python.zig").StmtKind;
+const getStmtKind = @import("python.zig").getStmtKind;
+const getPyType = @import("python.zig").getPyType;
+const printAstDump = @import("python.zig").printAstDump;
 
 const Function = @import("common").ir.Function;
 const FunctionKind = @import("common").ir.FunctionKind;
@@ -28,16 +32,14 @@ const Program = @import("common").program.Program;
 const PhiInput = @import("common").mir.PhiInput;
 const UnaryOp = @import("common").ir.UnaryOp;
 
-const IrBuilder = @import("builder.zig").IrBuilder;
-const LocalValues = @import("builder.zig").LocalValues;
+const IrBuilder = @import("ir_builder.zig").IrBuilder;
+const LocalValues = @import("ir_builder.zig").LocalValues;
 
 const LoopBody = @import("loop.zig").LoopBody;
 const walkLoop = @import("loop.zig").walkLoop;
 const LoopCarry = @import("loop.zig").LoopCarry;
 
 const PyObject = c.PyObject;
-
-const StmtKind = enum { Assign, AnnotatedAssign, Expr, If, While, For, FuncDef, Return, Pass, ImportFrom, AugAssign, ClassDef, Unknown };
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, Unknown };
 
@@ -90,9 +92,8 @@ pub fn walkStmt(raw_stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Alloc
         .FuncDef => try walkFuncDef(raw_stmt, irBuilder, null, alloc),
         .Return => try walkReturn(raw_stmt, irBuilder, alloc),
         .Pass => {},
-        // ignore bc we are building these concepts into language so importants aren't used
-        // currently we do this with Callable -- not requiring an import
-        .ImportFrom => {},
+        // imports handled in `module.zig`
+        .Import, .ImportFrom => {},
         .AugAssign => try walkAugAssignment(raw_stmt, irBuilder, alloc),
         .ClassDef => try walkClassDef(raw_stmt, irBuilder, alloc),
         else => {
@@ -689,6 +690,13 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                 return try value.clone(alloc);
             }
 
+            if (irBuilder.findImportModule(name)) |module_id| {
+                return .{
+                    .operand = .unknown,
+                    .type = .{ .module = module_id },
+                };
+            }
+
             if (irBuilder.findFunction(name)) |function| {
                 var params = try alloc.alloc(TypeInfo, function.params.len);
                 for (function.params, 0..) |param, i| {
@@ -1100,6 +1108,7 @@ fn walkNamedCall(
                     .operand = irBuilder.nextTemp(),
                     .type = .f64,
                 };
+                // this pattern only works on the cpu
                 try irBuilder.emit(.{ .function_call = .{
                     .dst = dst,
                     .callee = .{ .direct = try alloc.dupe(u8, "exp") },
@@ -1286,18 +1295,24 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, irBuilder: *IrBuilder, alloc
                 break :blk method;
             }
         }
-        const instance_expr = try walkExpr(instance_obj, irBuilder, null, alloc);
-        self = instance_expr;
-        const instance = switch (instance_expr.type) {
-            .instance => |inst| inst,
+        const receiver_expr = try walkExpr(instance_obj, irBuilder, null, alloc);
+        const method = switch (receiver_expr.type) {
+            .instance => |inst| module_blk: {
+                self = receiver_expr;
+                const class = irBuilder.getClass(inst.class_id);
+                const method_info = class.findMethod(method_name) orelse {
+                    return error.CantFindMethod;
+                };
+                break :module_blk irBuilder.getFunction(method_info.function_id) orelse {
+                    return error.CantFindFunction;
+                };
+            },
+            .module => |module_id| {
+                break :blk irBuilder.getModuleFunction(module_id, method_name) orelse {
+                    return error.CantFindFunction;
+                };
+            },
             else => return error.ExpectedInstance,
-        };
-        const class = irBuilder.getClass(instance.class_id);
-        const method_info = class.findMethod(method_name) orelse {
-            return error.CantFindMethod;
-        };
-        const method = irBuilder.getFunction(method_info.function_id) orelse {
-            return error.CantFindFunction;
         };
         break :blk method;
     };
@@ -1848,6 +1863,7 @@ pub fn walkFuncDef(stmt: *PyObject, irBuilder: *IrBuilder, class_id: ?ClassId, a
     try irBuilder.program.functions.append(alloc, try Function.init(
         prefixed_func_name,
         irBuilder.nextFunctionId(),
+        irBuilder.current_module_id,
         try params.toOwnedSlice(alloc),
         try type_params.toOwnedSlice(alloc),
         return_type,
@@ -2110,24 +2126,6 @@ fn getCompareOp(expr: *PyObject) !CmpOp {
     return error.NotFound;
 }
 
-fn getStmtKind(stmt: *PyObject) StmtKind {
-    const name = getPyType(stmt);
-
-    if (std.mem.eql(u8, name, "Assign")) return .Assign;
-    if (std.mem.eql(u8, name, "Expr")) return .Expr;
-    if (std.mem.eql(u8, name, "If")) return .If;
-    if (std.mem.eql(u8, name, "While")) return .While;
-    if (std.mem.eql(u8, name, "For")) return .For;
-    if (std.mem.eql(u8, name, "AnnAssign")) return .AnnotatedAssign;
-    if (std.mem.eql(u8, name, "FunctionDef")) return .FuncDef;
-    if (std.mem.eql(u8, name, "Return")) return .Return;
-    if (std.mem.eql(u8, name, "Pass")) return .Pass;
-    if (std.mem.eql(u8, name, "ImportFrom")) return .ImportFrom;
-    if (std.mem.eql(u8, name, "AugAssign")) return .AugAssign;
-    if (std.mem.eql(u8, name, "ClassDef")) return .ClassDef;
-    return .Unknown;
-}
-
 fn getExprKind(stmt: *PyObject) ExprKind {
     const name = getPyType(stmt);
     if (std.mem.eql(u8, name, "BinOp")) return .BinOp;
@@ -2143,12 +2141,6 @@ fn getExprKind(stmt: *PyObject) ExprKind {
     if (std.mem.eql(u8, name, "Attribute")) return .Attribute;
 
     return .Unknown;
-}
-
-fn getPyType(stmt: *PyObject) []const u8 {
-    const _type = c.PyObject_Type(stmt);
-    const name_ptr = c.PyObject_GetAttrString(_type, "__name__");
-    return std.mem.span(c.PyUnicode_AsUTF8(name_ptr));
 }
 
 fn parseTypeAnnotation(
@@ -2329,22 +2321,6 @@ fn getSubscriberType(annotation: *PyObject, irBuilder: *IrBuilder) !SubscriberTy
     }
 
     return error.InvalidSubscriber;
-}
-
-fn printAstDump(node: *PyObject) void {
-    const ast_module = c.PyImport_ImportModule("ast");
-    std.debug.assert(ast_module != null);
-
-    const dump_fn = c.PyObject_GetAttrString(ast_module, "dump");
-    std.debug.assert(dump_fn != null);
-
-    const dumped_obj = c.PyObject_CallFunction(dump_fn, "O", node);
-    std.debug.assert(dumped_obj != null);
-
-    const dumped = c.PyUnicode_AsUTF8(dumped_obj);
-    std.debug.assert(dumped != null);
-
-    std.debug.print("{s}\n", .{dumped});
 }
 
 fn getBuiltinCall(name: []const u8) ?BuiltinCall {

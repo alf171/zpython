@@ -196,6 +196,7 @@ fn createSpecializedFunction(
     var cloned = try Function.init(
         specialized_name,
         specialized_id,
+        null,
         params,
         try alloc.alloc(TypeParam, 0),
         return_type,

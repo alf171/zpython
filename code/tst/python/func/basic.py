@@ -1,5 +1,3 @@
-from typing import Callable
-
 def f(c: bool) -> int:
   if c:
       x = 1

@@ -3,13 +3,13 @@ const ArrayList = std.array_list.Managed;
 const c = @import("python.zig").c;
 const PyObject = c.PyObject;
 
-const IrBuilder = @import("builder.zig").IrBuilder;
+const IrBuilder = @import("ir_builder.zig").IrBuilder;
 const LocalId = @import("common").ir.LocalId;
 const CmpOp = @import("common").ir.CmpOp;
 const TypedOperand = @import("common").alloc.TypedOperand;
 const PhiInput = @import("common").mir.PhiInput;
 const Instruction = @import("common").mir.Instruction;
-const LocalValues = @import("builder.zig").LocalValues;
+const LocalValues = @import("ir_builder.zig").LocalValues;
 const LoopPhi = @import("common").mir.LoopPhi;
 const walkExpr = @import("walk.zig").walkExpr;
 const walkStmtList = @import("walk.zig").walkStmtList;

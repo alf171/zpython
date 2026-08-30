@@ -1,0 +1,29 @@
+running program: (OPTIM=true)
+
+import helper
+
+print(type(helper))
+print(helper.two())
+
+performance report: (ORIGIN=user)
+number of asm lines: 123
+mov count: 65
+memory load count: 0
+memory store count: 0
+branch count: 5
+call count: 7
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 667
+mov count: 330
+memory load count: 0
+memory store count: 0
+branch count: 57
+call count: 28
+spill count: 12
+
+actual output:
+module
+2
+[!!memory report!!]: allocs=3 frees=3 allocated_bytes=35 freed_bytes=35

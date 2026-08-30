@@ -105,6 +105,7 @@ test "spill reg function" {
     var function = try Function.init(
         "test",
         0,
+        null,
         try alloc.alloc(Param, 0),
         try alloc.alloc(TypeParam, 0),
         .i64,
