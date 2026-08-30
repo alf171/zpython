@@ -8,6 +8,7 @@ const printAstDump = @import("python.zig").printAstDump;
 const ModuleBuilder = @import("module_builder.zig").ModuleBuilder;
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
 const walkAstIntoBuilder = @import("walk.zig").walkAstIntoBuilder;
+const FunctionType = @import("common").ir.FunctionType;
 
 pub const LoadOptions = struct {
     module_root: []const u8,
@@ -18,6 +19,7 @@ pub const LoadedModule = struct {
     id: ModuleId,
     path: []const u8,
     ast: *PyObject,
+    origin: FunctionType,
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
         alloc.free(self.path);
@@ -36,6 +38,7 @@ pub const ImportEdge = struct {
 
 pub const ModuleGraph = struct {
     entry: ModuleId,
+    runtime_modules: []ModuleId,
     modules: []LoadedModule,
     imports: [][]ImportEdge,
 
@@ -61,11 +64,12 @@ pub const ModuleGraph = struct {
             alloc.free(module_imports);
         }
         alloc.free(self.imports);
+        alloc.free(self.runtime_modules);
     }
 };
 
 /// walk python program for imports
-fn parseModule(path: []const u8, io: std.Io, alloc: std.mem.Allocator) !*PyObject {
+pub fn parseModule(path: []const u8, io: std.Io, alloc: std.mem.Allocator) !*PyObject {
     const code = try std.Io.Dir.cwd().readFileAlloc(io, path, alloc, .limited(1 << 20));
     defer alloc.free(code);
     const code_z = try alloc.dupeSentinel(u8, code, 0);
@@ -84,11 +88,15 @@ pub fn loadGraph(
     io: std.Io,
     alloc: std.mem.Allocator,
 ) !ModuleGraph {
-    _ = options;
     var builder = ModuleBuilder.init();
 
+    // walk runtime
+    if (options.std_lib_enabled) {
+        try builder.loadRuntime(io, alloc);
+    }
+
     const entry_ast = try parseModule(entry_path, io, alloc);
-    const entry_id = try builder.addModule(entry_path, entry_ast, alloc);
+    const entry_id = try builder.addModule(entry_path, entry_ast, .user, alloc);
 
     // walk imports
     const body = c.PyObject_GetAttrString(entry_ast, "body") orelse {
@@ -115,7 +123,7 @@ pub fn loadGraph(
                     defer alloc.free(imported_path);
                     // recursively build imports module
                     const imported_ast = try parseModule(imported_path, io, alloc);
-                    const import_id = try builder.addModule(imported_path, imported_ast, alloc);
+                    const import_id = try builder.addModule(imported_path, imported_ast, .user, alloc);
                     try builder.addImport(entry_id, import_id, name_slice, alloc);
                 }
             },
@@ -134,5 +142,6 @@ pub fn loadGraph(
         .entry = entry_id,
         .modules = try builder.modules.toOwnedSlice(alloc),
         .imports = imports,
+        .runtime_modules = try builder.runtime_modules.toOwnedSlice(alloc),
     };
 }

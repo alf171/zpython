@@ -412,7 +412,7 @@ pub const TypeParam = struct {
 pub const Function = struct {
     name: []const u8,
     id: usize,
-    module_id: ?ModuleId,
+    module_id: ModuleId,
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
@@ -446,7 +446,7 @@ pub const Function = struct {
     pub fn init(
         func_name: []const u8,
         id: usize,
-        module_id: ?ModuleId,
+        module_id: ModuleId,
         params: []Param,
         type_params: []TypeParam,
         return_type: TypeInfo,

@@ -9,22 +9,23 @@ const Param = @import("ir.zig").Param;
 const TypeParam = @import("ir.zig").TypeParam;
 const Operand = @import("alloc.zig").Operand;
 const TypeInfo = @import("types.zig").TypeInfo;
+const ModuleId = @import("module.zig").ModuleId;
 
 pub const Program = struct {
     main: Function,
     functions: ArrayList(Function),
     classes: ArrayList(ClassInfo),
 
-    pub fn init(alloc: std.mem.Allocator) !Program {
-        var blocks = ArrayList(BasicBlock).empty;
-        const entry = BasicBlock.init(0);
+    pub fn init(module_id: ModuleId, alloc: std.mem.Allocator) !Program {
+        var blocks: ArrayList(BasicBlock) = .empty;
+        const entry: BasicBlock = .init(0);
         try blocks.append(alloc, entry);
 
         return .{
             .main = .{
                 .name = try alloc.dupe(u8, "main"),
                 .id = 0,
-                .module_id = null,
+                .module_id = module_id,
                 .blocks = blocks,
                 .entry_block = 0,
                 .params = try alloc.alloc(Param, 0),

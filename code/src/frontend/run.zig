@@ -17,26 +17,6 @@ pub fn walkAstWithRuntime(
     io: std.Io,
     alloc: std.mem.Allocator,
 ) !Program {
-    var ir_builder = try IrBuilder.init(.runtime, alloc);
-    defer ir_builder.deinit(alloc);
-    errdefer ir_builder.program.deinit(alloc);
-    // iterate through files in runtime/*
-    if (std_lib_enabled) {
-        const dir = try std.Io.Dir.cwd().openDir(io, "src/runtime", .{ .iterate = true });
-        defer dir.close(io);
-
-        var walker = try dir.walk(alloc);
-        defer walker.deinit();
-
-        while (try walker.next(io)) |entry| {
-            std.debug.assert(entry.kind == .file);
-            // std.debug.print("check {s}\n", .{entry.path});
-            const file_name = try std.fs.path.join(alloc, &.{ "src/runtime", entry.path });
-            defer alloc.free(file_name);
-            const runtime_obj = try readFile(file_name, false, should_optim, use_escape_codes, io, alloc);
-            try walkAstIntoBuilder(runtime_obj, &ir_builder, alloc);
-        }
-    }
     // print user source
     if (use_escape_codes) std.debug.print("{s}", .{underline_code});
     std.debug.print("running program:", .{});
@@ -51,43 +31,21 @@ pub fn walkAstWithRuntime(
     defer alloc.free(code);
     std.debug.print("\n\n{s}", .{code});
 
-    // walk UserFile
+    // load modules (user + runtime)
     var graph = try module.loadGraph(user_file_name, .{
         .module_root = ".",
         .std_lib_enabled = std_lib_enabled,
     }, io, alloc);
     defer graph.deinit(alloc);
-    ir_builder.function_origin = .user;
-    try graph.walkModule(0, &ir_builder, alloc);
-    return ir_builder.program;
-}
 
-// file system stuff
-fn readFile(
-    file_name: []const u8,
-    is_user_program: bool,
-    should_optim: bool,
-    use_escape_codes: bool,
-    io: std.Io,
-    alloc: std.mem.Allocator,
-) !*PyObject {
-    const code = try std.Io.Dir.cwd().readFileAlloc(io, file_name, alloc, .limited(1 << 20));
-    defer alloc.free(code);
-    const code_z = try alloc.dupeSentinel(u8, code, 0);
-    defer alloc.free(code_z);
+    var ir_builder: IrBuilder = try .init(.runtime, graph.entry, alloc);
+    defer ir_builder.deinit(alloc);
+    errdefer ir_builder.program.deinit(alloc);
 
-    const ast_module = c.PyImport_ImportModule("ast");
-
-    if (is_user_program) {
-        if (use_escape_codes) std.debug.print("{s}", .{underline_code});
-        std.debug.print("running program:", .{});
-        if (use_escape_codes) std.debug.print("{s}", .{reset_code});
-        if (should_optim) std.debug.print(" (OPTIM={})", .{should_optim});
-        std.debug.print("\n\n{s}", .{code});
+    for (graph.runtime_modules) |module_id| {
+        try graph.walkModule(module_id, &ir_builder, alloc);
     }
-
-    const parse_fn = c.PyObject_GetAttrString(ast_module, "parse");
-    const tree = c.PyObject_CallFunction(parse_fn, "s", code_z.ptr);
-    std.debug.assert(tree != null);
-    return tree;
+    ir_builder.function_origin = .user;
+    try graph.walkModule(graph.entry, &ir_builder, alloc);
+    return ir_builder.program;
 }

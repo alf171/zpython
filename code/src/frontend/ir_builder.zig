@@ -37,10 +37,10 @@ pub const IrBuilder = struct {
     active_param_types: []const TypeParam,
     // imports metadata
     current_imports: []const ImportEdge,
-    current_module_id: ?ModuleId,
+    current_module_id: ModuleId,
 
-    pub fn init(origin: FunctionType, alloc: std.mem.Allocator) !IrBuilder {
-        const program = try Program.init(alloc);
+    pub fn init(origin: FunctionType, module_id: ModuleId, alloc: std.mem.Allocator) !IrBuilder {
+        const program = try Program.init(module_id, alloc);
 
         return .{
             .program = program,
@@ -52,7 +52,7 @@ pub const IrBuilder = struct {
             .function_origin = origin,
             .active_param_types = &.{},
             .current_imports = &.{},
-            .current_module_id = null,
+            .current_module_id = module_id,
         };
     }
 
