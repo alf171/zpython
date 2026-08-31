@@ -63,7 +63,7 @@ fn rewriteFunction(
                         }
 
                         alloc.free(callee_name);
-                        fc.callee = .{ .direct = specialized.name };
+                        fc.callee = .{ .direct = specialized.label };
                     }
                     try new_instructions.append(alloc, instruction.*);
                 },
@@ -73,7 +73,7 @@ fn rewriteFunction(
                         // kernels dont use a return type
                         specialized.return_type.deinit(alloc);
                         alloc.free(gl.kernel);
-                        gl.kernel = specialized.name;
+                        gl.kernel = specialized.label;
                     }
                     try new_instructions.append(alloc, instruction.*);
                 },
@@ -92,7 +92,7 @@ fn specializeCall(
     args: []const TypedOperand,
     alloc: std.mem.Allocator,
 ) !?struct {
-    name: []const u8,
+    label: []const u8,
     return_type: TypeInfo,
 } {
     const callee = findFunction(program, callee_name) orelse {
@@ -121,28 +121,31 @@ fn specializeCall(
     }
 
     const specialized_func_name = try createSpecializedFunctionName(
-        callee_name,
+        callee.name,
         callee.type_params,
         &bindings,
         alloc,
     );
-    errdefer alloc.free(specialized_func_name);
+    defer alloc.free(specialized_func_name);
 
     const return_type = try callee.return_type.substitute(&bindings, alloc);
     errdefer return_type.deinit(alloc);
 
-    if (findFunction(program, specialized_func_name) == null and findFunctionIn(pending.items, specialized_func_name) == null) {
-        const specialized_function = try createSpecializedFunction(
+    const specialized_function: *const Function = findFunctionIn(program.functions.items, specialized_func_name) orelse findFunctionIn(pending.items, specialized_func_name) orelse blk: {
+        var specialized = try createSpecializedFunction(
             callee,
             specialized_func_name,
             program.functions.items.len + pending.items.len + 1,
             &bindings,
             alloc,
         );
-        try pending.append(alloc, specialized_function);
-    }
+        errdefer specialized.deinit(alloc);
+        try pending.append(alloc, specialized);
+        break :blk &pending.items[pending.items.len - 1];
+    };
+
     return .{
-        .name = specialized_func_name,
+        .label = try alloc.dupe(u8, specialized_function.label),
         .return_type = return_type,
     };
 }
@@ -197,6 +200,7 @@ fn createSpecializedFunction(
         specialized_name,
         specialized_id,
         function.module_id,
+        function.module_name,
         params,
         try alloc.alloc(TypeParam, 0),
         return_type,
@@ -236,7 +240,7 @@ fn createSpecializedFunction(
 // TODO: find somewhere more generic to put this
 fn findFunction(program: *const Program, function_name: []const u8) ?*Function {
     for (program.functions.items) |*function| {
-        if (std.mem.eql(u8, function.name, function_name)) {
+        if (std.mem.eql(u8, function.label, function_name)) {
             return function;
         }
     }

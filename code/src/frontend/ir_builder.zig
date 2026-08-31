@@ -38,9 +38,10 @@ pub const IrBuilder = struct {
     // imports metadata
     current_imports: []const ImportEdge,
     current_module_id: ModuleId,
+    current_module_name: []const u8,
 
-    pub fn init(origin: FunctionType, module_id: ModuleId, alloc: std.mem.Allocator) !IrBuilder {
-        const program = try Program.init(module_id, alloc);
+    pub fn init(origin: FunctionType, module_id: ModuleId, module_name: []const u8, alloc: std.mem.Allocator) !IrBuilder {
+        const program = try Program.init(module_id, module_name, alloc);
 
         return .{
             .program = program,
@@ -53,6 +54,7 @@ pub const IrBuilder = struct {
             .active_param_types = &.{},
             .current_imports = &.{},
             .current_module_id = module_id,
+            .current_module_name = module_name,
         };
     }
 
@@ -112,6 +114,7 @@ pub const IrBuilder = struct {
     }
 
     /// O(function) scan looking for matching name
+    /// careful because this is not module aware!
     pub fn findFunction(self: *@This(), name: []const u8) ?*Function {
         for (self.program.functions.items) |*function| {
             if (std.mem.eql(u8, function.name, name)) {
@@ -262,7 +265,9 @@ pub const IrBuilder = struct {
 
     pub fn getModuleFunction(self: *const @This(), id: ModuleId, name: []const u8) ?*Function {
         for (self.program.functions.items) |*function| {
-            if (function.module_id == id and std.mem.eql(u8, function.name, name)) {
+            if (function.module_id != id) continue;
+
+            if (std.mem.eql(u8, function.name, name)) {
                 return function;
             }
         }

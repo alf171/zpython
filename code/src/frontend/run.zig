@@ -38,7 +38,7 @@ pub fn walkAstWithRuntime(
     }, io, alloc);
     defer graph.deinit(alloc);
 
-    var ir_builder: IrBuilder = try .init(.runtime, graph.entry, alloc);
+    var ir_builder: IrBuilder = try .init(.runtime, graph.entry, graph.modules[graph.entry].name, alloc);
     defer ir_builder.deinit(alloc);
     errdefer ir_builder.program.deinit(alloc);
 

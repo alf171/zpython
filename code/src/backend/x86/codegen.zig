@@ -52,15 +52,15 @@ fn emitFunction(
         local_stack_size + (function.next_mem * 8),
         16,
     );
-    try createFunctionHeader(out, function.name, frame_stack_size, abi, alloc);
+    try createFunctionHeader(out, function.label, frame_stack_size, abi, alloc);
     var next_stack_alloc_byte: usize = 0;
     for (function.blocks.items) |block| {
-        try out.print(alloc, "{s}_L{d}:\n", .{ function.name, block.id });
+        try out.print(alloc, "{s}_L{d}:\n", .{ function.label, block.id });
         for (block.instructions.items) |instruction| {
             switch (instruction) {
                 .function_ref => |fr| {
                     const dst = try abi.regFor(fr.dst.operand, colors);
-                    try out.print(alloc, "\tleaq {s}(%rip), %{s}\n", .{ fr.function_name, dst });
+                    try out.print(alloc, "\tleaq {s}(%rip), %{s}\n", .{ fr.label, dst });
                 },
                 .function_call => |fc| {
                     switch (fc.callee) {
@@ -74,7 +74,7 @@ fn emitFunction(
                     }
                 },
                 .function_return => {
-                    try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.name});
+                    try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.label});
                 },
                 .len => |l| {
                     const dst = try abi.regFor(l.dst.operand, colors);
@@ -317,13 +317,13 @@ fn emitFunction(
                             try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ scratch8, dst });
                         },
                         .jump => |j| {
-                            try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.name, j.target });
+                            try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.label, j.target });
                         },
                         .branch => |b| {
                             const cond = try abi.regFor(b.condition.operand, colors);
                             try out.print(alloc, "\tcmpq $0, %{s}\n", .{cond});
-                            try out.print(alloc, "\tjne {s}_L{d}\n", .{ function.name, b.then_block });
-                            try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.name, b.else_block });
+                            try out.print(alloc, "\tjne {s}_L{d}\n", .{ function.label, b.then_block });
+                            try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.label, b.else_block });
                         },
                         .select => |s| {
                             const dst = try abi.regFor(s.dst.operand, colors);
@@ -509,10 +509,10 @@ fn emitFunction(
             }
         }
         if (block.successors.items.len == 0) {
-            try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.name});
+            try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.label});
         }
     }
-    try createFunctionFooter(out, function.name, frame_stack_size, is_main, abi, alloc);
+    try createFunctionFooter(out, function.label, frame_stack_size, is_main, abi, alloc);
 }
 
 fn createProgramHeader(out: *ArrayList(u8), alloc: std.mem.Allocator) !void {

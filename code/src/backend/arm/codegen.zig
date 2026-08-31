@@ -51,10 +51,10 @@ fn emitFunction(
         local_stack_size + (function.next_mem * 8),
         16,
     );
-    try createFunctionHeader(out, function.name, frame_stack_size, abi, alloc);
+    try createFunctionHeader(out, function.label, frame_stack_size, abi, alloc);
     var next_stack_alloc_byte: usize = 0;
     for (function.blocks.items) |block| {
-        try out.print(alloc, "_{s}_L{d}:\n", .{ function.name, block.id });
+        try out.print(alloc, "_{s}_L{d}:\n", .{ function.label, block.id });
         for (block.instructions.items) |instruction| {
             // TODO: this method should only be look at LIR. having MIR here is a hack!
             switch (instruction) {
@@ -291,11 +291,11 @@ fn emitFunction(
                         .branch => |b| {
                             const cond = try abi.regFor(b.condition.operand, colors);
                             try out.print(alloc, "\tcmp {s}, #0\n", .{cond});
-                            try out.print(alloc, "\tb.ne _{s}_L{d}\n", .{ function.name, b.then_block });
-                            try out.print(alloc, "\tb _{s}_L{d}\n", .{ function.name, b.else_block });
+                            try out.print(alloc, "\tb.ne _{s}_L{d}\n", .{ function.label, b.then_block });
+                            try out.print(alloc, "\tb _{s}_L{d}\n", .{ function.label, b.else_block });
                         },
                         .jump => |j| {
-                            try out.print(alloc, "\tb _{s}_L{d}\n", .{ function.name, j.target });
+                            try out.print(alloc, "\tb _{s}_L{d}\n", .{ function.label, j.target });
                         },
                         .compare => |c| {
                             const dst = try abi.regFor(c.dst.operand, colors);
@@ -430,8 +430,8 @@ fn emitFunction(
                 },
                 .function_ref => |fr| {
                     const dst = try abi.regFor(fr.dst.operand, colors);
-                    try out.print(alloc, "\tadrp {s}, _{s}@PAGE\n", .{ dst, fr.function_name });
-                    try out.print(alloc, "\tadd {s}, {s}, _{s}@PAGEOFF\n", .{ dst, dst, fr.function_name });
+                    try out.print(alloc, "\tadrp {s}, _{s}@PAGE\n", .{ dst, fr.label });
+                    try out.print(alloc, "\tadd {s}, {s}, _{s}@PAGEOFF\n", .{ dst, dst, fr.label });
                 },
                 else => |ir| {
                     std.debug.panic("ir instruction doesnt have a mapping in arm backend: {s}\n", .{@tagName(ir)});
@@ -440,10 +440,10 @@ fn emitFunction(
             }
         }
         if (block.successors.items.len == 0) {
-            try out.print(alloc, "\tb _{s}_epilogue\n", .{function.name});
+            try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
         }
     }
-    try createFunctionFooter(out, function.name, frame_stack_size, is_main, abi, alloc);
+    try createFunctionFooter(out, function.label, frame_stack_size, is_main, abi, alloc);
 }
 
 fn createProgramHeader(out: *ArrayList(u8), alloc: std.mem.Allocator) !void {

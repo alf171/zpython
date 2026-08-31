@@ -55,7 +55,7 @@ pub fn rewriteFunction(program: *Program, function: *Function, alloc: std.mem.Al
                     try new_instructions.append(alloc, .{ .function_call = .{
                         .dst = null,
                         .callee = .{
-                            .direct = try alloc.dupe(u8, method.function_name),
+                            .direct = try alloc.dupe(u8, method.function_label),
                         },
                         .args = try new_function_args.toOwnedSlice(alloc),
                     } });
@@ -89,7 +89,7 @@ pub fn rewriteFunction(program: *Program, function: *Function, alloc: std.mem.Al
                         .function_call = .{
                             .dst = try s.dst.clone(alloc),
                             .callee = .{
-                                .direct = try alloc.dupe(u8, method.function_name),
+                                .direct = try alloc.dupe(u8, method.function_label),
                             },
                             .args = arguments,
                         },
@@ -135,7 +135,7 @@ pub fn rewriteFunction(program: *Program, function: *Function, alloc: std.mem.Al
                         .function_call = .{
                             .dst = null,
                             .callee = .{
-                                .direct = try alloc.dupe(u8, method.function_name),
+                                .direct = try alloc.dupe(u8, method.function_label),
                             },
                             .args = arguments,
                         },
@@ -197,7 +197,7 @@ pub fn rewriteFunction(program: *Program, function: *Function, alloc: std.mem.Al
                             .function_call = .{
                                 .dst = try bop.dst.clone(alloc),
                                 .callee = .{
-                                    .direct = try alloc.dupe(u8, method.function_name),
+                                    .direct = try alloc.dupe(u8, method.function_label),
                                 },
                                 .args = try arguments.toOwnedSlice(alloc),
                             },

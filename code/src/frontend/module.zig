@@ -17,11 +17,13 @@ pub const LoadOptions = struct {
 
 pub const LoadedModule = struct {
     id: ModuleId,
+    name: []const u8,
     path: []const u8,
     ast: *PyObject,
     origin: FunctionType,
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        alloc.free(self.name);
         alloc.free(self.path);
     }
 };
@@ -48,6 +50,7 @@ pub const ModuleGraph = struct {
         }
         ir_builder.current_module_id = id;
         ir_builder.current_imports = self.imports[id];
+        ir_builder.current_module_name = self.modules[id].name;
 
         try walkAstIntoBuilder(self.modules[id].ast, ir_builder, alloc);
     }

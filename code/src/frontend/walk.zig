@@ -140,7 +140,7 @@ fn walkClassDef(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator
 
                 try class.methods.append(alloc, .{
                     .name = try alloc.dupe(u8, method_name),
-                    .function_name = try alloc.dupe(u8, function.name),
+                    .function_label = try alloc.dupe(u8, function.label),
                     .function_id = function.id,
                     .is_static = try hasDecorator(body_obj, "staticmethod"),
                 });
@@ -416,7 +416,7 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                     const method = class.findMethod(func) orelse {
                         return error.CantFindMethod;
                     };
-                    const function = irBuilder.findFunction(method.function_name) orelse {
+                    const function = irBuilder.getFunction(method.function_id) orelse {
                         return error.CantFindFunction;
                     };
                     var bindings: TypeBindings = .init(alloc);
@@ -713,7 +713,7 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                 try irBuilder.emit(.{
                     .function_ref = .{
                         .dst = function_dst,
-                        .function_name = try alloc.dupe(u8, function.name),
+                        .label = try alloc.dupe(u8, function.label),
                     },
                 }, alloc);
                 return try function_dst.clone(alloc);
@@ -1221,12 +1221,12 @@ fn walkNamedCall(
         }
     }
 
-    if (irBuilder.findFunction(std.mem.span(name))) |function| {
+    if (irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice)) |function| {
         return emitResolvedCall(function, name_slice, &arguments, irBuilder, alloc);
     }
 
     // class constructor
-    if (irBuilder.findClass(std.mem.span(name))) |class| {
+    if (irBuilder.findClass(name_slice)) |class| {
         const init = constructor_init orelse return error.CantFindInit;
         var bindings: TypeBindings = .init(alloc);
         defer bindings.deinit(alloc);
@@ -1853,17 +1853,18 @@ pub fn walkFuncDef(stmt: *PyObject, irBuilder: *IrBuilder, class_id: ?ClassId, a
     const is_inline = try hasDecorator(stmt, "inline");
 
     // append class name onto its methods
-    const prefixed_func_name = if (class_id) |id| blk: {
+    const definition_name = if (class_id) |id| blk: {
         const class = irBuilder.getClass(id);
         const name = try std.fmt.allocPrint(alloc, "{s}__{s}", .{ class.name, func_name });
         break :blk name;
     } else func_name;
-    defer if (class_id != null) alloc.free(prefixed_func_name);
+    defer if (class_id != null) alloc.free(definition_name);
 
     try irBuilder.program.functions.append(alloc, try Function.init(
-        prefixed_func_name,
+        definition_name,
         irBuilder.nextFunctionId(),
         irBuilder.current_module_id,
+        irBuilder.current_module_name,
         try params.toOwnedSlice(alloc),
         try type_params.toOwnedSlice(alloc),
         return_type,
@@ -1990,7 +1991,7 @@ fn emitResolvedCall(
         null;
     try irBuilder.emit(.{
         .function_call = .{
-            .callee = .{ .direct = try alloc.dupe(u8, callee_name) },
+            .callee = .{ .direct = try alloc.dupe(u8, function.label) },
             .dst = maybe_dst,
             .args = try arguments.toOwnedSlice(alloc),
         },

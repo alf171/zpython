@@ -28,9 +28,11 @@ pub const ModuleBuilder = struct {
         alloc: std.mem.Allocator,
     ) !ModuleId {
         const id: ModuleId = @intCast(self.modules.items.len);
+        const name = std.fs.path.stem(path);
 
         try self.modules.append(alloc, .{
             .id = id,
+            .name = try alloc.dupe(u8, name),
             .path = try alloc.dupe(u8, path),
             .ast = ast,
             .origin = origin,

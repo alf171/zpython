@@ -97,7 +97,8 @@ pub const Instruction = union(enum) {
     // used to pass functions as value
     function_ref: struct {
         dst: TypedOperand,
-        function_name: []const u8,
+        // `module_name`__`function_name`
+        label: []const u8,
     },
     // heap based variable size
     list_literal: struct {
@@ -177,7 +178,7 @@ pub const Instruction = union(enum) {
             },
             .function_ref => |fr| {
                 fr.dst.type.deinit(alloc);
-                alloc.free(fr.function_name);
+                alloc.free(fr.label);
             },
             .function_return => |fr| {
                 if (fr.value) |val| val.deinit(alloc);
@@ -352,7 +353,7 @@ pub const Instruction = union(enum) {
             },
             .function_ref => |fr| {
                 fr.dst.operand.print();
-                debugPrint(" <- {s}\n", .{fr.function_name});
+                debugPrint(" <- {s}\n", .{fr.label});
             },
             .function_param => |fp| {
                 fp.dst.operand.print();

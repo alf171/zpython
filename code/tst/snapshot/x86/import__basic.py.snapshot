@@ -5,13 +5,19 @@ import helper
 print(type(helper))
 print(helper.two())
 
+def two() -> int:
+    return 3
+
+print(two())
+print(helper.two())
+
 performance report: (ORIGIN=user)
-number of asm lines: 123
-mov count: 65
+number of asm lines: 185
+mov count: 97
 memory load count: 0
 memory store count: 0
-branch count: 5
-call count: 7
+branch count: 8
+call count: 13
 spill count: 0
 
 performance report: (ORIGIN=runtime)
@@ -26,4 +32,6 @@ spill count: 12
 actual output:
 module
 2
-[!!memory report!!]: allocs=3 frees=3 allocated_bytes=35 freed_bytes=35
+3
+2
+[!!memory report!!]: allocs=5 frees=5 allocated_bytes=55 freed_bytes=55

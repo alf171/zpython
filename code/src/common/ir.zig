@@ -100,13 +100,13 @@ pub const Field = struct {
 
 pub const Method = struct {
     name: []const u8,
-    function_name: []const u8,
+    function_label: []const u8,
     function_id: usize,
     is_static: bool,
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
         alloc.free(self.name);
-        alloc.free(self.function_name);
+        alloc.free(self.function_label);
     }
 };
 
@@ -410,9 +410,13 @@ pub const TypeParam = struct {
 };
 
 pub const Function = struct {
+    // function name
     name: []const u8,
+    // asm label (`module_name`__`name`)
+    label: []const u8,
     id: usize,
     module_id: ModuleId,
+    module_name: []const u8,
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
@@ -447,6 +451,7 @@ pub const Function = struct {
         func_name: []const u8,
         id: usize,
         module_id: ModuleId,
+        module_name: []const u8,
         params: []Param,
         type_params: []TypeParam,
         return_type: TypeInfo,
@@ -457,10 +462,20 @@ pub const Function = struct {
     ) !@This() {
         var blocks = ArrayList(BasicBlock).empty;
         try blocks.append(alloc, BasicBlock.init(0));
+
+        const name = try alloc.dupe(u8, func_name);
+        const label = if (std.mem.eql(u8, func_name, "main")) blk: {
+            break :blk try alloc.dupe(u8, "main");
+        } else if (origin == .user) blk: {
+            break :blk try std.fmt.allocPrint(alloc, "{s}__{s}", .{ module_name, func_name });
+        } else try alloc.dupe(u8, func_name);
+
         return .{
-            .name = try alloc.dupe(u8, func_name),
+            .name = name,
+            .label = label,
             .id = id,
             .module_id = module_id,
+            .module_name = try alloc.dupe(u8, module_name),
             .params = params,
             .type_params = type_params,
             .return_type = return_type,
@@ -496,6 +511,9 @@ pub const Function = struct {
             t.deinit(alloc);
         }
         self.value_to_type.deinit();
+        // free module stuff
+        alloc.free(self.label);
+        alloc.free(self.module_name);
     }
 
     pub fn setValueType(self: *@This(), operand: Operand, type_info: TypeInfo, alloc: std.mem.Allocator) !void {

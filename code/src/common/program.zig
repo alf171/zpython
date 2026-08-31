@@ -16,28 +16,23 @@ pub const Program = struct {
     functions: ArrayList(Function),
     classes: ArrayList(ClassInfo),
 
-    pub fn init(module_id: ModuleId, alloc: std.mem.Allocator) !Program {
-        var blocks: ArrayList(BasicBlock) = .empty;
-        const entry: BasicBlock = .init(0);
-        try blocks.append(alloc, entry);
-
+    pub fn init(module_id: ModuleId, module_name: []const u8, alloc: std.mem.Allocator) !Program {
+        const params = try alloc.alloc(Param, 0);
+        const type_params = try alloc.alloc(TypeParam, 0);
         return .{
-            .main = .{
-                .name = try alloc.dupe(u8, "main"),
-                .id = 0,
-                .module_id = module_id,
-                .blocks = blocks,
-                .entry_block = 0,
-                .params = try alloc.alloc(Param, 0),
-                .type_params = try alloc.alloc(TypeParam, 0),
-                .return_type = .i64,
-                .next_temp = 0,
-                .next_mem = 0,
-                .origin = .user,
-                .kind = .host,
-                .is_inline = false,
-                .value_to_type = std.AutoHashMap(Operand, TypeInfo).init(alloc),
-            },
+            .main = try Function.init(
+                "main",
+                0,
+                module_id,
+                module_name,
+                params,
+                type_params,
+                .i64,
+                .user,
+                .host,
+                false,
+                alloc,
+            ),
             .functions = .empty,
             .classes = .empty,
         };
