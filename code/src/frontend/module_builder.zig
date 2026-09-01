@@ -7,17 +7,44 @@ const PyObject = @import("python.zig").PyObject;
 const ModuleId = @import("common").module.ModuleId;
 const FunctionType = @import("common").ir.FunctionType;
 
+const ModuleStatus = struct {
+    id: ModuleId,
+    state: enum { loading, loaded },
+};
+
 pub const ModuleBuilder = struct {
     runtime_modules: ArrayList(ModuleId),
     modules: ArrayList(LoadedModule),
     imports: ArrayList(ArrayList(ImportEdge)),
+    modules_by_path: std.StringHashMap(ModuleStatus),
 
-    pub fn init() @This() {
+    pub fn init(alloc: std.mem.Allocator) @This() {
         return .{
             .runtime_modules = .empty,
             .modules = .empty,
             .imports = .empty,
+            .modules_by_path = .init(alloc),
         };
+    }
+
+    pub fn deinit(self: *@This()) void {
+        self.modules_by_path.deinit();
+    }
+
+    pub fn deinitContents(self: *@This(), alloc: std.mem.Allocator) void {
+        for (self.modules.items) |*module| {
+            module.deinit(alloc);
+        }
+        self.modules.deinit(alloc);
+
+        for (self.imports.items) |*module_imports| {
+            for (module_imports.items) |*imports| {
+                imports.deinit(alloc);
+            }
+            module_imports.deinit(alloc);
+        }
+        self.imports.deinit(alloc);
+        self.runtime_modules.deinit(alloc);
     }
 
     pub fn addModule(
@@ -38,6 +65,10 @@ pub const ModuleBuilder = struct {
             .origin = origin,
         });
         try self.imports.append(alloc, .empty);
+        try self.modules_by_path.put(self.modules.items[id].path, .{
+            .id = id,
+            .state = .loaded,
+        });
 
         return id;
     }

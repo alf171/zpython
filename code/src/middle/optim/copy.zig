@@ -236,7 +236,7 @@ fn dependsOnBuiltinReg(value: ValueRef, copyMap: *HashMap(Operand, ValueRef), al
 test "basic block copy prop" {
     const alloc = std.testing.allocator;
 
-    var program = try Program.init(alloc);
+    var program = try Program.init(0, "__init__", alloc);
     defer program.deinit(alloc);
     var instructions = &program.main.blocks.items[0].instructions;
 
@@ -290,7 +290,7 @@ test "basic block copy prop" {
 test "constant arg setup gets folded into abi reg" {
     const alloc = std.testing.allocator;
 
-    var program = try Program.init(alloc);
+    var program = try Program.init(0, "__init__", alloc);
     defer program.deinit(alloc);
     var instructions = &program.main.blocks.items[0].instructions;
 
@@ -340,7 +340,7 @@ test "constant arg setup gets folded into abi reg" {
 test "dont follow a redef" {
     const alloc = std.testing.allocator;
 
-    var program = try Program.init(alloc);
+    var program = try Program.init(0, "__init__", alloc);
     defer program.deinit(alloc);
     var instructions = &program.main.blocks.items[0].instructions;
 

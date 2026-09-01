@@ -2371,11 +2371,11 @@ test "while loop" {
     const tree = c.PyObject_CallFunction(parse_fn, "s", code);
     std.debug.assert(tree != null);
 
-    var irBuilder = try IrBuilder.init(.user, alloc);
-    defer irBuilder.deinit(alloc);
-    errdefer irBuilder.program.deinit(alloc);
-    try walkAstIntoBuilder(tree, &irBuilder, alloc);
-    var program = irBuilder.program;
+    var ir_builder: IrBuilder = try .init(.user, 0, "__init__", alloc);
+    defer ir_builder.deinit(alloc);
+    errdefer ir_builder.program.deinit(alloc);
+    try walkAstIntoBuilder(tree, &ir_builder, alloc);
+    var program = ir_builder.program;
     defer program.deinit(alloc);
 
     try std.testing.expectEqual(@as(usize, 4), program.main.blocks.items.len);

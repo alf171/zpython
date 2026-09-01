@@ -91,18 +91,48 @@ pub fn loadGraph(
     io: std.Io,
     alloc: std.mem.Allocator,
 ) !ModuleGraph {
-    var builder = ModuleBuilder.init();
+    var builder: ModuleBuilder = .init(alloc);
+    defer builder.deinit();
+    errdefer builder.deinitContents(alloc);
 
     // walk runtime
     if (options.std_lib_enabled) {
         try builder.loadRuntime(io, alloc);
     }
 
-    const entry_ast = try parseModule(entry_path, io, alloc);
-    const entry_id = try builder.addModule(entry_path, entry_ast, .user, alloc);
+    const id = try loadModule(&builder, entry_path, .user, io, alloc);
+    const imports = try alloc.alloc([]ImportEdge, builder.imports.items.len);
+    for (builder.imports.items, 0..) |*module_imports, i| {
+        imports[i] = try module_imports.toOwnedSlice(alloc);
+    }
+    builder.imports.deinit(alloc);
+    return .{
+        .entry = id,
+        .modules = try builder.modules.toOwnedSlice(alloc),
+        .imports = imports,
+        .runtime_modules = try builder.runtime_modules.toOwnedSlice(alloc),
+    };
+}
+
+pub fn loadModule(
+    builder: *ModuleBuilder,
+    path: []const u8,
+    origin: FunctionType,
+    io: std.Io,
+    alloc: std.mem.Allocator,
+) !ModuleId {
+    if (builder.modules_by_path.get(path)) |status| {
+        if (status.state == .loading) {
+            return error.ImportCycle;
+        }
+        return status.id;
+    }
+    const ast = try parseModule(path, io, alloc);
+    const id = try builder.addModule(path, ast, origin, alloc);
+    builder.modules_by_path.getPtr(path).?.state = .loading;
 
     // walk imports
-    const body = c.PyObject_GetAttrString(entry_ast, "body") orelse {
+    const body = c.PyObject_GetAttrString(ast, "body") orelse {
         return error.InvalidModuleAst;
     };
     for (0..@intCast(c.PyList_Size(body))) |stmt_i| {
@@ -121,13 +151,12 @@ pub fn loadGraph(
                     std.debug.assert(name != null);
                     const name_slice = std.mem.span(name);
 
-                    const imported_dir = std.fs.path.dirname(entry_path) orelse ".";
-                    const imported_path = try std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ imported_dir, name });
+                    const imported_dir = std.fs.path.dirname(path) orelse ".";
+                    const imported_path = try std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ imported_dir, name_slice });
                     defer alloc.free(imported_path);
                     // recursively build imports module
-                    const imported_ast = try parseModule(imported_path, io, alloc);
-                    const import_id = try builder.addModule(imported_path, imported_ast, .user, alloc);
-                    try builder.addImport(entry_id, import_id, name_slice, alloc);
+                    const import_id = try loadModule(builder, imported_path, origin, io, alloc);
+                    try builder.addImport(id, import_id, name_slice, alloc);
                 }
             },
             .ImportFrom => {
@@ -136,15 +165,6 @@ pub fn loadGraph(
             else => {},
         }
     }
-    const imports = try alloc.alloc([]ImportEdge, builder.imports.items.len);
-    for (builder.imports.items, 0..) |*module_imports, i| {
-        imports[i] = try module_imports.toOwnedSlice(alloc);
-    }
-    builder.imports.deinit(alloc);
-    return .{
-        .entry = entry_id,
-        .modules = try builder.modules.toOwnedSlice(alloc),
-        .imports = imports,
-        .runtime_modules = try builder.runtime_modules.toOwnedSlice(alloc),
-    };
+    builder.modules_by_path.getPtr(path).?.state = .loaded;
+    return id;
 }

@@ -277,7 +277,7 @@ pub const IrBuilder = struct {
 
 test "create ir builder" {
     const alloc = std.testing.allocator;
-    var irBuilder = try IrBuilder.init(.user, alloc);
+    var irBuilder = try IrBuilder.init(.user, 0, "__init__", alloc);
     defer irBuilder.deinit(alloc);
     defer irBuilder.program.deinit(alloc);
 

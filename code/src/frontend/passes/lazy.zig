@@ -112,7 +112,7 @@ fn rewriteFunction(function: *Function, producers: *HashMap(LazyKey, LazyProduce
 
 test "range behaves lazily" {
     const alloc = std.testing.allocator;
-    var program = try Program.init(alloc);
+    var program = try Program.init(0, "__init__", alloc);
     defer program.deinit(alloc);
     const block0 = &program.main.blocks.items[0];
     const start = program.main.nextTemp();
