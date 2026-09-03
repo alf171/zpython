@@ -1659,7 +1659,7 @@ pub fn walkFor(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator)
                 },
                 .lazy => {
                     try irBuilder_.emit(.{ .subscript = .{
-                        .dst = .{ .operand = value, .type = .ptr },
+                        .dst = .{ .operand = value, .type = try iterable.type.getElementType() },
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
