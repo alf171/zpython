@@ -16,6 +16,7 @@ pub const ModuleBuilder = struct {
     runtime_modules: ArrayList(ModuleId),
     modules: ArrayList(LoadedModule),
     imports: ArrayList(ArrayList(ImportEdge)),
+    dependencies: ArrayList(ArrayList(ModuleId)),
     modules_by_path: std.StringHashMap(ModuleStatus),
 
     pub fn init(alloc: std.mem.Allocator) @This() {
@@ -23,6 +24,7 @@ pub const ModuleBuilder = struct {
             .runtime_modules = .empty,
             .modules = .empty,
             .imports = .empty,
+            .dependencies = .empty,
             .modules_by_path = .init(alloc),
         };
     }
@@ -45,6 +47,10 @@ pub const ModuleBuilder = struct {
         }
         self.imports.deinit(alloc);
         self.runtime_modules.deinit(alloc);
+        for (self.dependencies.items) |*deps| {
+            deps.deinit(alloc);
+        }
+        self.dependencies.deinit(alloc);
     }
 
     pub fn addModule(
@@ -64,6 +70,7 @@ pub const ModuleBuilder = struct {
             .ast = ast,
             .origin = origin,
         });
+        try self.dependencies.append(alloc, .empty);
         try self.imports.append(alloc, .empty);
         try self.modules_by_path.put(self.modules.items[id].path, .{
             .id = id,
@@ -79,12 +86,39 @@ pub const ModuleBuilder = struct {
         return id;
     }
 
-    pub fn addImport(self: *@This(), from: ModuleId, to: ModuleId, name: []const u8, alloc: std.mem.Allocator) !void {
-        try self.imports.items[from].append(alloc, .{
-            .from = from,
-            .to = to,
+    pub fn addDependency(self: *@This(), from: ModuleId, to: ModuleId, alloc: std.mem.Allocator) !void {
+        for (self.dependencies.items[from].items) |existing| {
+            if (existing == to) return;
+        }
+        try self.dependencies.items[from].append(alloc, to);
+    }
+
+    pub fn addModuleImport(
+        self: *@This(),
+        from: ModuleId,
+        id: ModuleId,
+        name: []const u8,
+        alloc: std.mem.Allocator,
+    ) !void {
+        try self.imports.items[from].append(alloc, .{ .module = .{
+            .id = id,
             .name = try alloc.dupe(u8, name),
-        });
+        } });
+    }
+
+    pub fn addFunctionImport(
+        self: *@This(),
+        from: ModuleId,
+        id: ModuleId,
+        function_name: []const u8,
+        alias: ?[]const u8,
+        alloc: std.mem.Allocator,
+    ) !void {
+        try self.imports.items[from].append(alloc, .{ .function = .{
+            .id = id,
+            .function_name = try alloc.dupe(u8, function_name),
+            .alias = if (alias) |a| try alloc.dupe(u8, a) else null,
+        } });
     }
 
     pub fn loadRuntime(self: *@This(), io: std.Io, alloc: std.mem.Allocator) !void {

@@ -697,13 +697,21 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                 };
             }
 
-            if (irBuilder.findFunction(name)) |function| {
+            const maybe_function = if (irBuilder.findImportedFunction(name)) |imported| blk: {
+                break :blk irBuilder.getModuleFunction(imported.id, imported.function_name) orelse {
+                    return error.CantFindFunction;
+                };
+            } else blk: {
+                break :blk irBuilder.getModuleFunction(irBuilder.current_module_id, name) orelse
+                    irBuilder.findFunction(name);
+            };
+            if (maybe_function) |function| {
                 var params = try alloc.alloc(TypeInfo, function.params.len);
                 for (function.params, 0..) |param, i| {
                     params[i] = try param.type.clone(alloc);
                 }
                 const function_dst: TypedOperand = .{
-                    .operand = function.nextTemp(),
+                    .operand = irBuilder.nextTemp(),
                     .type = .{ .callable = .{
                         .params = params,
                         .returns = try (try function.return_type.clone(alloc)).toOwnedPointer(alloc),
@@ -1219,6 +1227,13 @@ fn walkNamedCall(
                 return TypedOperand{ .operand = .unknown, .type = .void };
             }
         }
+    }
+
+    if (irBuilder.findImportedFunction(name_slice)) |imported| {
+        const function = irBuilder.getModuleFunction(imported.id, imported.function_name) orelse {
+            return error.CantFindFunction;
+        };
+        return emitResolvedCall(function, imported.function_name, &arguments, irBuilder, alloc);
     }
 
     if (irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice)) |function| {

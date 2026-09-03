@@ -369,6 +369,22 @@ pub const TypeInfo = union(enum) {
 
                 break :blk try std.fmt.allocPrint(alloc, "list_{s}", .{elem});
             },
+            .callable => |c| blk: {
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                try out.append(alloc, '(');
+                for (c.params, 0..) |param, i| {
+                    const param_string = try param.toString(alloc);
+                    defer alloc.free(param_string);
+                    try out.appendSlice(alloc, param_string);
+                    if (i == 0) try out.appendSlice(alloc, ", ");
+                }
+                try out.appendSlice(alloc, ") -> ");
+                const return_string = try c.returns.toString(alloc);
+                defer alloc.free(return_string);
+                try out.appendSlice(alloc, return_string);
+                break :blk try out.toOwnedSlice(alloc);
+            },
             else => |e| {
                 std.debug.print("cannot stringify type {s}\n", .{@tagName(e)});
                 return error.TypeStringNotImpl;

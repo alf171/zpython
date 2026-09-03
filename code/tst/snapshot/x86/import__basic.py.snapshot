@@ -1,28 +1,31 @@
 running program: (OPTIM=true)
 
 import helper
+from helper import two as helper_two
 
 print(type(helper))
-print(helper.two())
+print(type(helper_two))
 
-def two() -> int:
+def two(x: i32, y: f32) -> int:
     return 3
 
-print(two())
+print(type(two))
+print(helper_two())
 print(helper.two())
+print(two(1, 2.0))
 
 performance report: (ORIGIN=user)
-number of asm lines: 185
-mov count: 97
+number of asm lines: 374
+mov count: 248
 memory load count: 0
 memory store count: 0
 branch count: 8
-call count: 13
+call count: 19
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 667
-mov count: 330
+number of asm lines: 668
+mov count: 331
 memory load count: 0
 memory store count: 0
 branch count: 57
@@ -31,7 +34,9 @@ spill count: 12
 
 actual output:
 module
+() -> i64
+(i32, f32) -> i64
+2
 2
 3
-2
-[!!memory report!!]: allocs=5 frees=5 allocated_bytes=55 freed_bytes=55
+[!!memory report!!]: allocs=9 frees=9 allocated_bytes=119 freed_bytes=119

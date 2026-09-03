@@ -20,6 +20,7 @@ const Instruction = @import("common").mir.Instruction;
 
 const ImportEdge = @import("module.zig").ImportEdge;
 const ModuleId = @import("common").module.ModuleId;
+const ImportFunction = @import("common").module.ImportFunction;
 
 pub const LocalValues = std.AutoHashMap(LocalId, TypedOperand);
 
@@ -256,8 +257,28 @@ pub const IrBuilder = struct {
 
     pub fn findImportModule(self: *const @This(), name: []const u8) ?ModuleId {
         for (self.current_imports) |import| {
-            if (std.mem.eql(u8, import.name, name)) {
-                return import.to;
+            switch (import) {
+                .module => |module| {
+                    if (std.mem.eql(u8, module.name, name)) {
+                        return module.id;
+                    }
+                },
+                .function => {},
+            }
+        }
+        return null;
+    }
+
+    pub fn findImportedFunction(self: *const @This(), name: []const u8) ?ImportFunction {
+        for (self.current_imports) |import| {
+            switch (import) {
+                .function => |func| {
+                    const resolved_name = func.alias orelse func.function_name;
+                    if (std.mem.eql(u8, resolved_name, name)) {
+                        return func;
+                    }
+                },
+                .module => {},
             }
         }
         return null;

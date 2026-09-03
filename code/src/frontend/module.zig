@@ -4,6 +4,7 @@ const python = @import("python.zig");
 const c = python.c;
 const PyObject = c.PyObject;
 const ModuleId = @import("common").module.ModuleId;
+const ImportFunction = @import("common").module.ImportFunction;
 const printAstDump = @import("python.zig").printAstDump;
 const ModuleBuilder = @import("module_builder.zig").ModuleBuilder;
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
@@ -28,25 +29,40 @@ pub const LoadedModule = struct {
     }
 };
 
-pub const ImportEdge = struct {
-    from: ModuleId,
-    to: ModuleId,
-    name: []const u8,
+pub const ImportEdge = union(enum) {
+    module: struct {
+        id: ModuleId,
+        name: []const u8,
+    },
+    function: ImportFunction,
 
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
-        alloc.free(self.name);
+        switch (self) {
+            .module => |module| {
+                alloc.free(module.name);
+            },
+            .function => |func| {
+                alloc.free(func.function_name);
+                if (func.alias) |alias| alloc.free(alias);
+            },
+        }
     }
 };
 
 pub const ModuleGraph = struct {
     entry: ModuleId,
+    /// all runtime modules
     runtime_modules: []ModuleId,
+    /// all modules
     modules: []LoadedModule,
+    /// each module has a different set of imports
     imports: [][]ImportEdge,
+    /// each module has a different set of deps
+    dependencies: [][]ModuleId,
 
     pub fn walkModule(self: *const @This(), id: ModuleId, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
-        for (self.imports[id]) |import| {
-            try self.walkModule(import.to, ir_builder, alloc);
+        for (self.dependencies[id]) |dep_id| {
+            try self.walkModule(dep_id, ir_builder, alloc);
         }
         ir_builder.current_module_id = id;
         ir_builder.current_imports = self.imports[id];
@@ -68,6 +84,10 @@ pub const ModuleGraph = struct {
         }
         alloc.free(self.imports);
         alloc.free(self.runtime_modules);
+        for (self.dependencies) |deps| {
+            alloc.free(deps);
+        }
+        alloc.free(self.dependencies);
     }
 };
 
@@ -106,11 +126,19 @@ pub fn loadGraph(
         imports[i] = try module_imports.toOwnedSlice(alloc);
     }
     builder.imports.deinit(alloc);
+
+    const dependencies = try alloc.alloc([]ModuleId, builder.modules.items.len);
+    for (builder.dependencies.items, 0..) |*deps, i| {
+        dependencies[i] = try deps.toOwnedSlice(alloc);
+    }
+    builder.dependencies.deinit(alloc);
+
     return .{
         .entry = id,
         .modules = try builder.modules.toOwnedSlice(alloc),
         .imports = imports,
         .runtime_modules = try builder.runtime_modules.toOwnedSlice(alloc),
+        .dependencies = dependencies,
     };
 }
 
@@ -156,11 +184,43 @@ pub fn loadModule(
                     defer alloc.free(imported_path);
                     // recursively build imports module
                     const import_id = try loadModule(builder, imported_path, origin, io, alloc);
-                    try builder.addImport(id, import_id, name_slice, alloc);
+                    try builder.addDependency(id, import_id, alloc);
+                    try builder.addModuleImport(id, import_id, name_slice, alloc);
                 }
             },
+            // ImportFrom(module='helper', names=[alias(name='two', asname='helper_two')], level=0)
             .ImportFrom => {
-                printAstDump(stmt);
+                const module = c.PyObject_GetAttrString(stmt, "module");
+                std.debug.assert(module != null);
+                const raw_module_name = c.PyUnicode_AsUTF8(module);
+                std.debug.assert(raw_module_name != null);
+                const module_name = std.mem.span(raw_module_name);
+                const names = c.PyObject_GetAttrString(stmt, "names");
+                std.debug.assert(names != null);
+                for (0..@intCast(c.PyList_Size(names))) |names_i| {
+                    const name_obj = c.PyList_GetItem(names, @intCast(names_i));
+                    std.debug.assert(name_obj != null);
+                    const func_name_obj = c.PyObject_GetAttrString(name_obj, "name");
+                    const raw_func_name = c.PyUnicode_AsUTF8(func_name_obj);
+                    std.debug.assert(raw_func_name != null);
+                    const func_name = std.mem.span(raw_func_name);
+                    std.debug.assert(func_name_obj != null);
+                    const alias: ?[]const u8 = blk: {
+                        const alias_obj = c.PyObject_GetAttrString(name_obj, "asname");
+                        if (alias_obj == c.Py_None()) break :blk null;
+                        std.debug.assert(alias_obj != null);
+                        const raw_alias = c.PyUnicode_AsUTF8(alias_obj);
+                        std.debug.assert(raw_alias != null);
+                        break :blk std.mem.span(raw_alias);
+                    };
+
+                    const imported_dir = std.fs.path.dirname(path) orelse ".";
+                    const imported_path = try std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ imported_dir, module_name });
+                    defer alloc.free(imported_path);
+                    const import_id = try loadModule(builder, imported_path, origin, io, alloc);
+                    try builder.addDependency(id, import_id, alloc);
+                    try builder.addFunctionImport(id, import_id, func_name, alias, alloc);
+                }
             },
             else => {},
         }

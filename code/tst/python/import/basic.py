@@ -1,10 +1,13 @@
 import helper
+from helper import two as helper_two
 
 print(type(helper))
-print(helper.two())
+print(type(helper_two))
 
-def two() -> int:
+def two(x: i32, y: f32) -> int:
     return 3
 
-print(two())
+print(type(two))
+print(helper_two())
 print(helper.two())
+print(two(1, 2.0))
