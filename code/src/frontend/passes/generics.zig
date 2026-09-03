@@ -105,6 +105,10 @@ fn specializeCall(
     if (callee.type_params.len == 0) {
         return null;
     }
+    if (callee.params.len != args.len) {
+        return null;
+    }
+
     // populate
     for (callee.params, args) |param, arg| {
         try TypeInfo.unify(param.type, arg.type, &bindings, alloc);

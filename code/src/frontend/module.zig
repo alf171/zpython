@@ -59,8 +59,23 @@ pub const ModuleGraph = struct {
     imports: [][]ImportEdge,
     /// each module has a different set of deps
     dependencies: [][]ModuleId,
+    /// avoid walking duplicate modules
+    visited: []bool,
 
-    pub fn walkModule(self: *const @This(), id: ModuleId, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+    pub fn walkAll(self: *const @This(), ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+        @memset(self.visited, false);
+        for (self.runtime_modules) |module_id| {
+            try self.walkModule(module_id, ir_builder, alloc);
+        }
+        ir_builder.function_origin = .user;
+        try self.walkModule(self.entry, ir_builder, alloc);
+    }
+
+    fn walkModule(self: *const @This(), id: ModuleId, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+        // check cache
+        if (self.visited[id]) return;
+        self.visited[id] = true;
+        // walk dependencies first
         for (self.dependencies[id]) |dep_id| {
             try self.walkModule(dep_id, ir_builder, alloc);
         }
@@ -88,6 +103,7 @@ pub const ModuleGraph = struct {
             alloc.free(deps);
         }
         alloc.free(self.dependencies);
+        alloc.free(self.visited);
     }
 };
 
@@ -132,6 +148,8 @@ pub fn loadGraph(
         dependencies[i] = try deps.toOwnedSlice(alloc);
     }
     builder.dependencies.deinit(alloc);
+    const visited = try alloc.alloc(bool, builder.modules.items.len);
+    @memset(visited, false);
 
     return .{
         .entry = id,
@@ -139,6 +157,7 @@ pub fn loadGraph(
         .imports = imports,
         .runtime_modules = try builder.runtime_modules.toOwnedSlice(alloc),
         .dependencies = dependencies,
+        .visited = visited,
     };
 }
 
@@ -157,6 +176,9 @@ pub fn loadModule(
     }
     const ast = try parseModule(path, io, alloc);
     const id = try builder.addModule(path, ast, origin, alloc);
+    if (origin == .runtime) {
+        try builder.markRuntimeModule(id, alloc);
+    }
     builder.modules_by_path.getPtr(path).?.state = .loading;
 
     // walk imports

@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 const LoadedModule = @import("module.zig").LoadedModule;
 const ImportEdge = @import("module.zig").ImportEdge;
 const parseModule = @import("module.zig").parseModule;
+const loadModule = @import("module.zig").loadModule;
 const PyObject = @import("python.zig").PyObject;
 const ModuleId = @import("common").module.ModuleId;
 const FunctionType = @import("common").ir.FunctionType;
@@ -80,10 +81,8 @@ pub const ModuleBuilder = struct {
         return id;
     }
 
-    pub fn addRuntimeModule(self: *@This(), path: []const u8, ast: *PyObject, alloc: std.mem.Allocator) !ModuleId {
-        const id = try self.addModule(path, ast, .runtime, alloc);
+    pub fn markRuntimeModule(self: *@This(), id: ModuleId, alloc: std.mem.Allocator) !void {
         try self.runtime_modules.append(alloc, id);
-        return id;
     }
 
     pub fn addDependency(self: *@This(), from: ModuleId, to: ModuleId, alloc: std.mem.Allocator) !void {
@@ -131,10 +130,9 @@ pub const ModuleBuilder = struct {
         while (try walker.next(io)) |entry| {
             std.debug.assert(entry.kind == .file);
             // std.debug.print("check {s}\n", .{entry.path});
-            const file_name = try std.fs.path.join(alloc, &.{ "src/runtime", entry.path });
-            defer alloc.free(file_name);
-            const ast = try parseModule(file_name, io, alloc);
-            _ = try self.addRuntimeModule(file_name, ast, alloc);
+            const path = try std.fs.path.join(alloc, &.{ "src/runtime", entry.path });
+            defer alloc.free(path);
+            _ = try loadModule(self, path, .runtime, io, alloc);
         }
     }
 };

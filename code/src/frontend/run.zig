@@ -42,10 +42,6 @@ pub fn walkAstWithRuntime(
     defer ir_builder.deinit(alloc);
     errdefer ir_builder.program.deinit(alloc);
 
-    for (graph.runtime_modules) |module_id| {
-        try graph.walkModule(module_id, &ir_builder, alloc);
-    }
-    ir_builder.function_origin = .user;
-    try graph.walkModule(graph.entry, &ir_builder, alloc);
+    try graph.walkAll(&ir_builder, alloc);
     return ir_builder.program;
 }
