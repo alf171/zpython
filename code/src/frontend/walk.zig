@@ -1187,11 +1187,31 @@ fn walkNamedCall(
         }
         arguments.deinit(alloc);
     }
+    // get function type
+    const name_slice = std.mem.span(name);
+    const direct_callee = if (irBuilder.findImportedFunction(name_slice)) |imported|
+        irBuilder.getModuleFunction(imported.id, imported.function_name)
+    else
+        irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice);
+
+    if (direct_callee) |function| {
+        const expected_count = function.params.len + @intFromBool(function.kind == .gpu_kernel);
+        if (c.PyList_Size(args) != expected_count) {
+            return error.InvalidArgCount;
+        }
+    }
+
     for (0..@intCast(c.PyList_Size(args))) |i| {
         const arg_obj = c.PyList_GetItem(args, @intCast(i));
         std.debug.assert(arg_obj != null);
         const param_type = if (constructor_init) |init|
             init.params[i + 1].type
+        else if (direct_callee) |function|
+            // hack to protect against type inference on work_items
+            if (function.kind == .gpu_kernel and i == function.params.len)
+                null
+            else
+                function.params[i].type
         else
             null;
         // dont infer type from generic args
@@ -1202,7 +1222,6 @@ fn walkNamedCall(
         const arg = try walkExpr(arg_obj, irBuilder, expected_arg_type, alloc);
         try arguments.append(alloc, arg);
     }
-    const name_slice = std.mem.span(name);
 
     if (irBuilder.getLocal(name_slice) catch null) |local_id| {
         if (irBuilder.local_values.get(local_id)) |callee| {
@@ -1229,15 +1248,8 @@ fn walkNamedCall(
         }
     }
 
-    if (irBuilder.findImportedFunction(name_slice)) |imported| {
-        const function = irBuilder.getModuleFunction(imported.id, imported.function_name) orelse {
-            return error.CantFindFunction;
-        };
-        return emitResolvedCall(function, imported.function_name, &arguments, irBuilder, alloc);
-    }
-
-    if (irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice)) |function| {
-        return emitResolvedCall(function, name_slice, &arguments, irBuilder, alloc);
+    if (direct_callee) |function| {
+        return emitResolvedCall(function, function.name, &arguments, irBuilder, alloc);
     }
 
     // class constructor
