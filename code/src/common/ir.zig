@@ -267,6 +267,27 @@ pub const ConstValue = union(enum) {
         };
     }
 
+    pub fn isZero(self: @This()) bool {
+        return switch (self) {
+            .i64 => |i| i == 0,
+            .i32 => |i| i == 0,
+            .f64 => |f| f == 0.0,
+            .f32 => |f| f == 0.0,
+            .bool => |b| !b,
+            .char => |c| c == 0,
+        };
+    }
+    pub fn isOne(self: @This()) bool {
+        return switch (self) {
+            .i64 => |i| i == 1,
+            .i32 => |i| i == 1,
+            .f64 => |f| f == 1.0,
+            .f32 => |f| f == 1.0,
+            .bool => |b| b,
+            .char => |c| c == 1,
+        };
+    }
+
     pub fn coherce(self: @This(), expected_type: ?TypeInfo) !@This() {
         const t = expected_type orelse return self;
         if (t.containsGenericVariable()) return self;

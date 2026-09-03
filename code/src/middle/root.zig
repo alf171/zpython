@@ -9,6 +9,7 @@ pub const phi = @import("phi.zig");
 pub const parallel_copies = @import("parallel_copies.zig");
 pub const copy = @import("optim/copy.zig");
 pub const dead = @import("optim/dead.zig");
+pub const peephole = @import("optim/peephole.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

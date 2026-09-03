@@ -23,7 +23,7 @@ pub fn run(program: *Program, alloc: std.mem.Allocator) !void {
 pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
     for (function.blocks.items) |block| {
         // copy prop will only work within a basic block
-        var copyMap = HashMap(Operand, ValueRef).init(alloc);
+        var copyMap: HashMap(Operand, ValueRef) = .init(alloc);
         defer copyMap.deinit();
 
         for (block.instructions.items) |*instruction| {

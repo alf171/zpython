@@ -347,6 +347,12 @@ pub const TypeInfo = union(enum) {
                 return false;
             },
             .i64, .i32, .f64, .f32, .char, .bool => false,
+            .callable => |c| {
+                for (c.params) |param| {
+                    if (param.containsGenericVariable()) return true;
+                }
+                return c.returns.*.containsGenericVariable();
+            },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;

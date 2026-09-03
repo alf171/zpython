@@ -31,6 +31,7 @@ const phi = middle.phi;
 const parallel_copies = middle.parallel_copies;
 const copy = middle.copy;
 const dead = middle.dead;
+const peephole = middle.peephole;
 const FunctionType = @import("common").ir.FunctionType;
 const TimerMetrics = @import("common").timer.TimerMetrics;
 
@@ -121,6 +122,10 @@ pub fn main(init: std.process.Init) !void {
 
     // run optimization passses
     if (should_optim) {
+        // expose constants to peephole
+        try copy.run(&ir_program, alloc);
+        try peephole.run(&ir_program, alloc);
+        // cleanup peephole optims
         try copy.run(&ir_program, alloc);
     }
     // dump ir after optim pass
