@@ -54,6 +54,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
 - [ ] replace bespoke c scripts
 
 ### MiniTorch
+- [micrograd](https://github.com/karpathy/micrograd/blob/master/micrograd/engine.py) 
 - a tiny ml framework leveraging language
 1. forward/backward pass
 2. common matrix operations like relu(), transpose(), matmul(), etc
@@ -61,7 +62,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [x] ewise sub/mul
   - [x] Tensor * scalar (div too)?
   - [x] transpose
-  - [wip] exp
+  - [x] exp
   - [ ] sum/max (axis=1, keepdim=True)
   - [ ] broadcasting
   - [ ] stable softmax
