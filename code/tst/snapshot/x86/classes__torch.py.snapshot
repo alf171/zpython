@@ -29,22 +29,22 @@ print(C.cols)
 print(C[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 587
-mov count: 418
+number of asm lines: 548
+mov count: 398
 memory load count: 0
 memory store count: 0
 branch count: 10
 call count: 43
-spill count: 10
+spill count: 7
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1339
-mov count: 651
+number of asm lines: 1269
+mov count: 614
 memory load count: 0
 memory store count: 0
 branch count: 98
 call count: 42
-spill count: 11
+spill count: 5
 
 actual output:
 2

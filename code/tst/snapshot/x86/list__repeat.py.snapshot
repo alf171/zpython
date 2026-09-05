@@ -9,8 +9,8 @@ for i in range(6):
 print("\n", end="")
 
 performance report: (ORIGIN=user)
-number of asm lines: 155
-mov count: 94
+number of asm lines: 142
+mov count: 88
 memory load count: 0
 memory store count: 0
 branch count: 6
@@ -18,13 +18,13 @@ call count: 11
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 733
-mov count: 351
+number of asm lines: 692
+mov count: 324
 memory load count: 0
 memory store count: 0
 branch count: 64
 call count: 28
-spill count: 12
+spill count: 5
 
 actual output:
 18
