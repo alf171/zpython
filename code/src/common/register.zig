@@ -16,6 +16,12 @@ pub const RegisterFile = struct {
     count: u16,
     type: RegisterType,
     forbidden_mask: u32,
+
+    /// how many colors are available to this node
+    pub fn legalCount(self: @This(), forbidden_colors: u32) u16 {
+        const mask = (@as(u32, 1) << @intCast(self.count)) - 1;
+        return self.count - @popCount(mask & forbidden_colors);
+    }
 };
 
 pub const RegisterOperand = struct {

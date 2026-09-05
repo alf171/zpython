@@ -57,7 +57,9 @@ fn canCoalesce(
         const nbor = graph.nodes.get(nbor_id.*) orelse {
             return error.CantFindNode;
         };
-        if (nbor.cur_degree >= register_file.count) count += 1;
+        if (nbor.cur_degree >= register_file.legalCount(nbor.forbidden_colors)) {
+            count += 1;
+        }
         try seen.put(nbor_id.*, {});
     }
 
@@ -67,11 +69,14 @@ fn canCoalesce(
         const nbor = graph.nodes.get(nbor_id.*) orelse {
             return error.CantFindNode;
         };
-        if (nbor.cur_degree >= register_file.count) count += 1;
+        if (nbor.cur_degree >= register_file.legalCount(nbor.forbidden_colors)) {
+            count += 1;
+        }
         try seen.put(nbor_id.*, {});
     }
 
-    return count < register_file.count;
+    const usable_count = register_file.legalCount(a.forbidden_colors | b.forbidden_colors);
+    return count < usable_count;
 }
 
 //  (a+b)

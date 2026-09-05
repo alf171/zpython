@@ -25,7 +25,7 @@ pub const Node = struct {
     forbidden_colors: u32 = 0,
 
     pub fn init(val: Operand, reg_class: RegisterClass, allocator: Allocator) Node {
-        return Node{
+        return .{
             .val = val,
             .reg_class = reg_class,
             .neighbors = std.AutoHashMap(Operand, void).init(allocator),
@@ -44,16 +44,6 @@ pub const Node = struct {
 
         self.static_degree += 1;
         self.cur_degree += 1;
-    }
-
-    /// how many colors are available to this node
-    pub fn legalCount(self: @This(), k: u16) DegreeCount {
-        // largest value forbidden_colors supports
-        std.debug.assert(k < 32);
-        const mask = (@as(u32, 1) << @intCast(k)) - 1;
-        const forbiddden_count: DegreeCount = @popCount(mask & self.forbidden_colors);
-
-        return k - forbiddden_count;
     }
 };
 
@@ -227,6 +217,15 @@ pub const IGraph = struct {
         // free
         src_node.deinit();
         _ = self.nodes.remove(src);
+
+        // merge could've messed these up...
+        // this should be elsewhere tho i think
+        var check_it = self.nodes.valueIterator();
+        while (check_it.next()) |node| {
+            const degree: DegreeCount = @intCast(node.neighbors.count());
+            node.static_degree = degree;
+            node.cur_degree = degree;
+        }
     }
 
     pub fn resolveAlias(self: *@This(), op: Operand) Operand {

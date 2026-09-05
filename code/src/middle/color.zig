@@ -154,7 +154,7 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
                 continue;
             }
 
-            if (node.cur_degree < node.legalCount(register_file.count)) {
+            if (node.cur_degree < register_file.legalCount(node.forbidden_colors)) {
                 try simplify.put(node.val, {});
             } else {
                 try spill.put(node.val, {});
@@ -177,7 +177,7 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
                 return error.CantFindNode;
             };
             if (!node.selected) {
-                try removeNode(input, node.*, &select, &simplify, &spill, register_file.count);
+                try removeNode(input, node.*, &select, &simplify, &spill, register_file);
             }
         } else {
             // spill node with lowest impact according to our hueristic
@@ -247,7 +247,7 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
 }
 
 /// build our select stack. move things between simplify and spill as needed
-fn removeNode(input: *const graph.IGraph, node: graph.Node, select: *std.array_list.Managed(Operand), simplify: *Set(Operand), spill: *Set(Operand), register_count: u16) !void {
+fn removeNode(input: *const graph.IGraph, node: graph.Node, select: *std.array_list.Managed(Operand), simplify: *Set(Operand), spill: *Set(Operand), register_file: RegisterFile) !void {
     std.debug.assert(node.val != .reg);
     std.debug.assert(!node.selected);
     try select.append(node.val);
@@ -267,7 +267,7 @@ fn removeNode(input: *const graph.IGraph, node: graph.Node, select: *std.array_l
         }
 
         // if we go from k -> k - 1, move from spill to select
-        if (n.cur_degree == n.legalCount(register_count)) {
+        if (n.cur_degree == register_file.legalCount(n.forbidden_colors)) {
             std.debug.assert(spill.contains(n_ptr.*));
             std.debug.assert(!simplify.contains(n_ptr.*));
             _ = spill.remove(n_ptr.*);
