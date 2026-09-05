@@ -8,7 +8,8 @@ const ConstValue = @import("common").ir.ConstValue;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
 const LirInstruction = @import("common").lir.Instruction;
-const Binop = @FieldType(LirInstruction, "binop");
+const BinOpInstruction = @FieldType(LirInstruction, "binop");
+const BinOp = @FieldType(BinOpInstruction, "op");
 
 pub fn run(program: *Program, alloc: std.mem.Allocator) !void {
     try runFunction(&program.main, alloc);
@@ -55,6 +56,7 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
                                         .dst = bop.dst,
                                         .src = .{ .constant = value },
                                     } } });
+                                    try copyMap.put(bop.dst.operand, value);
                                 },
                             }
                         } else {
@@ -78,9 +80,17 @@ const SimplificationValue = union(enum) {
 };
 
 /// return an Operand iff there is a valid rewrite
-fn rewriteIntoMove(bop: Binop, copyMap: *const HashMap(Operand, ConstValue)) ?SimplificationValue {
+fn rewriteIntoMove(bop: BinOpInstruction, copyMap: *const HashMap(Operand, ConstValue)) ?SimplificationValue {
     const lhs = copyMap.get(bop.lhs.operand);
     const rhs = copyMap.get(bop.rhs.operand);
+    if (lhs) |lhs_value| {
+        if (rhs) |rhs_value| {
+            if (foldConstants(bop.op, lhs_value, rhs_value)) |constant| {
+                return .{ .constant = constant };
+            }
+        }
+    }
+
     switch (bop.op) {
         .add => {
             if (rhs) |value| {
@@ -118,4 +128,28 @@ fn rewriteIntoMove(bop: Binop, copyMap: *const HashMap(Operand, ConstValue)) ?Si
         else => return null,
     }
     return null;
+}
+
+fn foldConstants(op: BinOp, lhs: ConstValue, rhs: ConstValue) ?ConstValue {
+    switch (lhs) {
+        .i64 => |lhs_i| switch (rhs) {
+            .i64 => |rhs_i| switch (op) {
+                .add => return .{ .i64 = lhs_i + rhs_i },
+                .sub => return .{ .i64 = lhs_i - rhs_i },
+                .mul => return .{ .i64 = lhs_i * rhs_i },
+                else => return null,
+            },
+            else => return null,
+        },
+        .i32 => |lhs_i| switch (rhs) {
+            .i32 => |rhs_i| switch (op) {
+                .add => return .{ .i64 = lhs_i + rhs_i },
+                .sub => return .{ .i64 = lhs_i - rhs_i },
+                .mul => return .{ .i64 = lhs_i * rhs_i },
+                else => return null,
+            },
+            else => return null,
+        },
+        else => return null,
+    }
 }

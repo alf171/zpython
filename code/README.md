@@ -48,6 +48,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   y = 123 # infer i64
   xs[0] = y
 ```
+- [ ] [code sinking](https://llvm.org/docs/Passes.html#sink-code-sinking)
 
 ### Assembler/Linker
 - [ ] remove clang on linux/x86

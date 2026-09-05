@@ -13,8 +13,8 @@ print(d)
 print(e)
 
 performance report: (ORIGIN=user)
-number of asm lines: 704
-mov count: 549
+number of asm lines: 462
+mov count: 428
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -22,8 +22,8 @@ call count: 13
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 628
-mov count: 303
+number of asm lines: 592
+mov count: 285
 memory load count: 0
 memory store count: 0
 branch count: 57
