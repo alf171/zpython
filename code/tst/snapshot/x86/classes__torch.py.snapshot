@@ -19,31 +19,22 @@ for i in range(a.rows):
         print(a[i, j], end=" ")
 print("\n", end="")
 
-A_data: list[i32] = [1,2,3,4,5,6] 
-A = Tensor(A_data, (2,3))
-B_data: list[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
-B = Tensor(B_data, (3,4))
-C = A @ B
-print(C.rows, end = ", ")
-print(C.cols)
-print(C[0,0])
-
 performance report: (ORIGIN=user)
-number of asm lines: 449
-mov count: 348
+number of asm lines: 298
+mov count: 214
 memory load count: 0
 memory store count: 0
 branch count: 10
-call count: 43
+call count: 29
 spill count: 7
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1229
-mov count: 594
+number of asm lines: 922
+mov count: 438
 memory load count: 0
 memory store count: 0
-branch count: 98
-call count: 42
+branch count: 79
+call count: 35
 spill count: 5
 
 actual output:
@@ -53,6 +44,4 @@ actual output:
 42
 42
 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 
-2, 4
-74
-[!!memory report!!]: allocs=284 frees=284 allocated_bytes=9224 freed_bytes=9224
+[!!memory report!!]: allocs=274 frees=274 allocated_bytes=8981 freed_bytes=8981

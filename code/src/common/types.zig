@@ -369,6 +369,19 @@ pub const TypeInfo = union(enum) {
             .f64 => try alloc.dupe(u8, "f64"),
             .f32 => try alloc.dupe(u8, "f32"),
             .module => try alloc.dupe(u8, "module"),
+            .tuple => |t| blk: {
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                try out.append(alloc, '(');
+                for (t.elements, 0..) |elem, i| {
+                    const elem_string = try elem.toString(alloc);
+                    defer alloc.free(elem_string);
+                    if (i != 0) try out.appendSlice(alloc, ", ");
+                    try out.appendSlice(alloc, elem_string);
+                }
+                try out.append(alloc, ')');
+                break :blk try out.toOwnedSlice(alloc);
+            },
             .list => |l| blk: {
                 const elem = try l.element.*.toString(alloc);
                 defer alloc.free(elem);
@@ -391,6 +404,7 @@ pub const TypeInfo = union(enum) {
                 try out.appendSlice(alloc, return_string);
                 break :blk try out.toOwnedSlice(alloc);
             },
+            .type_variable => |tv| try std.fmt.allocPrint(alloc, "T{d}", .{tv}),
             else => |e| {
                 std.debug.print("cannot stringify type {s}\n", .{@tagName(e)});
                 return error.TypeStringNotImpl;

@@ -11,6 +11,10 @@ const LirInstruction = @import("common").lir.Instruction;
 const BinOpInstruction = @FieldType(LirInstruction, "binop");
 const BinOp = @FieldType(BinOpInstruction, "op");
 
+/// perform constant propogation
+/// ex) temp_1 <- 4, use this instead of temp later
+/// and also constant folding
+/// ex) temp_2 <- 4 * 8 => temp_2 <- 32
 pub fn run(program: *Program, alloc: std.mem.Allocator) !void {
     try runFunction(&program.main, alloc);
     for (program.functions.items) |*function| {

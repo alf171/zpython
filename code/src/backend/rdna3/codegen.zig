@@ -110,7 +110,7 @@ pub fn emit(
                                     },
                                 },
                                 .top => |top| switch (top.type) {
-                                    .list, .i64 => {
+                                    .list, .ptr, .i64, .f64 => {
                                         const src = try abi.regFor(top.operand, colors);
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         std.debug.assert(dst.width == 2);
@@ -122,7 +122,7 @@ pub fn emit(
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg_lo });
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base + 1, src_reg_hi });
                                     },
-                                    .i32 => {
+                                    .i32, .f32 => {
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         const src = try abi.regFor(top.operand, colors);
                                         const src_reg = try src.toString(alloc);
@@ -145,9 +145,9 @@ pub fn emit(
                             const lhs = try abi.regFor(bop.lhs.operand, colors);
                             const rhs = try abi.regFor(bop.rhs.operand, colors);
                             std.debug.assert(dst.reg_type == .vgpr);
+                            // can this be modularized?
                             switch (bop.op) {
                                 .add => {
-                                    // TODO: modularize this logic?
                                     std.debug.assert(lhs.reg_type != .sgpr and rhs.reg_type != .sgpr);
                                     const dst_reg = try dst.toString(alloc);
                                     defer alloc.free(dst_reg);
@@ -155,12 +155,14 @@ pub fn emit(
                                     defer alloc.free(lhs_reg);
                                     const rhs_reg = try rhs.toString(alloc);
                                     defer alloc.free(rhs_reg);
-                                    try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, lhs_reg, rhs_reg });
+                                    switch (bop.dst.type) {
+                                        .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, lhs_reg, rhs_reg }),
+                                        else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, lhs_reg, rhs_reg }),
+                                    }
                                     if (dst.width == 2)
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                 },
                                 .mul => {
-                                    // TODO: modularize this logic?
                                     std.debug.assert(lhs.reg_type != .sgpr and rhs.reg_type != .sgpr);
                                     switch (bop.dst.type) {
                                         .f32 => {
@@ -245,7 +247,7 @@ pub fn emit(
                                     });
                                     // address = src
                                     switch (so.src.type) {
-                                        .i32 => {
+                                        .i32, .f32 => {
                                             try out.print(alloc, "\tglobal_store_b32 v[{d}:{d}], v{d}, off\n", .{
                                                 address.base,
                                                 address.base + 1,
@@ -273,7 +275,7 @@ pub fn emit(
                             switch (src.reg_type) {
                                 .vgpr => {
                                     switch (lo.dst.type) {
-                                        .i32 => {
+                                        .i32, .f32 => {
                                             std.debug.assert(offset.reg_type == .vgpr);
                                             std.debug.assert(dst.width == 1);
                                             std.debug.assert(src.width == 2);

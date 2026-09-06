@@ -364,7 +364,7 @@ fn walkAnnotatedAssignment(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.me
                 annotation_type,
                 alloc,
             );
-            try irBuilder.local_values.put(local, rhs_value);
+            try irBuilder.putLocalValues(local, rhs_value, alloc);
             try irBuilder.emit(.{ .lir = .{ .store_local = .{
                 .local = .{
                     .id = local,
