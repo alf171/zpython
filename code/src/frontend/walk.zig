@@ -386,8 +386,16 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
             const right = c.PyObject_GetAttrString(stmt, "right");
 
             const op = try getBinOp(stmt);
+            // list repeat has expected_type propogate through only lhs
+            const lhs_expected_type: ?TypeInfo = if (expected_type) |t|
+                switch (t) {
+                    .list => t,
+                    else => null,
+                }
+            else
+                null;
             // order here will impact temp numbering
-            const lhs = try walkExpr(left, irBuilder, null, alloc);
+            const lhs = try walkExpr(left, irBuilder, lhs_expected_type, alloc);
             const rhs = try walkExpr(right, irBuilder, null, alloc);
 
             if (lhs.type == .list and rhs.type == .i64) {
@@ -808,7 +816,13 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
             const instance_expr = try walkExpr(value, irBuilder, null, alloc);
             const instance = switch (instance_expr.type) {
                 .instance => |id| id,
-                else => return error.UnexpectedType,
+                else => {
+                    const got = try instance_expr.type.toString(alloc);
+                    defer alloc.free(got);
+                    std.debug.print("attribute must be an instance; got {s}\n", .{got});
+                    instance_expr.deinit(alloc);
+                    return error.UnexpectedType;
+                },
             };
 
             const name_obj = c.PyObject_GetAttrString(stmt, "attr");
