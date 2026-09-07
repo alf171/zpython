@@ -1,0 +1,35 @@
+running program: (OPTIM=true)
+
+x_data: list[f32] = [10.0,20.0]
+x1 = Tensor(x_data, (1,2))
+
+y = x1.broadcast_to((3,2))
+y.print()
+
+x2 = Tensor(x_data, (2,1))
+
+y = x2.broadcast_to((2,3))
+y.print()
+
+performance report: (ORIGIN=user)
+number of asm lines: 83
+mov count: 48
+memory load count: 0
+memory store count: 0
+branch count: 2
+call count: 10
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 886
+mov count: 418
+memory load count: 0
+memory store count: 0
+branch count: 80
+call count: 37
+spill count: 9
+
+actual output:
+10.00000 20.00000 10.00000 20.00000 10.00000 20.00000 
+10.00000 10.00000 10.00000 20.00000 20.00000 20.00000 
+[!!memory report!!]: allocs=33 frees=33 allocated_bytes=390 freed_bytes=390

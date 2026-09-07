@@ -12,7 +12,4 @@ print(y[5,5])
 z = Tensor.fill((16, 16), 42);
 # this will get run on the gpu
 a = y + z
-for i in range(a.rows):
-    for j in range(a.cols):
-        print(a[i, j], end=" ")
-print("\n", end="")
+a.print()

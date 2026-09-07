@@ -594,6 +594,9 @@ pub const Instruction = union(enum) {
             },
             .print => |*pi| {
                 try res.append(alloc, .{ .top = &pi.src });
+                if (pi.end) |*end| {
+                    try res.append(alloc, .{ .top = end });
+                }
             },
             .range => |*r| {
                 try res.append(alloc, .{ .top = &r.start });

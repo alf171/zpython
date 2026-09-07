@@ -41,9 +41,11 @@ const LoopCarry = @import("loop.zig").LoopCarry;
 
 const PyObject = c.PyObject;
 
-const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, Unknown };
+const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, Unknown };
 
 const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp, Exp2, Type };
+
+const BoolOp = enum { And, Or };
 
 const SubscriberTypes = union(enum) {
     list,
@@ -237,6 +239,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, irBuilder: *Ir
         },
         // Assign(targets=[Tuple(elts=[Name(id='x', ctx=Store()), Name(id='y', ctx=Store())], ctx=Store())], value=Call(func=Name(id='foobar', ctx=Load()), args=[Constant(value=1), Constant(value=2)]))
         .Tuple => {
+            defer rhs_value.deinit(alloc);
             const elts = c.PyObject_GetAttrString(lhs, "elts");
             std.debug.assert(elts != null);
             for (0..@intCast(c.PyList_Size(elts))) |i| {
@@ -263,7 +266,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, irBuilder: *Ir
 
                 try irBuilder.emit(.{ .subscript = .{
                     .dst = elem_dst,
-                    .src = rhs_value,
+                    .src = try rhs_value.clone(alloc),
                     .index = index,
                 } }, alloc);
 
@@ -847,6 +850,42 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                 .offset = field.offset,
             } }, alloc);
             return try dst.clone(alloc);
+        },
+        // BoolOp(op=And(), values=[Compare(left=Attribute(value=Name(id='self', ctx=Load()), attr='rows', ctx=Load()), ops=[Eq()], comparators=[Constant(value=1)]), Compare(left=Name(id='rows', ctx=Load()), ops=[NotEq()], comparators=[Constant(value=1)])])
+        // a_left a_op a_right <op> b_left b_op b_right
+        .BoolOp => {
+            const op_obj = c.PyObject_GetAttrString(stmt, "op");
+            std.debug.assert(op_obj != null);
+            const op = try getBoolOp(getPyType(op_obj));
+            switch (op) {
+                .And => {
+                    const values_obj = c.PyObject_GetAttrString(stmt, "values");
+                    std.debug.assert(values_obj != null);
+                    std.debug.assert(c.PyList_Size(values_obj) == 2);
+                    const lhs_obj = c.PyList_GetItem(values_obj, 0);
+                    std.debug.assert(lhs_obj != null);
+                    const lhs = try walkExpr(lhs_obj, irBuilder, null, alloc);
+                    std.debug.assert(lhs.type == .bool);
+                    const rhs_obj = c.PyList_GetItem(values_obj, 1);
+                    std.debug.assert(rhs_obj != null);
+                    const rhs = try walkExpr(rhs_obj, irBuilder, null, alloc);
+                    std.debug.assert(rhs.type == .bool);
+                    const dst: TypedOperand = .{
+                        .operand = irBuilder.nextTemp(),
+                        .type = .bool,
+                    };
+                    try irBuilder.emit(.{
+                        .lir = .{ .select = .{
+                            .dst = dst,
+                            .condition = lhs,
+                            .if_value = .{ .top = rhs },
+                            .else_value = .{ .constant = .{ .bool = false } },
+                        } },
+                    }, alloc);
+                    return try dst.clone(alloc);
+                },
+                else => return error.NotImpl,
+            }
         },
         .Unknown => {
             const name = getPyType(stmt);
@@ -2181,7 +2220,7 @@ fn getExprKind(stmt: *PyObject) ExprKind {
     if (std.mem.eql(u8, name, "Subscript")) return .Subscript;
     if (std.mem.eql(u8, name, "IfExp")) return .IfExp;
     if (std.mem.eql(u8, name, "Attribute")) return .Attribute;
-
+    if (std.mem.eql(u8, name, "BoolOp")) return .BoolOp;
     return .Unknown;
 }
 
@@ -2366,32 +2405,25 @@ fn getSubscriberType(annotation: *PyObject, irBuilder: *IrBuilder) !SubscriberTy
 }
 
 fn getBuiltinCall(name: []const u8) ?BuiltinCall {
-    if (std.mem.eql(u8, name, "range")) {
-        return BuiltinCall.Range;
-    } else if (std.mem.eql(u8, name, "print")) {
-        return BuiltinCall.Print;
-    } else if (std.mem.eql(u8, name, "write")) {
-        return BuiltinCall.Write;
-    } else if (std.mem.eql(u8, name, "len")) {
-        return BuiltinCall.Len;
-    } else if (std.mem.eql(u8, name, "int")) {
-        return BuiltinCall.Int;
-    } else if (std.mem.eql(u8, name, "i32")) {
-        return BuiltinCall.I32;
-    } else if (std.mem.eql(u8, name, "float")) {
-        return BuiltinCall.Float;
-    } else if (std.mem.eql(u8, name, "global_id")) {
-        return BuiltinCall.GlobalIdx;
-    } else if (std.mem.eql(u8, name, "max")) {
-        return BuiltinCall.Max;
-    } else if (std.mem.eql(u8, name, "exp")) {
-        return BuiltinCall.Exp;
-    } else if (std.mem.eql(u8, name, "exp2")) {
-        return BuiltinCall.Exp2;
-    } else if (std.mem.eql(u8, name, "type")) {
-        return BuiltinCall.Type;
-    }
+    if (std.mem.eql(u8, name, "range")) return .Range;
+    if (std.mem.eql(u8, name, "print")) return .Print;
+    if (std.mem.eql(u8, name, "write")) return .Write;
+    if (std.mem.eql(u8, name, "len")) return .Len;
+    if (std.mem.eql(u8, name, "int")) return .Int;
+    if (std.mem.eql(u8, name, "i32")) return .I32;
+    if (std.mem.eql(u8, name, "float")) return .Float;
+    if (std.mem.eql(u8, name, "global_id")) return .GlobalIdx;
+    if (std.mem.eql(u8, name, "max")) return .Max;
+    if (std.mem.eql(u8, name, "exp")) return .Exp;
+    if (std.mem.eql(u8, name, "exp2")) return .Exp2;
+    if (std.mem.eql(u8, name, "type")) return .Type;
     return null;
+}
+
+fn getBoolOp(name: []const u8) !BoolOp {
+    if (std.mem.eql(u8, name, "And")) return .And;
+    std.debug.print("cant handle bool op {s}\n", .{name});
+    return error.UnsupportedBoolOp;
 }
 
 test "while loop" {

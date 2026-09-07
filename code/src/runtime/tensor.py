@@ -21,6 +21,12 @@ class Tensor[T]:
         res.col_stride = col_stride
         return res
 
+    def broadcast_to(self, shape: tuple[i32, i32]) -> Tensor[T]:
+        rows, cols = shape
+        row_stride = 0 if self.rows == 1 and rows != 1 else self.row_stride
+        col_stride = 0 if self.cols == 1 and cols != 1 else self.col_stride
+        return Tensor._view(self.data, rows, cols, row_stride, col_stride)
+
     def transpose(self) -> Tensor[T]:
         return Tensor._view(self.data, self.cols, self.rows, self.col_stride, self.row_stride)
 
@@ -88,3 +94,10 @@ class Tensor[T]:
         res = Tensor.fill((self.rows, self.cols), zero)
         _exp_gpu(res.data, self.data, (self.rows * self.cols, 1, 1))
         return res
+
+    def print(self) -> None:
+        for i in range(self.rows):
+            for j in range(self.cols):
+                print(self[i, j], end=" ")
+        print("\n", end="")
+

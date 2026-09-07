@@ -325,18 +325,30 @@ fn emitFunction(
                             try out.print(alloc, "\tjne {s}_L{d}\n", .{ function.label, b.then_block });
                             try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.label, b.else_block });
                         },
+                        // a bit hacky. to avoid first move, we would need an interference edge between dst and if_value
+                        // scratch = if_value
+                        // dst = else_value
+                        // if condition:
+                        //     dst = scratch
                         .select => |s| {
                             const dst = try abi.regFor(s.dst.operand, colors);
                             const scratch_reg = try abi.scratchReg(0, .gp);
-
                             const condition = try abi.regFor(s.condition.operand, colors);
                             try out.print(alloc, "\tcmpq $0, %{s}\n", .{condition});
 
+                            const if_reg = switch (s.if_value) {
+                                .top => |top| blk: {
+                                    const src = try abi.regFor(top.operand, colors);
+                                    try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ src, scratch_reg });
+                                    break :blk scratch_reg;
+                                },
+                                .constant => try valueToReg(s.if_value, out, scratch_reg, colors, abi, alloc),
+                            };
                             const else_reg = try valueToReg(s.else_value, out, dst, colors, abi, alloc);
+
                             if (!std.mem.eql(u8, else_reg, dst)) {
                                 try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ else_reg, dst });
                             }
-                            const if_reg = try valueToReg(s.if_value, out, scratch_reg, colors, abi, alloc);
                             try out.print(alloc, "\tcmovne %{s}, %{s}\n", .{ if_reg, dst });
                         },
                         .unaryop => |u| {
@@ -413,6 +425,10 @@ fn emitFunction(
                                         try out.print(alloc, "\tcvttsd2siq %{s}, %{s}\n", .{ src, dst });
                                     },
                                     else => {
+                                        std.debug.print(
+                                            "unsupported cast: {s} -> {s}\n",
+                                            .{ @tagName(c.src.type), @tagName(c.dst_target_type) },
+                                        );
                                         return error.UnsupportedCast;
                                     },
                                 },
@@ -791,6 +807,10 @@ pub fn valueToReg(
                 .f64 => |f| {
                     const bits: u64 = @bitCast(f);
                     try out.print(alloc, "\tmovabsq ${d}, %{s}\n", .{ bits, cur_scratch_reg });
+                    return cur_scratch_reg;
+                },
+                .bool => |b| {
+                    try out.print(alloc, "movq ${d}, %{s}\n", .{ @intFromBool(b), cur_scratch_reg });
                     return cur_scratch_reg;
                 },
                 else => |e| {

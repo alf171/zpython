@@ -369,6 +369,7 @@ pub const TypeInfo = union(enum) {
             .f64 => try alloc.dupe(u8, "f64"),
             .f32 => try alloc.dupe(u8, "f32"),
             .module => try alloc.dupe(u8, "module"),
+            .any => try alloc.dupe(u8, "any"),
             .tuple => |t| blk: {
                 var out: std.ArrayList(u8) = .empty;
                 errdefer out.deinit(alloc);

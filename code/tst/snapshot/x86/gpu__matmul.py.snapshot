@@ -8,10 +8,7 @@ B = Tensor(B_data, (3,4))
 C = A @ B
 print(C.rows, end = ", ")
 print(C.cols)
-for i in range(C.rows):
-    for j in range(C.cols):
-        print(C[i, j], end=" ")
-print("\n", end="")
+C.print()
 
 # f32 matmul
 A_data: list[f32] = [1.5, -2.0, 0.0,  3.25, -1.0,  0.5]
@@ -20,28 +17,25 @@ A = Tensor(A_data, (3, 2))
 B_data: list[f32] = [2.0, -1.0,  0.5, 4.0, 1.5,  2.0, -2.0, 0.0]
 B = Tensor(B_data, (2, 4))
 C = A @ B
-for i in range(C.rows):
-    for j in range(C.cols):
-        print(float(C[i, j]), end=" ")
-print("\n", end="")
+C.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 478
-mov count: 363
+number of asm lines: 273
+mov count: 219
 memory load count: 0
 memory store count: 0
-branch count: 18
-call count: 31
-spill count: 21
+branch count: 2
+call count: 21
+spill count: 4
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1210
-mov count: 599
+number of asm lines: 1434
+mov count: 716
 memory load count: 0
 memory store count: 0
-branch count: 95
-call count: 42
-spill count: 6
+branch count: 117
+call count: 54
+spill count: 14
 
 actual output:
 2, 4
