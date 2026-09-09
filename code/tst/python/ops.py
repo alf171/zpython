@@ -8,6 +8,8 @@ print(x - y)
 print(x * y)
 # div
 print(x / y)
+# floor div
+print(x // y)
 # mod
 print(x % y)
 # left shift

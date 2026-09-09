@@ -39,6 +39,9 @@ pub const TypeBindings = struct {
         alloc: std.mem.Allocator,
     ) !TypeInfo {
         if (function.type_params.len > 0) {
+            if (function.params.len != args.len) {
+                return error.ArgumentCountMismatch;
+            }
             for (function.params, args) |param, arg| {
                 try TypeInfo.unify(param.type, arg.type, self, alloc);
             }

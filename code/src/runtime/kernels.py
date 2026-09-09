@@ -44,3 +44,24 @@ def exp[U](out: list[U], a: list[U]) -> None:
     i = global_id(0)
     log2_e: f32 = 1.4426950408889634
     out[i] = exp2(a[i] * log2_e)
+
+@gpu
+def sum_cols[U](out: list[U], a: list[U], rows: i32, row_stride: i32, col_stride: i32) -> None:
+    col = global_id(0)
+    total: U = 0
+
+    for row in range(rows):
+        total += a[index_2d(row, col, row_stride, col_stride)]
+
+    out[col] = total
+
+@gpu
+def sum_rows[U](out: list[U], a: list[U], cols: i32, row_stride: i32, col_stride: i32) -> None:
+    row = global_id(0)
+    total: U = 0
+
+    for col in range(cols):
+        total += a[index_2d(row, col, row_stride, col_stride)]
+
+    out[row] = total
+

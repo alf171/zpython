@@ -65,7 +65,12 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [x] transpose
   - [x] exp
   - [ ] sum/max (axis=1, keepdim=True)
-  - [ ] broadcasting
+  - [x] broadcasting
+  - [ ] reject invalid broadcast shapes
+  ```python
+  assert(self.rows == rows or self.rows == 1)
+  assert(self.cols == cols or self.cols == 1)
+  ```
   - [ ] stable softmax
   - [ ] backwards pass
 3. [Optional] read/write weights to a file

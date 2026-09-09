@@ -249,7 +249,8 @@ fn emitFunction(
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
                                     }
                                 },
-                                .div => {
+                                // FIXME: floor_div is wrong for neg values
+                                .div, .floor_div => {
                                     try out.print(alloc, "\tpushq %rax\n", .{});
                                     try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
                                     try out.print(alloc, "\tcqto\n", .{});

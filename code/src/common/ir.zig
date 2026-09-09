@@ -201,6 +201,7 @@ pub const BinOp = enum {
     sub,
     mul,
     div,
+    floor_div,
     mod,
     lshift,
     rshift,

@@ -1108,7 +1108,10 @@ fn walkNamedCall(
                 return try dst.clone(alloc);
             },
             .GlobalIdx => {
-                std.debug.assert(c.PyList_Size(args) == 1);
+                if (c.PyList_Size(args) != 1) {
+                    std.debug.print("global idx doesn't have exactly 1 arg\n", .{});
+                    return error.InvalidGlobalIdx;
+                }
                 const arg_obj = c.PyList_GetItem(args, 0);
                 const arg = try walkExpr(arg_obj, irBuilder, null, alloc);
 
@@ -2168,6 +2171,7 @@ fn getBinOp(expr: *PyObject) !BinOp {
     if (std.mem.eql(u8, name, "Sub")) return .sub;
     if (std.mem.eql(u8, name, "Mult")) return .mul;
     if (std.mem.eql(u8, name, "Div")) return .div;
+    if (std.mem.eql(u8, name, "FloorDiv")) return .floor_div;
     if (std.mem.eql(u8, name, "Mod")) return .mod;
     if (std.mem.eql(u8, name, "LShift")) return .lshift;
     if (std.mem.eql(u8, name, "RShift")) return .rshift;
