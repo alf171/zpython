@@ -217,6 +217,14 @@ pub const BinOp = enum {
             else => return error.CantFindBuiltin,
         };
     }
+
+    pub fn isCommutative(self: @This()) bool {
+        return switch (self) {
+            .add, .mul => true,
+            .sub, .div, .floor_div, .mod, .lshift, .rshift, .matmul => false,
+            else => unreachable,
+        };
+    }
 };
 
 pub const UnaryOp = enum { neg, exp2 };

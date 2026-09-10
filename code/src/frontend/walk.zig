@@ -1134,7 +1134,14 @@ fn walkNamedCall(
                 const rhs_obj = c.PyList_GetItem(args, 1);
                 const rhs = try walkExpr(rhs_obj, irBuilder, lhs.type, alloc);
 
-                std.debug.assert(lhs.type.equal(rhs.type));
+                if (!lhs.type.equal(rhs.type)) {
+                    const lhs_type_str = try lhs.type.toString(alloc);
+                    defer alloc.free(lhs_type_str);
+                    const rhs_type_str = try rhs.type.toString(alloc);
+                    defer alloc.free(rhs_type_str);
+                    std.debug.print("lhs type ({s}) and rhs type ({s}) do not match\n", .{ lhs_type_str, rhs_type_str });
+                    return error.MatchTypesDontMatch;
+                }
 
                 const compare: TypedOperand = .{
                     .operand = irBuilder.nextTemp(),

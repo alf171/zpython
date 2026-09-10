@@ -65,3 +65,22 @@ def sum_rows[U](out: list[U], a: list[U], cols: i32, row_stride: i32, col_stride
 
     out[row] = total
 
+@gpu
+def max_cols[U](out: list[U], a: list[U], rows: i32, row_stride: i32, col_stride: i32) -> None:
+    col = global_id(0)
+    best: U = a[index_2d(0, col, row_stride, col_stride)]
+
+    for row in range(1, rows):
+        best = max(best, a[index_2d(row, col, row_stride, col_stride)])
+
+    out[col] = best
+
+@gpu
+def max_rows[U](out: list[U], a: list[U], cols: i32, row_stride: i32, col_stride: i32) -> None:
+    row = global_id(0)
+    best: U = a[index_2d(row, 0, row_stride, col_stride)]
+
+    for col in range(1, cols):
+        best = max(best, a[index_2d(row, col, row_stride, col_stride)])
+
+    out[row] = best

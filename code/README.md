@@ -64,7 +64,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [x] Tensor * scalar (div too)?
   - [x] transpose
   - [x] exp
-  - [ ] sum/max (axis=1, keepdim=True)
+  - [1/2] sum/max (axis=1, keepdim=True)
   - [x] broadcasting
   - [ ] reject invalid broadcast shapes
   ```python

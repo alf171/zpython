@@ -163,7 +163,6 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
     }
 
     var new_graph = try ColoredGraph.init(input, allocator);
-    // TODO: run tiny pass coloring all nodes which have a spec_reg
 
     // TODO: consider presizing stack since we have some knowledge at runtime
     var select = std.array_list.Managed(Operand).init(allocator);

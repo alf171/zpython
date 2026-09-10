@@ -7,6 +7,8 @@ from kernels import relu as _relu_gpu
 from kernels import exp as _exp_gpu
 from kernels import sum_rows as _sum_rows_gpu
 from kernels import sum_cols as _sum_cols_gpu
+from kernels import max_rows as _max_rows_gpu
+from kernels import max_cols as _max_cols_gpu
 
 class Tensor[T]:
     def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:
@@ -107,6 +109,16 @@ class Tensor[T]:
         else:
             out = Tensor.fill((self.rows, 1), zero)
             _sum_rows_gpu(out.data, self.data, self.cols, self.row_stride, self.col_stride, (self.rows, 1, 1))
+        return out
+
+    def max(self, axis: i32) -> Tensor[T]:
+        zero: T = 0
+        if axis == 0:
+            out = Tensor.fill((1, self.cols), zero)
+            _max_cols_gpu(out.data, self.data, self.rows, self.row_stride, self.col_stride, (self.cols, 1, 1))
+        else:
+            out = Tensor.fill((self.rows, 1), zero)
+            _max_rows_gpu(out.data, self.data, self.cols, self.row_stride, self.col_stride, (self.rows, 1, 1))
         return out
 
     def print(self) -> None:
