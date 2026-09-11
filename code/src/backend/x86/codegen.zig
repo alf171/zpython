@@ -475,7 +475,7 @@ fn emitFunction(
                                         .i32 => {
                                             try out.print(alloc, "\tmovslq (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
-                                        .bool => {
+                                        .bool, .char => {
                                             try out.print(alloc, "\tmovzbq (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
                                         else => |e| {

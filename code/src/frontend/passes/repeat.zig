@@ -30,7 +30,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     const elem_type = try lr.dst.type.getElementType();
                     const list_length_temp: TypedOperand = .{
                         .operand = function.nextTemp(),
-                        .type = .i64,
+                        .type = try lr.count.type.clone(alloc),
                     };
                     try new_instructions.append(alloc, .{
                         .len = .{
@@ -41,7 +41,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     // byte_count = 8 + elem_size * list_length * repeat_count
                     const repeat_list_count: TypedOperand = .{
                         .operand = function.nextTemp(),
-                        .type = .i64,
+                        .type = try lr.count.type.clone(alloc),
                     };
                     // repeat_list_size = list_length * repeat_count
                     try new_instructions.append(alloc, .{ .lir = .{

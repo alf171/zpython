@@ -401,7 +401,7 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
             const lhs = try walkExpr(left, irBuilder, lhs_expected_type, alloc);
             const rhs = try walkExpr(right, irBuilder, null, alloc);
 
-            if (lhs.type == .list and rhs.type == .i64) {
+            if (lhs.type == .list and (rhs.type == .i64 or rhs.type == .i32)) {
                 // list_repeat owns clones of both operands, so release these
                 // expression temporaries after building the instruction.
                 defer lhs.deinit(alloc);
@@ -1255,7 +1255,9 @@ fn walkNamedCall(
     const direct_callee = if (irBuilder.findImportedFunction(name_slice)) |imported|
         irBuilder.getModuleFunction(imported.id, imported.function_name)
     else
-        irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice);
+        // in the scenario of a conflict, we want to prefer our module over runtime
+        irBuilder.getModuleFunction(irBuilder.current_module_id, name_slice) orelse
+            irBuilder.findFunction(name_slice);
 
     if (direct_callee) |function| {
         const expected_count = function.params.len + @intFromBool(function.kind == .gpu_kernel);
@@ -1844,6 +1846,10 @@ pub fn walkFuncDef(stmt: *PyObject, irBuilder: *IrBuilder, class_id: ?ClassId, a
     std.debug.assert(args_obj != null);
     const args_list = c.PyObject_GetAttrString(args_obj, "args");
     std.debug.assert(args_list != null);
+    // std.debug.print(
+    //     "walk function {s} from module {s}\n",
+    //     .{ func_name, irBuilder.current_module_name },
+    // );
 
     const is_static = try hasDecorator(stmt, "staticmethod");
     // type params (generics)

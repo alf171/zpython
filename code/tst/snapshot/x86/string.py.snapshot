@@ -1,0 +1,28 @@
+running program: (OPTIM=true)
+
+x = "foo"
+y = "bar"
+z = string_concat(x, y)
+print(z)
+
+performance report: (ORIGIN=user)
+number of asm lines: 74
+mov count: 49
+memory load count: 0
+memory store count: 0
+branch count: 2
+call count: 6
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 772
+mov count: 364
+memory load count: 0
+memory store count: 0
+branch count: 75
+call count: 31
+spill count: 6
+
+actual output:
+foobar
+[!!memory report!!]: allocs=5 frees=5 allocated_bytes=58 freed_bytes=58
