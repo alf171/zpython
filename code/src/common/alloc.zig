@@ -217,6 +217,32 @@ pub const Operand = union(enum) {
             .reg, .unknown => self,
         };
     }
+
+    /// check if self.id < other.id
+    pub fn lessThan(self: @This(), other: @This()) bool {
+        // assume we are dealing with same types for now
+        return switch (self) {
+            .temp => |self_temp| {
+                const other_temp = other.temp;
+                if (self_temp.function_id != other_temp.function_id) {
+                    return self_temp.function_id < other_temp.function_id;
+                }
+                return self_temp.id < other_temp.id;
+            },
+            .mem => |self_mem| {
+                const other_mem = other.mem;
+                if (self_mem.function_id != other_mem.function_id) {
+                    return self_mem.function_id < other_mem.function_id;
+                }
+                return self_mem.id < other_mem.id;
+            },
+            .reg => |self_reg| {
+                const other_reg = other.reg;
+                return self_reg.id < other_reg.id;
+            },
+            .unknown => unreachable,
+        };
+    }
 };
 
 pub const TypedOperand = struct {

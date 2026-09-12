@@ -15,7 +15,20 @@ pub fn run(graph: *igraph.IGraph, register_file: RegisterFile, alloc: std.mem.Al
     }
 }
 
-fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile, alloc: std.mem.Allocator) !?struct { nodeA: Operand, nodeB: Operand } {
+pub const MergePair = struct {
+    nodeA: Operand,
+    nodeB: Operand,
+
+    pub fn pairLess(self: @This(), other: @This()) bool {
+        if (self.nodeA.lessThan(other.nodeA)) return true;
+        if (other.nodeA.lessThan(self.nodeA)) return false;
+        return self.nodeB.lessThan(other.nodeB);
+    }
+};
+
+// deterministic for merges using lowest id
+fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile, alloc: std.mem.Allocator) !?MergePair {
+    var best: ?MergePair = null;
     var node_it = graph.nodes.valueIterator();
     while (node_it.next()) |node| {
         var move_it = node.moves.keyIterator();
@@ -30,11 +43,14 @@ fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile, all
             }
 
             if (try canCoalesce(graph, node.*, move_node, register_file, alloc)) {
-                return .{ .nodeA = node.val, .nodeB = move_id.* };
+                const canidate: MergePair = .{ .nodeA = node.val, .nodeB = move_id.* };
+                if (best == null or canidate.pairLess(best.?)) {
+                    best = canidate;
+                }
             }
         }
     }
-    return null;
+    return best;
 }
 
 // https://en.wikipedia.org/wiki/Register_allocation

@@ -136,12 +136,10 @@ const ColorGraphAttempt = union(enum) { graph: ColoredGraph, spill_register: Ope
 /// at what layer of abstraction should we do all of this is still being decided
 pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: Allocator) !ColorGraphAttempt {
     // things to keep track of
-    var simplify = Set(Operand).init(allocator);
-    var spill = Set(Operand).init(allocator);
-    defer {
-        simplify.deinit();
-        spill.deinit();
-    }
+    var simplify: Set(Operand) = .init(allocator);
+    defer simplify.deinit();
+    var spill: Set(Operand) = .init(allocator);
+    defer spill.deinit();
 
     // phase 1, build simplify and spill
     {
@@ -317,15 +315,18 @@ fn takeNodeWithCheapestSpill(
 }
 
 /// remove a node from map and return it to the caller
-/// this fun is not fun is not deterministic
+/// this fun is deterministic
 fn takeAny(s: *std.AutoHashMap(Operand, void)) !Operand {
+    var best: ?Operand = null;
     var it = s.keyIterator();
-    if (it.next()) |p| {
-        const id = p.*;
-        _ = s.remove(id);
-        return id;
+    if (it.next()) |candidate| {
+        if (best == null or candidate.*.lessThan(best.?)) {
+            best = candidate.*;
+        }
     }
-    return error.IllegalGraph;
+    const selected = best orelse return error.IllegalGraph;
+    _ = s.remove(selected);
+    return selected;
 }
 
 // take a node. determininstically find lowest reg available
