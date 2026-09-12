@@ -41,7 +41,7 @@ const LoopCarry = @import("loop.zig").LoopCarry;
 
 const PyObject = c.PyObject;
 
-const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, Unknown };
+const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Unknown };
 
 const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp, Exp2, Type };
 
@@ -886,6 +886,61 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
                 },
                 else => return error.NotImpl,
             }
+        },
+        // JoinedStr(values=[FormattedValue(value=Attribute(value=Name(id='self', ctx=Load()), attr='name', ctx=Load()), conversion=-1), Constant(value=' says '), FormattedValue(value=Attribute(value=Name(id='self', ctx=Load()), attr='sounds', ctx=Load()), conversion=-1)])
+        .FString => {
+            const values = c.PyObject_GetAttrString(stmt, "values");
+            std.debug.assert(values != null);
+            var result: ?TypedOperand = null;
+            for (0..@intCast(c.PyList_Size(values))) |i| {
+                const value_obj = c.PyList_GetItem(values, @intCast(i));
+                std.debug.assert(value_obj != null);
+                const value = if (std.mem.eql(u8, getPyType(value_obj), "FormattedValue")) blk: {
+                    const inner_value_obj = c.PyObject_GetAttrString(value_obj, "value");
+                    std.debug.assert(inner_value_obj != null);
+                    const val = try walkExpr(inner_value_obj, irBuilder, null, alloc);
+                    break :blk val;
+                } else blk: {
+                    break :blk try walkExpr(value_obj, irBuilder, null, alloc);
+                };
+                if (result) |lhs| {
+                    const dst: TypedOperand = .{
+                        .operand = irBuilder.nextTemp(),
+                        .type = try lhs.type.clone(alloc),
+                    };
+                    const args = try alloc.alloc(TypedOperand, 2);
+                    args[0] = lhs;
+                    args[1] = value;
+                    errdefer {
+                        lhs.deinit(alloc);
+                        value.deinit(alloc);
+                        alloc.free(args);
+                    }
+                    try irBuilder.emit(.{ .function_call = .{
+                        .dst = try dst.clone(alloc),
+                        .callee = .{ .direct = try alloc.dupe(u8, "string_concat") },
+                        .args = args,
+                    } }, alloc);
+                    result = dst;
+                } else {
+                    result = value;
+                }
+            }
+            return result orelse blk: {
+                const string = try makeStringLiteral("", alloc);
+                const composite = string.composite;
+
+                const dst: TypedOperand = .{
+                    .operand = irBuilder.nextTemp(),
+                    .type = composite.type,
+                };
+
+                try irBuilder.emit(.{ .list_literal = .{
+                    .dst = dst,
+                    .elements = composite.elements,
+                } }, alloc);
+                break :blk try dst.clone(alloc);
+            };
         },
         .Unknown => {
             const name = getPyType(stmt);
@@ -2238,6 +2293,7 @@ fn getExprKind(stmt: *PyObject) ExprKind {
     if (std.mem.eql(u8, name, "IfExp")) return .IfExp;
     if (std.mem.eql(u8, name, "Attribute")) return .Attribute;
     if (std.mem.eql(u8, name, "BoolOp")) return .BoolOp;
+    if (std.mem.eql(u8, name, "JoinedStr")) return .FString;
     return .Unknown;
 }
 

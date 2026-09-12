@@ -3,3 +3,4 @@ y = "bar"
 # FIXME: should become x + y?
 z = string_concat(x, y)
 print(z)
+print(f"fstring print: {x} {y}")
