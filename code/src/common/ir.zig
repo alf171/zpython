@@ -119,16 +119,18 @@ pub const ClassInfo = struct {
     type_params: []TypeParam,
     fields: ArrayList(Field),
     methods: ArrayList(Method),
+    base_class: ?ClassId,
     // size to create an instance of this class
     size: usize,
 
-    pub fn init(id: ClassId, name: []const u8, type_params: []TypeParam, alloc: std.mem.Allocator) !@This() {
+    pub fn init(id: ClassId, name: []const u8, type_params: []TypeParam, base_class: ?ClassId, alloc: std.mem.Allocator) !@This() {
         return .{
             .id = id,
             .name = try alloc.dupe(u8, name),
             .type_params = type_params,
             .fields = .empty,
             .methods = .empty,
+            .base_class = base_class,
             .size = 0,
         };
     }

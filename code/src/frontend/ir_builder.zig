@@ -28,6 +28,7 @@ pub const IrBuilder = struct {
     program: Program,
     current_block: BlockId,
     current_function: ?usize,
+    current_class: ?ClassId,
     // name -> LocalId
     locals_by_name: std.StringHashMap(LocalId),
     // LocalId -> TypedOperand
@@ -48,6 +49,7 @@ pub const IrBuilder = struct {
             .program = program,
             .current_function = null,
             .current_block = 0,
+            .current_class = null,
             .locals_by_name = std.StringHashMap(LocalId).init(alloc),
             .local_values = LocalValues.init(alloc),
             .locals = .empty,

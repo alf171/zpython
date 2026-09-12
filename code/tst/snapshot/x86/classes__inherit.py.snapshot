@@ -1,0 +1,43 @@
+running program: (OPTIM=true)
+
+class Animal:
+    def __init__(self, name: str, sound: str) -> None:
+        self.name = name
+        self.sound = sound
+
+    def speak(self) -> None:
+        print(f"{self.name} says {self.sound}")
+
+class Dog(Animal):
+    def __init__(self, name: str) -> None:
+        super().__init__(name, "woof")
+
+    def speak(self) -> None:
+        print("dog: ", end="")
+        super().speak()
+
+
+dog = Dog("remy")
+dog.speak()
+
+performance report: (ORIGIN=user)
+number of asm lines: 252
+mov count: 137
+memory load count: 0
+memory store count: 0
+branch count: 14
+call count: 16
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 773
+mov count: 365
+memory load count: 0
+memory store count: 0
+branch count: 75
+call count: 31
+spill count: 6
+
+actual output:
+dog: remy says woof
+[!!memory report!!]: allocs=11 frees=11 allocated_bytes=150 freed_bytes=150

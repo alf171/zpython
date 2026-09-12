@@ -117,9 +117,33 @@ fn walkClassDef(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator
     const id: ClassId = irBuilder.nextClassIdx();
     const class_type_params = try parseTypeParams(stmt, 0, alloc);
 
+    const bases_obj = c.PyObject_GetAttrString(stmt, "bases");
+    std.debug.assert(bases_obj != null);
+    const base_count = c.PyList_Size(bases_obj);
+    if (base_count > 1) return error.MultipleInheritanceNotSupported;
+    const base_class_id: ?ClassId = if (base_count == 0)
+        null
+    else blk: {
+        const base_obj = c.PyList_GetItem(bases_obj, 0);
+        std.debug.assert(base_obj != null);
+        const id_obj = c.PyObject_GetAttrString(base_obj, "id");
+        std.debug.assert(id_obj != null);
+        const base_raw_name = c.PyUnicode_AsUTF8(id_obj);
+        std.debug.assert(base_raw_name != null);
+        const base_name = std.mem.span(base_raw_name);
+        const base_class = irBuilder.findClass(base_name) orelse {
+            std.debug.print("cant find base class {s}\n", .{base_name});
+            return error.InvalidBaseClass;
+        };
+        break :blk base_class.id;
+    };
+    var class_info = try ClassInfo.init(id, name, class_type_params, base_class_id, alloc);
+    if (class_info.base_class) |base| {
+        class_info.size = irBuilder.getClass(base).size;
+    }
     try irBuilder.program.classes.append(
         alloc,
-        try ClassInfo.init(id, name, class_type_params, alloc),
+        class_info,
     );
     const body_objs = c.PyObject_GetAttrString(stmt, "body");
     std.debug.assert(body_objs != null);
@@ -817,13 +841,13 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
             const value = c.PyObject_GetAttrString(stmt, "value");
             std.debug.assert(value != null);
             const instance_expr = try walkExpr(value, irBuilder, null, alloc);
+            errdefer instance_expr.deinit(alloc);
             const instance = switch (instance_expr.type) {
                 .instance => |id| id,
                 else => {
                     const got = try instance_expr.type.toString(alloc);
                     defer alloc.free(got);
                     std.debug.print("attribute must be an instance; got {s}\n", .{got});
-                    instance_expr.deinit(alloc);
                     return error.UnexpectedType;
                 },
             };
@@ -892,6 +916,9 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
             const values = c.PyObject_GetAttrString(stmt, "values");
             std.debug.assert(values != null);
             var result: ?TypedOperand = null;
+            errdefer {
+                if (result) |value| value.deinit(alloc);
+            }
             for (0..@intCast(c.PyList_Size(values))) |i| {
                 const value_obj = c.PyList_GetItem(values, @intCast(i));
                 std.debug.assert(value_obj != null);
@@ -1426,12 +1453,55 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, irBuilder: *IrBuilder, alloc
 
     var self: ?TypedOperand = null;
     const method = blk: {
-        if (std.mem.eql(u8, getPyType(instance_obj), "Name")) {
+        // super().method
+        if (std.mem.eql(u8, getPyType(instance_obj), "Call")) {
+            const super_func_obj = c.PyObject_GetAttrString(instance_obj, "func");
+            std.debug.assert(super_func_obj != null);
+            if (std.mem.eql(u8, getPyType(super_func_obj), "Name")) {
+                const id_obj = PyObject.GetAttrString(super_func_obj, "id");
+                std.debug.assert(id_obj != null);
+                const raw_name = c.PyUnicode_AsUTF8(id_obj);
+                std.debug.assert(raw_name != null);
+                const name = std.mem.span(raw_name);
+                if (std.mem.eql(u8, name, "super")) {
+                    const super_args = c.PyObject_GetAttrString(instance_obj, "args");
+                    std.debug.assert(super_args != null);
+                    if (c.PyList_Size(super_args) != 0) {
+                        std.debug.print("super must have 0 args but found\n", .{});
+                        return error.InvalidSuperCall;
+                    }
+                    const current_class = irBuilder.current_class orelse {
+                        return error.CurrentClassNotSet;
+                    };
+                    const base_class_id = irBuilder.getClass(current_class).base_class orelse {
+                        return error.CurrentClassMissingBase;
+                    };
+                    const base_class = irBuilder.getClass(base_class_id);
+                    const method_info = base_class.findMethod(method_name) orelse {
+                        return error.CantFindMethod;
+                    };
+                    if (method_info.is_static) return error.ExpectedInstance;
+                    const method = irBuilder.getFunction(method_info.function_id) orelse {
+                        return error.CantFindFunction;
+                    };
+                    // establish self
+                    const self_name = irBuilder.currentFunction().params[0].name;
+                    const self_id = try irBuilder.getLocal(self_name);
+                    const self_value = irBuilder.local_values.get(self_id) orelse {
+                        return error.CantFindSelf;
+                    };
+                    self = try self_value.clone(alloc);
+
+                    break :blk method;
+                }
+            }
+        } else if (std.mem.eql(u8, getPyType(instance_obj), "Name")) {
             const id_obj = PyObject.GetAttrString(instance_obj, "id");
             std.debug.assert(id_obj != null);
             const raw_name = c.PyUnicode_AsUTF8(id_obj);
             std.debug.assert(raw_name != null);
-            if (irBuilder.findClass(std.mem.span(raw_name))) |class| {
+            const name = std.mem.span(raw_name);
+            if (irBuilder.findClass(name)) |class| {
                 const method_info = class.findMethod(method_name) orelse {
                     return error.CantFindMethod;
                 };
@@ -1891,6 +1961,10 @@ pub fn walkFor(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator)
 
 // FunctionDef(name='foobar', args=arguments(args=[arg(arg='x'), arg(arg='y')]), body=[Expr(value=Call(func=Name(id='print', ctx=Load()), args=[Name(id='x', ctx=Load())])), Expr(value=Call(func=Name(id='print', ctx=Load()), args=[Name(id='y', ctx=Load())])), Return(value=BinOp(left=Name(id='x', ctx=Load()), op=Add(), right=Name(id='y', ctx=Load())))])
 pub fn walkFuncDef(stmt: *PyObject, irBuilder: *IrBuilder, class_id: ?ClassId, alloc: std.mem.Allocator) anyerror!void {
+    // set and restore current class
+    const saved_class = irBuilder.current_class;
+    irBuilder.current_class = class_id;
+    defer irBuilder.current_class = saved_class;
     // start walking function
     const func_name_obj = c.PyObject_GetAttrString(stmt, "name");
     std.debug.assert(func_name_obj != null);
