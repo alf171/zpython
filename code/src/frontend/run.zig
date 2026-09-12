@@ -33,7 +33,8 @@ pub fn walkAstWithRuntime(
 
     // load modules (user + runtime)
     var graph = try module.loadGraph(user_file_name, .{
-        .module_root = ".",
+        .module_root = std.fs.path.dirname(user_file_name) orelse ".",
+        .runtime_root = "src/runtime",
         .std_lib_enabled = std_lib_enabled,
     }, io, alloc);
     defer graph.deinit(alloc);

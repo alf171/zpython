@@ -13,6 +13,7 @@ const FunctionType = @import("common").ir.FunctionType;
 
 pub const LoadOptions = struct {
     module_root: []const u8,
+    runtime_root: []const u8,
     std_lib_enabled: bool,
 };
 
@@ -133,10 +134,10 @@ pub fn loadGraph(
 
     // walk runtime
     if (options.std_lib_enabled) {
-        try builder.loadRuntime(io, alloc);
+        try builder.loadRuntime(options.runtime_root, io, alloc);
     }
 
-    const id = try loadModule(&builder, entry_path, .user, io, alloc);
+    const id = try loadModule(&builder, entry_path, options.module_root, .user, io, alloc);
     const imports = try alloc.alloc([]ImportEdge, builder.imports.items.len);
     for (builder.imports.items, 0..) |*module_imports, i| {
         imports[i] = try module_imports.toOwnedSlice(alloc);
@@ -164,6 +165,7 @@ pub fn loadGraph(
 pub fn loadModule(
     builder: *ModuleBuilder,
     path: []const u8,
+    import_root: []const u8,
     origin: FunctionType,
     io: std.Io,
     alloc: std.mem.Allocator,
@@ -201,11 +203,10 @@ pub fn loadModule(
                     std.debug.assert(name != null);
                     const name_slice = std.mem.span(name);
 
-                    const imported_dir = std.fs.path.dirname(path) orelse ".";
-                    const imported_path = try std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ imported_dir, name_slice });
+                    const imported_path = try resolveImportPath(import_root, name_slice, alloc);
                     defer alloc.free(imported_path);
                     // recursively build imports module
-                    const import_id = try loadModule(builder, imported_path, origin, io, alloc);
+                    const import_id = try loadModule(builder, imported_path, import_root, origin, io, alloc);
                     try builder.addDependency(id, import_id, alloc);
                     try builder.addModuleImport(id, import_id, name_slice, alloc);
                 }
@@ -235,11 +236,10 @@ pub fn loadModule(
                         std.debug.assert(raw_alias != null);
                         break :blk std.mem.span(raw_alias);
                     };
-
-                    const imported_dir = std.fs.path.dirname(path) orelse ".";
-                    const imported_path = try std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ imported_dir, module_name });
+                    const imported_path = try resolveImportPath(import_root, module_name, alloc);
                     defer alloc.free(imported_path);
-                    const import_id = try loadModule(builder, imported_path, origin, io, alloc);
+                    const import_id = try loadModule(builder, imported_path, import_root, origin, io, alloc);
+
                     try builder.addDependency(id, import_id, alloc);
                     try builder.addFunctionImport(id, import_id, func_name, alias, alloc);
                 }
@@ -249,4 +249,15 @@ pub fn loadModule(
     }
     builder.modules_by_path.getPtr(path).?.state = .loaded;
     return id;
+}
+
+/// normalize from python syntax to os file path
+fn resolveImportPath(import_root: []const u8, module_name: []const u8, alloc: std.mem.Allocator) ![]const u8 {
+    const module_path = try alloc.dupe(u8, module_name);
+    defer alloc.free(module_path);
+    for (module_path) |*char| {
+        if (char.* == '.') char.* = '/';
+    }
+
+    return std.fmt.allocPrint(alloc, "{s}/{s}.py", .{ import_root, module_path });
 }

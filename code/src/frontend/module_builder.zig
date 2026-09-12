@@ -120,19 +120,19 @@ pub const ModuleBuilder = struct {
         } });
     }
 
-    pub fn loadRuntime(self: *@This(), io: std.Io, alloc: std.mem.Allocator) !void {
-        const dir = try std.Io.Dir.cwd().openDir(io, "src/runtime", .{ .iterate = true });
+    pub fn loadRuntime(self: *@This(), root_path: []const u8, io: std.Io, alloc: std.mem.Allocator) !void {
+        const dir = try std.Io.Dir.cwd().openDir(io, root_path, .{ .iterate = true });
         defer dir.close(io);
 
         var walker = try dir.walk(alloc);
         defer walker.deinit();
 
         while (try walker.next(io)) |entry| {
-            std.debug.assert(entry.kind == .file);
+            if (entry.kind != .file) continue;
             // std.debug.print("check {s}\n", .{entry.path});
-            const path = try std.fs.path.join(alloc, &.{ "src/runtime", entry.path });
+            const path = try std.fs.path.join(alloc, &.{ root_path, entry.path });
             defer alloc.free(path);
-            _ = try loadModule(self, path, .runtime, io, alloc);
+            _ = try loadModule(self, path, root_path, .runtime, io, alloc);
         }
     }
 };
