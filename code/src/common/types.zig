@@ -275,7 +275,14 @@ pub const TypeInfo = union(enum) {
                         try unify(actual_arg, expected_arg, bindings, alloc);
                     }
                 },
-                else => return error.TypeMistmatch,
+                else => {
+                    const lhs = try self.toString(alloc);
+                    defer alloc.free(lhs);
+                    const rhs = try expected.toString(alloc);
+                    defer alloc.free(rhs);
+                    std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
+                    return error.TypeMistmatch;
+                },
             },
             .tuple => |tuple| switch (expected) {
                 .tuple => |expected_t| {
@@ -356,6 +363,12 @@ pub const TypeInfo = union(enum) {
                 }
                 return c.returns.*.containsGenericVariable();
             },
+            .instance => |i| {
+                for (i.args) |arg| {
+                    if (arg.containsGenericVariable()) return true;
+                }
+                return false;
+            },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;
@@ -409,6 +422,7 @@ pub const TypeInfo = union(enum) {
                 break :blk try out.toOwnedSlice(alloc);
             },
             .type_variable => |tv| try std.fmt.allocPrint(alloc, "T{d}", .{tv}),
+            .instance => |instance| try std.fmt.allocPrint(alloc, "class_{d}", .{instance.class_id}),
             else => |e| {
                 std.debug.print("cannot stringify type {s}\n", .{@tagName(e)});
                 return error.TypeStringNotImpl;

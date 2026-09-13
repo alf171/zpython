@@ -10,6 +10,8 @@ const ModuleBuilder = @import("module_builder.zig").ModuleBuilder;
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
 const walkAstIntoBuilder = @import("walk.zig").walkAstIntoBuilder;
 const FunctionType = @import("common").ir.FunctionType;
+const declareClassesInAst = python.declareClassesInAst;
+const declareFunctionsInAst = python.declareFunctionsInAst;
 
 pub const LoadOptions = struct {
     module_root: []const u8,
@@ -64,6 +66,23 @@ pub const ModuleGraph = struct {
     visited: []bool,
 
     pub fn walkAll(self: *const @This(), ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+        // declare classes
+        for (self.modules) |module| {
+            ir_builder.current_module_id = module.id;
+            ir_builder.current_imports = self.imports[module.id];
+            ir_builder.current_module_name = module.name;
+            ir_builder.function_origin = module.origin;
+            try declareClassesInAst(module.ast, ir_builder, alloc);
+        }
+        // declare functions
+        for (self.modules) |module| {
+            ir_builder.current_module_id = module.id;
+            ir_builder.current_imports = self.imports[module.id];
+            ir_builder.current_module_name = module.name;
+            ir_builder.function_origin = module.origin;
+            try declareFunctionsInAst(module.ast, ir_builder, alloc);
+        }
+        // walk modules
         @memset(self.visited, false);
         for (self.runtime_modules) |module_id| {
             try self.walkModule(module_id, ir_builder, alloc);
@@ -171,9 +190,9 @@ pub fn loadModule(
     alloc: std.mem.Allocator,
 ) !ModuleId {
     if (builder.modules_by_path.get(path)) |status| {
-        if (status.state == .loading) {
-            return error.ImportCycle;
-        }
+        // if (status.state == .loading) {
+        //     return error.ImportCycle;
+        // }
         return status.id;
     }
     const ast = try parseModule(path, io, alloc);
