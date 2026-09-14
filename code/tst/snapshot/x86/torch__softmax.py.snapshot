@@ -1,0 +1,33 @@
+running program: (OPTIM=true)
+
+
+x_data: list[f32] = [1000.0, 999.9, -1000.0, -1001.0]
+
+x = Tensor(x_data, (2,2))
+softmax = Softmax[f32]()
+y = softmax.forward(x)
+y.print()
+y.sum(1).print()
+
+performance report: (ORIGIN=user)
+number of asm lines: 86
+mov count: 50
+memory load count: 0
+memory store count: 0
+branch count: 2
+call count: 10
+spill count: 2
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 2064
+mov count: 1145
+memory load count: 0
+memory store count: 0
+branch count: 140
+call count: 66
+spill count: 11
+
+actual output:
+0.52497 0.47502 0.73105 0.26894 
+1.00000 1.00000 
+[!!memory report!!]: allocs=39 frees=39 allocated_bytes=590 freed_bytes=590

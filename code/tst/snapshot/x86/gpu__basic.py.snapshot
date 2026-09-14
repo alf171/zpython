@@ -10,8 +10,8 @@ kernel(out, (len(out), 1, 1))
 print(out)
 
 performance report: (ORIGIN=user)
-number of asm lines: 93
-mov count: 62
+number of asm lines: 111
+mov count: 80
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -19,11 +19,11 @@ call count: 5
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 772
-mov count: 364
+number of asm lines: 793
+mov count: 365
 memory load count: 0
 memory store count: 0
-branch count: 75
+branch count: 78
 call count: 31
 spill count: 6
 

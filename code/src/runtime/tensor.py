@@ -2,6 +2,7 @@ from indexing import index_2d
 from kernels import add as _add_gpu
 from kernels import sub as _sub_gpu
 from kernels import mul as _mul_gpu
+from kernels import div as _div_gpu
 from kernels import matmul as _matmul_gpu
 from kernels import relu as _relu_gpu
 from kernels import exp as _exp_gpu
@@ -54,19 +55,25 @@ class Tensor[T]:
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
-        _add_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
+        _add_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
-        _sub_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
+        _sub_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __mul__(self, other: Tensor[T]) -> Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
-        _mul_gpu(res.data, self.data, other.data, (self.rows * self.cols, 1, 1))
+        _mul_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __truediv__(self, other: Tensor[T]) -> Tensor[T]:
+        zero: T = 0
+        res = Tensor.fill((self.rows, self.cols), zero)
+        _div_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __matmul__(self, other: Tensor[T]) -> Tensor[T]:

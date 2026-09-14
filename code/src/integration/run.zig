@@ -96,10 +96,10 @@ pub fn main(init: std.process.Init) !void {
     // rewrite layer
     var timer = TimerMetrics.init();
     timer.begin(.frontend_total, io);
-    // lower calls
     try class.lowerCalls(&ir_program, alloc);
+    // classes can contain generics
     try generics.rewrite(&ir_program, alloc);
-    // lower storage
+    // storage depends on generics
     try class.lowerStorage(&ir_program, alloc);
     try inline_.rewrite(&ir_program, alloc);
     try repeat.rewrite(&ir_program, alloc);

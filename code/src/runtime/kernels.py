@@ -1,22 +1,45 @@
+from tensor import Tensor
 from indexing import index_2d
 
 @gpu
-def add[U](out: list[U], a: list[U], b: list[U]) -> None:
-    i = global_id(0)
-    out[i] = a[i] + b[i]
-    return
+def add[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] + b.data[b_i]
 
 @gpu
-def sub[U](out: list[U], a: list[U], b: list[U]) -> None:
-    i = global_id(0)
-    out[i] = a[i] - b[i]
-    return
+def sub[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] - b.data[b_i]
 
 @gpu
-def mul[U](out: list[U], a: list[U], b: list[U]) -> None:
-    i = global_id(0)
-    out[i] = a[i] * b[i]
-    return
+def mul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] * b.data[b_i]
+
+@gpu
+def div[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] / b.data[b_i]
 
 @gpu
 # (i, j) @ (j,k) = (i,k)
