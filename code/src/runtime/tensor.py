@@ -80,23 +80,13 @@ class Tensor[T]:
         zero: T = 0
         # (i, k)
         res = Tensor.fill((self.rows, other.cols), zero)
-        _matmul_gpu(
-            res.data,
-            self.data,
-            other.data,
-            self.cols,
-            other.cols,
-           (self.rows, other.cols, 1)
-        )
+        _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
         return res
 
     def relu(self) -> Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
-        _relu_gpu(
-            res.data,
-            self.data,
-            (self.rows * self.cols, 1, 1)
+        _relu_gpu(res, self, (self.rows, self.cols, 1)
         )
         return res
 
@@ -112,20 +102,20 @@ class Tensor[T]:
         zero: T = 0
         if axis == 0:
             out = Tensor.fill((1, self.cols), zero)
-            _sum_cols_gpu(out.data, self.data, self.rows, self.row_stride, self.col_stride, (self.cols, 1, 1))
+            _sum_cols_gpu(out.data, self, (self.cols, 1, 1))
         else:
             out = Tensor.fill((self.rows, 1), zero)
-            _sum_rows_gpu(out.data, self.data, self.cols, self.row_stride, self.col_stride, (self.rows, 1, 1))
+            _sum_rows_gpu(out.data, self, (self.rows, 1, 1))
         return out
 
     def max(self, axis: i32) -> Tensor[T]:
         zero: T = 0
         if axis == 0:
             out = Tensor.fill((1, self.cols), zero)
-            _max_cols_gpu(out.data, self.data, self.rows, self.row_stride, self.col_stride, (self.cols, 1, 1))
+            _max_cols_gpu(out.data, self, (self.cols, 1, 1))
         else:
             out = Tensor.fill((self.rows, 1), zero)
-            _max_rows_gpu(out.data, self.data, self.cols, self.row_stride, self.col_stride, (self.rows, 1, 1))
+            _max_rows_gpu(out.data, self, (self.rows, 1, 1))
         return out
 
     def print(self) -> None:

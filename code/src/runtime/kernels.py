@@ -43,23 +43,28 @@ def div[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
 
 @gpu
 # (i, j) @ (j,k) = (i,k)
-def matmul[U](out: list[U], a: list[U], b: list[U], J: i32, K: i32) -> None:
+def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     i = global_id(0)
     k = global_id(1)
+
     acc: U = 0
-    for j in range(J):
-        a_i = index_2d(i, j, J, 1)
-        b_i = index_2d(j, k, K, 1) 
-        acc += a[a_i] * b[b_i]
+    for j in range(a.cols):
+        a_i = index_2d(i, j, a.row_stride, a.col_stride)
+        b_i = index_2d(j, k, b.row_stride, b.col_stride) 
+        acc += a.data[a_i] * b.data[b_i]
 
     # (i, k)
-    out[i * K + k] = acc
+    out_i = index_2d(i, k, out.row_stride, out.col_stride)
+    out.data[out_i] = acc
 
 @gpu
-def relu[U](out: list[U], a: list[U]) -> None:
-    i = global_id(0)
+def relu[U](out: Tensor[U], a: Tensor[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
     zero: U = 0
-    out[i] = max(a[i], zero)
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    out.data[out_i] = max(a.data[a_i], zero)
 
 @gpu
 # a bit hacky for rdna3 :)
@@ -69,41 +74,41 @@ def exp[U](out: list[U], a: list[U]) -> None:
     out[i] = exp2(a[i] * log2_e)
 
 @gpu
-def sum_cols[U](out: list[U], a: list[U], rows: i32, row_stride: i32, col_stride: i32) -> None:
+def sum_cols[U](out: list[U], a: Tensor[U]) -> None:
     col = global_id(0)
     total: U = 0
 
-    for row in range(rows):
-        total += a[index_2d(row, col, row_stride, col_stride)]
+    for row in range(a.rows):
+        total += a.data[index_2d(row, col, a.row_stride, a.col_stride)]
 
     out[col] = total
 
 @gpu
-def sum_rows[U](out: list[U], a: list[U], cols: i32, row_stride: i32, col_stride: i32) -> None:
+def sum_rows[U](out: list[U], a: Tensor[U]) -> None:
     row = global_id(0)
     total: U = 0
 
-    for col in range(cols):
-        total += a[index_2d(row, col, row_stride, col_stride)]
+    for col in range(a.cols):
+        total += a.data[index_2d(row, col, a.row_stride, a.col_stride)]
 
     out[row] = total
 
 @gpu
-def max_cols[U](out: list[U], a: list[U], rows: i32, row_stride: i32, col_stride: i32) -> None:
+def max_cols[U](out: list[U], a: Tensor[U]) -> None:
     col = global_id(0)
-    best: U = a[index_2d(0, col, row_stride, col_stride)]
+    best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
 
-    for row in range(1, rows):
-        best = max(best, a[index_2d(row, col, row_stride, col_stride)])
+    for row in range(1, a.rows):
+        best = max(best, a.data[index_2d(row, col, a.row_stride, a.col_stride)])
 
     out[col] = best
 
 @gpu
-def max_rows[U](out: list[U], a: list[U], cols: i32, row_stride: i32, col_stride: i32) -> None:
+def max_rows[U](out: list[U], a: Tensor[U]) -> None:
     row = global_id(0)
-    best: U = a[index_2d(row, 0, row_stride, col_stride)]
+    best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
 
-    for col in range(1, cols):
-        best = max(best, a[index_2d(row, col, row_stride, col_stride)])
+    for col in range(1, a.cols):
+        best = max(best, a.data[index_2d(row, col, a.row_stride, a.col_stride)])
 
     out[row] = best

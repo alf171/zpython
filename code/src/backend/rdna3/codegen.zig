@@ -110,7 +110,7 @@ pub fn emit(
                                     },
                                 },
                                 .top => |top| switch (top.type) {
-                                    .list, .ptr, .i64, .f64 => {
+                                    .list, .ptr, .i64, .f64, .instance => {
                                         const src = try abi.regFor(top.operand, colors);
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         std.debug.assert(dst.width == 2);
@@ -321,7 +321,7 @@ pub fn emit(
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
-                                        .i64 => {
+                                        .i64, .list => {
                                             std.debug.assert(dst.width == 2);
                                             try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
