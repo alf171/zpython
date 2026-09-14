@@ -202,6 +202,7 @@ pub const TypeInfo = union(enum) {
             .i64, .list, .tuple, .ptr, .f64 => 8,
             .i32, .f32 => 4,
             .bool, .char => 1,
+            .type_variable => return error.GenericsNotLoweredProperly,
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 return error.NotImpl;
@@ -245,6 +246,11 @@ pub const TypeInfo = union(enum) {
         const ptr = try alloc.create(TypeInfo);
         ptr.* = self;
         return ptr;
+    }
+
+    pub fn replaceType(self: *TypeInfo, new_type: TypeInfo, alloc: std.mem.Allocator) void {
+        self.deinit(alloc);
+        self.* = new_type;
     }
 
     /// verifies generics logic
@@ -293,7 +299,14 @@ pub const TypeInfo = union(enum) {
                         try unify(t, e, bindings, alloc);
                     }
                 },
-                else => return error.TypeMistmatch,
+                else => {
+                    const lhs = try self.toString(alloc);
+                    defer alloc.free(lhs);
+                    const rhs = try expected.toString(alloc);
+                    defer alloc.free(rhs);
+                    std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
+                    return error.TypeMistmatch;
+                },
             },
             else => {
                 // FIXME: enabling this causing tons of type errors between i64 and i32
@@ -323,6 +336,7 @@ pub const TypeInfo = union(enum) {
                 const elem = try substitute(l.element.*, bindings, alloc);
                 return .{ .list = .{ .element = try elem.toOwnedPointer(alloc) } };
             },
+            // substitutes fields not methods
             .instance => |i| {
                 var args = try alloc.alloc(TypeInfo, i.args.len);
                 var initialized: usize = 0;
@@ -422,7 +436,24 @@ pub const TypeInfo = union(enum) {
                 break :blk try out.toOwnedSlice(alloc);
             },
             .type_variable => |tv| try std.fmt.allocPrint(alloc, "T{d}", .{tv}),
-            .instance => |instance| try std.fmt.allocPrint(alloc, "class_{d}", .{instance.class_id}),
+            .instance => |instance| blk: {
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                try out.appendSlice(alloc, "class_");
+                const class_id = try std.fmt.allocPrint(alloc, "{d}", .{instance.class_id});
+                defer alloc.free(class_id);
+                try out.appendSlice(alloc, class_id);
+                if (instance.args.len > 0) {
+                    try out.appendSlice(alloc, "[");
+                    for (instance.args) |arg| {
+                        const arg_name = try arg.toString(alloc);
+                        defer alloc.free(arg_name);
+                        try out.appendSlice(alloc, arg_name);
+                    }
+                    try out.appendSlice(alloc, "]");
+                }
+                break :blk out.toOwnedSlice(alloc);
+            },
             else => |e| {
                 std.debug.print("cannot stringify type {s}\n", .{@tagName(e)});
                 return error.TypeStringNotImpl;

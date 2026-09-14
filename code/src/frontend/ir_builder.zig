@@ -119,12 +119,7 @@ pub const IrBuilder = struct {
     /// O(function) scan looking for matching name
     /// careful because this is not module aware!
     pub fn findFunction(self: *@This(), name: []const u8) ?*Function {
-        for (self.program.functions.items) |*function| {
-            if (std.mem.eql(u8, function.name, name)) {
-                return function;
-            }
-        }
-        return null;
+        return self.program.findFunction(name);
     }
 
     /// get function from index

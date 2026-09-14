@@ -28,9 +28,9 @@ pub fn emit(
         if (function.kind != .gpu_kernel) {
             continue;
         }
-        try emitKernelHeader(&out, function.name, alloc);
+        try emitKernelHeader(&out, function.label, alloc);
         for (function.blocks.items) |block| {
-            try out.print(alloc, "{s}_L{d}:\n", .{ function.name, block.id });
+            try out.print(alloc, "{s}_L{d}:\n", .{ function.label, block.id });
             for (block.instructions.items) |instruction| {
                 switch (instruction) {
                     .function_param => |fp| {
@@ -187,6 +187,21 @@ pub fn emit(
                                         else => try out.print(alloc, "\tv_sub_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
                                     }
                                 },
+                                .div => {
+                                    // div is not communitiive
+                                    std.debug.assert(src1.reg_type == .vgpr);
+                                    switch (bop.dst.type) {
+                                        .f32 => {
+                                            const reciprocal = try abi.scratchReg(0, 1, .vgpr);
+                                            const reciprocal_reg = try reciprocal.toString(alloc);
+                                            defer alloc.free(reciprocal_reg);
+                                            // x/y => x * 1/y
+                                            try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
+                                            try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
+                                        },
+                                        else => return error.NotImpl,
+                                    }
+                                },
                                 else => |e| {
                                     std.debug.print("cant handle {s}\n", .{@tagName(e)});
                                     return error.NotImpl;
@@ -252,6 +267,15 @@ pub fn emit(
                                                 src.base,
                                             });
                                         },
+                                        .i64 => {
+                                            std.debug.assert(src.width == 2);
+                                            try out.print(alloc, "\tglobal_store_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{
+                                                address.base,
+                                                address.base + 1,
+                                                src.base,
+                                                src.base + 1,
+                                            });
+                                        },
                                         else => |e| {
                                             std.debug.print("cant handle {s}\n", .{@tagName(e)});
                                             return error.NotImpl;
@@ -264,7 +288,20 @@ pub fn emit(
                         .load_offset => |lo| {
                             const dst = try abi.regFor(lo.dst.operand, colors);
                             const offset = switch (lo.offset) {
-                                .constant => return error.NotImpl,
+                                .constant => |constant| blk: {
+                                    const value: i64 = switch (constant) {
+                                        .i64 => |v| v,
+                                        .i32 => |v| v,
+                                        else => return error.InvalidOffsetType,
+                                    };
+                                    const scratch = try abi.scratchReg(0, 2, .vgpr);
+                                    const bits: u64 = @bitCast(value);
+                                    const low: u32 = @truncate(bits);
+                                    const high: u32 = @truncate(bits >> 32);
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base, low });
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base + 1, high });
+                                    break :blk scratch;
+                                },
                                 .top => |top| try abi.regFor(top.operand, colors),
                             };
                             const src = try abi.regFor(lo.src.operand, colors);
@@ -272,15 +309,21 @@ pub fn emit(
                             // dst = *(src + offset)
                             switch (src.reg_type) {
                                 .vgpr => {
+                                    std.debug.assert(src.width == 2);
+                                    std.debug.assert(offset.width == 2);
+                                    std.debug.assert(offset.reg_type == .vgpr);
+                                    const address = try abi.scratchReg(0, 2, .vgpr);
+                                    try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
+                                    try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
                                     switch (lo.dst.type) {
                                         .i32, .f32 => {
-                                            std.debug.assert(offset.reg_type == .vgpr);
                                             std.debug.assert(dst.width == 1);
-                                            std.debug.assert(src.width == 2);
-                                            const address = try abi.scratchReg(0, 2, .vgpr);
-                                            try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
-                                            try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
+                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                        },
+                                        .i64 => {
+                                            std.debug.assert(dst.width == 2);
+                                            try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
                                         else => |e| {
@@ -322,7 +365,7 @@ pub fn emit(
                             }
                         },
                         .jump => |j| {
-                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.name, j.target });
+                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, j.target });
                         },
                         .branch => |b| {
                             const condition = try abi.regFor(b.condition.operand, colors);
@@ -332,8 +375,8 @@ pub fn emit(
                             try out.print(alloc, "\tv_readfirstlane_b32 s{d}, v{d}\n", .{ scalar_scratch.base, condition.base });
                             // sets scc bit
                             try out.print(alloc, "\ts_cmp_lg_u32 s{d}, 0\n", .{scalar_scratch.base});
-                            try out.print(alloc, "\ts_cbranch_scc1 {s}_L{d}\n", .{ function.name, b.then_block });
-                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.name, b.else_block });
+                            try out.print(alloc, "\ts_cbranch_scc1 {s}_L{d}\n", .{ function.label, b.then_block });
+                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, b.else_block });
                         },
                         .compare => |c| {
                             const dst = try abi.regFor(c.dst.operand, colors);
@@ -412,9 +455,9 @@ pub fn emit(
                 }
             }
         }
-        try emitKernelFooter(&out, function.name, alloc);
+        try emitKernelFooter(&out, function.label, alloc);
         const register_usage = try abi.registerUsage(colors);
-        try emitKernelDescriptor(&out, function.name, register_usage, function.params.len, alloc);
+        try emitKernelDescriptor(&out, function.label, register_usage, function.params.len, alloc);
     }
 
     // try createFooter(&out, alloc);

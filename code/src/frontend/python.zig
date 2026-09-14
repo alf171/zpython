@@ -160,10 +160,7 @@ fn declareClass(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
         };
         break :blk base_class.id;
     };
-    var class_info = try ClassInfo.init(id, name, class_type_params, base_class_id, alloc);
-    if (class_info.base_class) |base| {
-        class_info.size = ir_builder.getClass(base).size;
-    }
+    const class_info = try ClassInfo.init(id, name, class_type_params, base_class_id, alloc);
     try ir_builder.program.classes.append(
         alloc,
         class_info,

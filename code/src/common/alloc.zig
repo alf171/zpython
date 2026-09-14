@@ -269,6 +269,10 @@ pub const TypedOperand = struct {
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
         self.type.deinit(alloc);
     }
+
+    pub fn replaceType(self: *@This(), t: TypeInfo, alloc: std.mem.Allocator) void {
+        self.type.replaceType(t, alloc);
+    }
 };
 
 pub const AllocLine = struct {

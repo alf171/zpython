@@ -72,4 +72,14 @@ pub const Program = struct {
             }
         }
     }
+
+    /// O(n) scan for function
+    pub fn findFunction(program: *const Program, function_name: []const u8) ?*Function {
+        for (program.functions.items) |*function| {
+            if (std.mem.eql(u8, function.label, function_name)) {
+                return function;
+            }
+        }
+        return null;
+    }
 };

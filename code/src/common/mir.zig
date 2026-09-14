@@ -123,17 +123,21 @@ pub const Instruction = union(enum) {
         class_id: ClassId,
         args: []TypedOperand,
     },
-    // instance <- *(src + offset)
+    // class pre `__init__` call
+    class_alloc: struct {
+        dst: TypedOperand,
+    },
+    // instance <- src[field_index]
     field_store: struct {
         instance: TypedOperand,
-        offset: usize,
+        field_index: usize,
         src: TypedOperand,
     },
-    // dst <- *(instance + offset)
+    // dst <- instance[field_index]
     field_load: struct {
         dst: TypedOperand,
         instance: TypedOperand,
-        offset: usize,
+        field_index: usize,
     },
     /// gpu method
     gpu_launch: struct {
@@ -266,6 +270,9 @@ pub const Instruction = union(enum) {
             .print => |p| {
                 p.src.deinit(alloc);
                 if (p.end) |*end| end.deinit(alloc);
+            },
+            .class_alloc => |ca| {
+                ca.dst.deinit(alloc);
             },
             .lir => |*lir| lir.deinit(alloc),
             else => {},
@@ -560,6 +567,7 @@ pub const Instruction = union(enum) {
             .field_store => null,
             .field_load => |*fl| .{ .top = &fl.dst },
             .class_init => |*ci| .{ .top = &ci.dst },
+            .class_alloc => |*ca| .{ .top = &ca.dst },
             .lir => |*l| return l.getDefinePtrs(),
             else => |e| {
                 debugPrint("getDefines cant handle {s}\n", .{@tagName(e)});
@@ -671,6 +679,14 @@ pub const Instruction = union(enum) {
                 }
                 try res.append(alloc, .{ .top = &gl.work_items });
             },
+            .field_store => |*fs| {
+                try res.append(alloc, .{ .top = &fs.instance });
+                try res.append(alloc, .{ .top = &fs.src });
+            },
+            .field_load => |*fl| {
+                try res.append(alloc, .{ .top = &fl.instance });
+            },
+            .class_alloc => {},
             .lir => |*l| {
                 var seen = try l.getUsePtrs(alloc);
                 defer seen.deinit(alloc);
@@ -785,6 +801,19 @@ pub const Instruction = union(enum) {
             .global_idx => |gi| .{ .global_idx = .{
                 .dst = try gi.dst.clone(alloc),
                 .axis = try gi.axis.clone(alloc),
+            } },
+            .field_store => |fs| .{ .field_store = .{
+                .instance = try fs.instance.clone(alloc),
+                .field_index = fs.field_index,
+                .src = try fs.src.clone(alloc),
+            } },
+            .field_load => |fl| .{ .field_load = .{
+                .dst = try fl.dst.clone(alloc),
+                .instance = try fl.instance.clone(alloc),
+                .field_index = fl.field_index,
+            } },
+            .class_alloc => |ca| .{ .class_alloc = .{
+                .dst = try ca.dst.clone(alloc),
             } },
             .lir => |*lir| .{
                 .lir = try lir.clone(alloc),

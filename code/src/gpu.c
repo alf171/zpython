@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include "gpu_layout.h"
 
 typedef struct {
   uint32_t x;
@@ -153,13 +154,40 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   check(hsa_memory_allocate(kernel_region, arg_count * sizeof(*kernel_args), (void **)&kernel_args), "hsa_memory_allocate");
   void **gpu_ptrs = calloc(arg_count, sizeof(*gpu_ptrs));
   for (uint64_t i = 0; i < arg_count; i++) {
-    uint64_t byte_count = arg_slots[2 * i + 1];
+    fprintf(
+      stderr,
+      "arg[%lu] value=%#lx bytes=%lu layout=%#lx\n",
+      i,
+      arg_slots[3 * i],
+      arg_slots[3 * i + 1],
+      arg_slots[3 * i + 2]
+    );
+    uint64_t byte_count = arg_slots[3 * i + 1];
+    const GpuInstanceLayout *layout = (const GpuInstanceLayout *)(uintptr_t)arg_slots[3 * i + 2];
     if (byte_count != 0) {
-      void *host_ptr = (void *)arg_slots[2 * i];
+      void *host_ptr = (void *)arg_slots[3 * i];
+      if (layout != NULL) {
+        for (uint64_t j = 0; j < layout->list_field_count; j++) {
+          const GpuListField *field = &layout->list_fields[j];
+          void *list_host;
+          memcpy(
+            &list_host,
+            (const unsigned char *)host_ptr + field->offset,
+            sizeof(list_host)
+          );
+          uint64_t count;
+          memcpy(&count, list_host, sizeof(count));
+
+          size_t bytes = sizeof(count) + count * field->element_size;
+          void *list_device;
+          check(hsa_amd_memory_lock(list_host, bytes, &gpu, 1, &list_device), "hsa_amd_memory_lock");
+          fprintf(stderr, "list host=%p device=%p\n", list_host, list_device);
+        }
+      }
       check(hsa_amd_memory_lock(host_ptr, byte_count, &gpu, 1, &gpu_ptrs[i]), "hsa_amd_memory_lock");
       kernel_args[i] = (uint64_t)gpu_ptrs[i];
     } else {
-      kernel_args[i] = arg_slots[2*i];
+      kernel_args[i] = arg_slots[3*i];
     }
   }
 
@@ -208,8 +236,11 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
            HSA_WAIT_STATE_BLOCKED);
   
   for (uint64_t i = 0; i < arg_count; i++) {
-    void *host_ptr = (void *)arg_slots[2 * i];
-    check(hsa_amd_memory_unlock(host_ptr), "hsa_amd_memory_unlock");
+    uint64_t byte_count = arg_slots[3 * i + 1];
+    if (byte_count != 0) {
+      void *host_ptr = (void *)arg_slots[3 * i];
+      check(hsa_amd_memory_unlock(host_ptr), "hsa_amd_memory_unlock");
+    }
   }
 
    fprintf(

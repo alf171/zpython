@@ -2,6 +2,7 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 const HashMap = std.HashMap;
 const BasicBlock = @import("common").ir.BasicBlock;
+const ClassId = @import("common").ir.ClassId;
 const Operand = @import("common").alloc.Operand;
 const TypedOperand = @import("common").alloc.TypedOperand;
 const Param = @import("common").ir.Param;
@@ -45,36 +46,24 @@ fn rewriteFunction(
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
                 .function_call => |*fc| {
-                    const callee_name = switch (fc.callee) {
-                        .direct => |name| name,
-                        else => {
-                            try new_instructions.append(alloc, instruction.*);
-                            continue;
+                    switch (fc.callee) {
+                        .direct => |*name| {
+                            try specializeInvocation(
+                                name,
+                                program,
+                                pending,
+                                if (fc.dst) |*dst| dst else null,
+                                fc.args,
+                                function,
+                                alloc,
+                            );
                         },
-                    };
-
-                    if (try specializeCall(callee_name, program, pending, fc.args, alloc)) |specialized| {
-                        if (fc.dst) |*dst| {
-                            dst.type.deinit(alloc);
-                            dst.type = specialized.return_type;
-                            try function.setValueType(dst.operand, dst.type, alloc);
-                        } else {
-                            specialized.return_type.deinit(alloc);
-                        }
-
-                        alloc.free(callee_name);
-                        fc.callee = .{ .direct = specialized.label };
+                        else => {},
                     }
                     try new_instructions.append(alloc, instruction.*);
                 },
-                // TODO: dont share instructions make entire new copies
                 .gpu_launch => |*gl| {
-                    if (try specializeCall(gl.kernel, program, pending, gl.args, alloc)) |specialized| {
-                        // kernels dont use a return type
-                        specialized.return_type.deinit(alloc);
-                        alloc.free(gl.kernel);
-                        gl.kernel = specialized.label;
-                    }
+                    try specializeInvocation(&gl.kernel, program, pending, null, gl.args, function, alloc);
                     try new_instructions.append(alloc, instruction.*);
                 },
                 else => try new_instructions.append(alloc, instruction.*),
@@ -85,17 +74,55 @@ fn rewriteFunction(
     }
 }
 
+fn specializeInvocation(callee_name: *[]const u8, program: *Program, pending: *ArrayList(Function), maybe_dst: ?*TypedOperand, args: []TypedOperand, function: *Function, alloc: std.mem.Allocator) !void {
+    var maybe_specialized = try specializeCall(callee_name.*, program, pending, args, alloc);
+    if (maybe_specialized) |*specialized| {
+        defer specialized.deinit(alloc);
+        if (maybe_dst) |dst| {
+            dst.replaceType(specialized.takeReturnType(), alloc);
+
+            try function.setValueType(dst.operand, dst.type, alloc);
+        }
+
+        alloc.free(callee_name.*);
+        callee_name.* = specialized.takeLabel();
+    }
+}
+
+const SpecializeCall = struct {
+    label: ?[]const u8,
+    return_type: ?TypeInfo,
+
+    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        if (self.label) |label| alloc.free(label);
+        if (self.return_type) |return_type| {
+            return_type.deinit(alloc);
+        }
+
+        self.* = undefined;
+    }
+
+    pub fn takeLabel(self: *@This()) []const u8 {
+        const label = self.label orelse unreachable;
+        self.label = null;
+        return label;
+    }
+
+    pub fn takeReturnType(self: *@This()) TypeInfo {
+        const return_type = self.return_type orelse unreachable;
+        self.return_type = null;
+        return return_type;
+    }
+};
+
 fn specializeCall(
     callee_name: []const u8,
-    program: *const Program,
+    program: *Program,
     pending: *ArrayList(Function),
     args: []const TypedOperand,
     alloc: std.mem.Allocator,
-) !?struct {
-    label: []const u8,
-    return_type: TypeInfo,
-} {
-    const callee = findFunction(program, callee_name) orelse {
+) !?SpecializeCall {
+    const callee = program.findFunction(callee_name) orelse {
         return null;
     };
     // check for generics
@@ -124,7 +151,7 @@ fn specializeCall(
         }
     }
 
-    const specialized_func_name = try createSpecializedFunctionName(
+    const specialized_func_name = try specializeName(
         callee.name,
         callee.type_params,
         &bindings,
@@ -132,12 +159,13 @@ fn specializeCall(
     );
     defer alloc.free(specialized_func_name);
 
-    const return_type = try callee.return_type.substitute(&bindings, alloc);
+    var return_type = try callee.return_type.substitute(&bindings, alloc);
     errdefer return_type.deinit(alloc);
+    // return type can be a generic class also
+    _ = try specializeClassInstance(&return_type, program, alloc);
 
     const specialized_function: *const Function = findFunctionIn(program.functions.items, specialized_func_name) orelse findFunctionIn(pending.items, specialized_func_name) orelse blk: {
-        var specialized = try createSpecializedFunction(
-            callee,
+        var specialized = try callee.specialize(
             specialized_func_name,
             program.functions.items.len + pending.items.len + 1,
             &bindings,
@@ -154,7 +182,68 @@ fn specializeCall(
     };
 }
 
-fn createSpecializedFunctionName(
+fn specializeClassInstance(
+    type_info: *TypeInfo,
+    program: *Program,
+    alloc: std.mem.Allocator,
+) !bool {
+    const instance = switch (type_info.*) {
+        .instance => |instance| instance,
+        else => return false,
+    };
+    if (instance.args.len == 0) return false;
+
+    const specialized_id = try specializeClass(program, instance.class_id, instance.args, alloc);
+    const replacement: TypeInfo = .{ .instance = .{
+        .class_id = specialized_id,
+        .args = try alloc.alloc(TypeInfo, 0),
+    } };
+    type_info.replaceType(replacement, alloc);
+
+    return true;
+}
+
+fn specializeClass(
+    program: *Program,
+    template_id: ClassId,
+    specialized_args: []const TypeInfo,
+    alloc: std.mem.Allocator,
+) !ClassId {
+    const template = &program.classes.items[template_id];
+    // check for generics
+    var bindings: TypeBindings = .init(alloc);
+    defer bindings.deinit(alloc);
+
+    // concrete class doesn't need specialization
+    if (template.type_params.len == 0) {
+        return template_id;
+    }
+
+    if (template.type_params.len != specialized_args.len) {
+        return error.InvalidTypeArgCount;
+    }
+    // Map[T, U] => T.id -> i32, U.id -> f64
+    for (template.type_params, specialized_args) |param, arg| {
+        try bindings.put(param.id, try arg.clone(alloc));
+    }
+
+    const specialized_name = try specializeName(template.name, template.type_params, &bindings, alloc);
+    defer alloc.free(specialized_name);
+    // check if specialization already exists
+    for (program.classes.items) |class| {
+        if (class.template_id != null and class.template_id.? == template_id and std.mem.eql(u8, class.name, specialized_name)) {
+            return class.id;
+        }
+    }
+
+    const specialized_id: ClassId = @intCast(program.classes.items.len);
+    // std.debug.print("specialized {s} as class_{d}\n", .{ specialized_name, specialized_id });
+    const specialized = try template.specialize(specialized_name, specialized_id, &bindings, alloc);
+    try program.classes.append(alloc, specialized);
+    return specialized_id;
+}
+
+fn specializeName(
     base_name: []const u8,
     type_params: []TypeParam,
     bindings: *TypeBindings,
@@ -164,6 +253,7 @@ fn createSpecializedFunctionName(
     errdefer out.deinit(alloc);
 
     try out.appendSlice(alloc, base_name);
+    // Box[M, N] => Box__{typeof(M)}_{typeof(N)}
     try out.appendSlice(alloc, "__");
 
     for (type_params, 0..) |type_param, i| {
@@ -177,78 +267,6 @@ fn createSpecializedFunctionName(
     }
 
     return out.toOwnedSlice(alloc);
-}
-
-/// clones a generic function applying type bindings
-fn createSpecializedFunction(
-    function: *const Function,
-    specialized_name: []const u8,
-    specialized_id: usize,
-    bindings: *TypeBindings,
-    alloc: std.mem.Allocator,
-) !Function {
-    var params = try alloc.alloc(Param, function.params.len);
-    errdefer alloc.free(params);
-
-    for (function.params, 0..) |param, i| {
-        params[i] = .{
-            .name = try alloc.dupe(u8, param.name),
-            .type = try param.type.substitute(bindings, alloc),
-            .default = if (param.default) |d| try d.clone(alloc) else null,
-        };
-    }
-
-    const return_type = try function.return_type.substitute(bindings, alloc);
-
-    var cloned = try Function.init(
-        specialized_name,
-        specialized_id,
-        function.module_id,
-        function.module_name,
-        params,
-        try alloc.alloc(TypeParam, 0),
-        return_type,
-        function.origin,
-        function.kind,
-        function.is_inline,
-        alloc,
-    );
-    errdefer cloned.deinit(alloc);
-
-    // deinit init'd stuff
-    cloned.blocks.items[0].deinit(alloc);
-    cloned.blocks.clearRetainingCapacity();
-
-    for (function.blocks.items) |source| {
-        var block = BasicBlock.init(source.id);
-        errdefer block.deinit(alloc);
-        try block.predecessors.appendSlice(alloc, source.predecessors.items);
-        try block.successors.appendSlice(alloc, source.successors.items);
-
-        for (source.instructions.items) |*source_instruct| {
-            var instruct = try source_instruct.clone(alloc);
-            errdefer instruct.deinit(alloc);
-            try instruct.remapInstruction(specialized_id, bindings, alloc);
-            try block.instructions.append(alloc, instruct);
-        }
-        try cloned.blocks.append(alloc, block);
-    }
-
-    cloned.entry_block = function.entry_block;
-    cloned.next_temp = function.next_temp;
-    cloned.next_mem = function.next_mem;
-
-    return cloned;
-}
-
-// TODO: find somewhere more generic to put this
-fn findFunction(program: *const Program, function_name: []const u8) ?*Function {
-    for (program.functions.items) |*function| {
-        if (std.mem.eql(u8, function.label, function_name)) {
-            return function;
-        }
-    }
-    return null;
 }
 
 fn findFunctionIn(functions: []const Function, function_name: []const u8) ?*const Function {

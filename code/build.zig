@@ -9,6 +9,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    common.addIncludePath(b.path("src"));
 
     const frontend = b.addExecutable(.{
         .name = "frontend",

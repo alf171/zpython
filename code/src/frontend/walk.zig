@@ -135,13 +135,10 @@ fn walkClassDef(stmt: *PyObject, irBuilder: *IrBuilder, alloc: std.mem.Allocator
         };
         break :blk base_class.id;
     };
-    // adjust size and set base class
+    // set base class
     const class = irBuilder.getClass(id);
     class.base_class = base_class_id;
-    class.size = if (base_class_id) |base|
-        irBuilder.getClass(base).size
-    else
-        0;
+
     const body_objs = c.PyObject_GetAttrString(stmt, "body");
     std.debug.assert(body_objs != null);
     for (0..@intCast(c.PyList_Size(body_objs))) |i| {
@@ -327,9 +324,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, irBuilder: *Ir
                 try class.fields.append(alloc, .{
                     .name = try alloc.dupe(u8, field_name),
                     .type = try rhs_value.type.clone(alloc),
-                    .offset = class.size,
                 });
-                class.size += try rhs_value.type.sizeOfType();
                 field = &class.fields.items[class.fields.items.len - 1];
             } else {
                 // reassignemnt scenario
@@ -341,7 +336,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, irBuilder: *Ir
 
             try irBuilder.emit(.{ .field_store = .{
                 .instance = instance_expr,
-                .offset = field.?.offset,
+                .field_index = field_idx orelse (class.fields.items.len - 1),
                 .src = rhs_value,
             } }, alloc);
         },
@@ -848,19 +843,21 @@ pub fn walkExpr(stmt: *PyObject, irBuilder: *IrBuilder, expected_type: ?TypeInfo
 
             const class = irBuilder.getClass(instance.class_id);
             const name = std.mem.span(raw_name);
-            const field = class.findField(name) orelse {
+            const field_index = class.findFieldIdx(name) orelse {
                 std.debug.print("cant find {s}\n", .{name});
                 return error.CantFindField;
             };
+            const field = &class.fields.items[field_index];
+            const resolved_field_type = try class.resolveFieldType(field, instance, alloc);
 
             const dst: TypedOperand = .{
                 .operand = irBuilder.nextTemp(),
-                .type = try field.type.clone(alloc),
+                .type = resolved_field_type,
             };
             try irBuilder.emit(.{ .field_load = .{
                 .dst = dst,
                 .instance = instance_expr,
-                .offset = field.offset,
+                .field_index = field_index,
             } }, alloc);
             return try dst.clone(alloc);
         },

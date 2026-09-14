@@ -12,15 +12,15 @@ const ValueRef = @import("common").ir.ValueRef;
 
 /// inline any functions annotated with @inline
 pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
-    try rewriteFunction(&program.main, &program.functions, alloc);
+    try rewriteFunction(&program.main, program, alloc);
     for (program.functions.items) |*function| {
-        try rewriteFunction(function, &program.functions, alloc);
+        try rewriteFunction(function, program, alloc);
     }
 }
 
 fn rewriteFunction(
     function: *Function,
-    functions: *ArrayList(Function),
+    program: *const Program,
     alloc: std.mem.Allocator,
 ) !void {
     for (function.blocks.items) |*block| {
@@ -38,7 +38,7 @@ fn rewriteFunction(
                         },
                     };
 
-                    const callee = findFunction(functions, function_name) orelse {
+                    const callee = program.findFunction(function_name) orelse {
                         try new_instructions.append(alloc, instruction.*);
                         continue;
                     };
@@ -124,14 +124,4 @@ fn rewriteFunction(
         block.instructions.deinit(alloc);
         block.instructions = new_instructions;
     }
-}
-
-// TODO: modularize this logic
-fn findFunction(functions: *ArrayList(Function), function_name: []const u8) ?*Function {
-    for (functions.items) |*function| {
-        if (std.mem.eql(u8, function.name, function_name)) {
-            return function;
-        }
-    }
-    return null;
 }
