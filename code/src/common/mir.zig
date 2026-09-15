@@ -123,7 +123,7 @@ pub const Instruction = union(enum) {
         class_id: ClassId,
         args: []TypedOperand,
     },
-    // class pre `__init__` call
+    // class pre `malloc` call
     class_alloc: struct {
         dst: TypedOperand,
     },
@@ -749,6 +749,10 @@ pub const Instruction = union(enum) {
                     .src = try ss.src.clone(alloc),
                 },
             },
+            .function_ref => |fr| .{ .function_ref = .{
+                .dst = try fr.dst.clone(alloc),
+                .label = try alloc.dupe(u8, fr.label),
+            } },
             .function_call => |fc| blk: {
                 const new_args = try alloc.alloc(TypedOperand, fc.args.len);
                 for (fc.args, 0..) |arg, i| {

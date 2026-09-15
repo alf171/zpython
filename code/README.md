@@ -72,7 +72,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   assert(self.cols == cols or self.cols == 1)
   ```
   - [x] inheritence && `class Module`
-  - [ ] stable softmax
+  - [x] stable softmax
   - [ ] backwards pass
 3. [Optional] read/write weights to a file
 4. build some models (ideas under)

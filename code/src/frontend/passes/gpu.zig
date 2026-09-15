@@ -297,7 +297,7 @@ fn rewriteFunction(
 
 fn buildGpuArgLayout(type_info: TypeInfo, program: *const Program, alloc: std.mem.Allocator) !GpuArgLayout {
     return switch (type_info) {
-        .i64, .i32 => .{ .scalar = .{ .size = try type_info.sizeOfType() } },
+        .i64, .i32, .callable => .{ .scalar = .{ .size = try type_info.sizeOfType() } },
         .list => |list| .{ .list = .{ .element_size = try list.element.sizeOfType() } },
         .instance => |instance| {
             for (program.classes.items) |class| {
@@ -327,6 +327,9 @@ fn buildGpuArgLayout(type_info: TypeInfo, program: *const Program, alloc: std.me
             }
             return error.CantFindClass;
         },
-        else => return error.NotImpl,
+        else => |e| {
+            std.debug.print("cant handle passing {s} to the gpu\n", .{@tagName(e)});
+            return error.NotImpl;
+        },
     };
 }

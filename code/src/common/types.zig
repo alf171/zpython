@@ -197,9 +197,8 @@ pub const TypeInfo = union(enum) {
 
     pub fn sizeOfType(self: @This()) !usize {
         return switch (self) {
-            // instances are just pointers
-            .instance => 8,
-            .i64, .list, .tuple, .ptr, .f64 => 8,
+            // instances and callables are pointers
+            .i64, .list, .tuple, .ptr, .f64, .instance, .callable => 8,
             .i32, .f32 => 4,
             .bool, .char => 1,
             .type_variable => return error.GenericsNotLoweredProperly,

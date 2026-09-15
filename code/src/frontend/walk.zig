@@ -1977,6 +1977,7 @@ fn walkFuncDef(stmt: *PyObject, irBuilder: *IrBuilder, class_id: ?ClassId, alloc
 
     // set function state
     const declared = irBuilder.getModuleFunction(irBuilder.current_module_id, definition_name) orelse {
+        std.debug.print("cant find function {s}\n", .{definition_name});
         return error.FunctionNotDeclared;
     };
     const saved_type_params = irBuilder.active_param_types;
