@@ -213,11 +213,20 @@ fn emitFunction(
 
                             switch (bop.op) {
                                 .add => {
-                                    const add_inst = if (bop.dst.type == .f64) "addsd" else "addq";
+                                    const add_inst = switch (bop.dst.type) {
+                                        .f64 => "addsd",
+                                        .f32 => "addss",
+                                        else => "addq",
+                                    };
+                                    const mov_inst = switch (bop.dst.type) {
+                                        .f64 => "movsd",
+                                        .f32 => "movss",
+                                        else => "movq",
+                                    };
                                     if (std.mem.eql(u8, dst, rhs)) {
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, lhs, dst });
                                     } else if (!std.mem.eql(u8, dst, lhs)) {
-                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ lhs, dst });
+                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
                                     } else {
                                         try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
