@@ -307,6 +307,25 @@ pub const TypeInfo = union(enum) {
                     return error.TypeMistmatch;
                 },
             },
+            .callable => |callable| switch (expected) {
+                .callable => |expected_c| {
+                    if (callable.params.len != expected_c.params.len) {
+                        return error.TypeMismatch;
+                    }
+                    for (callable.params, expected_c.params) |param, expected_param| {
+                        try param.unify(expected_param, bindings, alloc);
+                    }
+                    try callable.returns.*.unify(expected_c.returns.*, bindings, alloc);
+                },
+                else => {
+                    const lhs = try self.toString(alloc);
+                    defer alloc.free(lhs);
+                    const rhs = try expected.toString(alloc);
+                    defer alloc.free(rhs);
+                    std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
+                    return error.TypeMistmatch;
+                },
+            },
             else => {
                 // FIXME: enabling this causing tons of type errors between i64 and i32
                 // need better type propogation to enable this
@@ -399,6 +418,7 @@ pub const TypeInfo = union(enum) {
             .f32 => try alloc.dupe(u8, "f32"),
             .module => try alloc.dupe(u8, "module"),
             .any => try alloc.dupe(u8, "any"),
+            .void => try alloc.dupe(u8, "void"),
             .tuple => |t| blk: {
                 var out: std.ArrayList(u8) = .empty;
                 errdefer out.deinit(alloc);

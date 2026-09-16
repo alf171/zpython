@@ -1,3 +1,4 @@
+from backward import add as backwards_add
 from indexing import index_2d
 from kernels import add as _add_gpu
 from kernels import sub as _sub_gpu
@@ -11,13 +12,19 @@ from kernels import sum_cols as _sum_cols_gpu
 from kernels import max_rows as _max_rows_gpu
 from kernels import max_cols as _max_cols_gpu
 
+def noop_backward(a: Tensor[f32], b: Tensor[f32], c: Tensor[f32]) -> None:
+    return
+
 class Tensor[T]:
     def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:
-        self.data = data
-        self.rows = shape[0]
-        self.cols = shape[1]
-        self.row_stride = shape[1]
+        self.data: list[T] = data
+        self.rows: i32 = shape[0]
+        self.cols: i32 = shape[1]
+        self.row_stride: i32 = shape[1]
         self.col_stride: i32 = 1
+        # info for backwards pass
+        self.grad: list[f32] = [0] * len(data)
+        self.backward: Callable[[Tensor[f32], Tensor[f32], Tensor[f32]], None] = noop_backward
 
     @staticmethod
     def _view[U](data: list[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> Tensor[U]:
@@ -56,12 +63,16 @@ class Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         _add_gpu(res, self, other, (self.rows, self.cols, 1))
+
+        # need to keep track of lhs, rhs w.r.t to the closure
+        res.backward = backwards_add
         return res
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
         zero: T = 0
         res = Tensor.fill((self.rows, self.cols), zero)
         _sub_gpu(res, self, other, (self.rows, self.cols, 1))
+
         return res
 
     def __mul__(self, other: Tensor[T]) -> Tensor[T]:
