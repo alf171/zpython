@@ -591,11 +591,10 @@ pub const Function = struct {
         try blocks.append(alloc, BasicBlock.init(0));
 
         const name = try alloc.dupe(u8, func_name);
-        const label = if (std.mem.eql(u8, func_name, "main")) blk: {
-            break :blk try alloc.dupe(u8, "main");
-        } else if (origin == .user) blk: {
-            break :blk try std.fmt.allocPrint(alloc, "_{s}__{s}", .{ module_name, func_name });
-        } else try alloc.dupe(u8, func_name);
+        const label = if (std.mem.eql(u8, func_name, "main"))
+            try alloc.dupe(u8, "main")
+        else
+            try std.fmt.allocPrint(alloc, "_{s}__{s}", .{ module_name, func_name });
 
         return .{
             .name = name,

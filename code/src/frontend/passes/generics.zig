@@ -1,6 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const HashMap = std.HashMap;
+const ModuleId = @import("common").module.ModuleId;
 const BasicBlock = @import("common").ir.BasicBlock;
 const ClassId = @import("common").ir.ClassId;
 const Operand = @import("common").alloc.Operand;
@@ -164,7 +165,7 @@ fn specializeCall(
     // return type can be a generic class also
     _ = try specializeClassInstance(&return_type, program, alloc);
 
-    const specialized_function: *const Function = findFunctionIn(program.functions.items, specialized_func_name) orelse findFunctionIn(pending.items, specialized_func_name) orelse blk: {
+    const specialized_function: *const Function = program.findFunctionInModule(specialized_func_name, callee.module_id) orelse findFunctionIn(pending.items, specialized_func_name, callee.module_id) orelse blk: {
         var specialized = try callee.specialize(
             specialized_func_name,
             program.functions.items.len + pending.items.len + 1,
@@ -269,9 +270,9 @@ fn specializeName(
     return out.toOwnedSlice(alloc);
 }
 
-fn findFunctionIn(functions: []const Function, function_name: []const u8) ?*const Function {
+fn findFunctionIn(functions: []const Function, function_name: []const u8, module_id: ModuleId) ?*const Function {
     for (functions) |*function| {
-        if (std.mem.eql(u8, function.name, function_name)) {
+        if (function.module_id == module_id and std.mem.eql(u8, function.name, function_name)) {
             return function;
         }
     }

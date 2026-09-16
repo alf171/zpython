@@ -74,9 +74,19 @@ pub const Program = struct {
     }
 
     /// O(n) scan for function
-    pub fn findFunction(program: *const Program, function_name: []const u8) ?*Function {
+    pub fn findFunction(program: *const Program, function_label: []const u8) ?*Function {
         for (program.functions.items) |*function| {
-            if (std.mem.eql(u8, function.label, function_name)) {
+            if (std.mem.eql(u8, function.label, function_label)) {
+                return function;
+            }
+        }
+        return null;
+    }
+
+    // prefer over `findFunction` due to scoping to a module
+    pub fn findFunctionInModule(program: *const Program, function_name: []const u8, module_id: ModuleId) ?*Function {
+        for (program.functions.items) |*function| {
+            if (function.module_id == module_id and std.mem.eql(u8, function.name, function_name)) {
                 return function;
             }
         }

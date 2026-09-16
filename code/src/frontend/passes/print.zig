@@ -67,13 +67,13 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             if (l.element.* == .char) {
                                 try new_instructions.append(alloc, .{ .function_call = .{
                                     .dst = null,
-                                    .callee = .{ .direct = try alloc.dupe(u8, "print_string") },
+                                    .callee = .{ .direct = try alloc.dupe(u8, "_print__print_string") },
                                     .args = args,
                                 } });
                             } else if (l.element.* == .i64 or l.element.* == .i32) {
                                 try new_instructions.append(alloc, .{ .function_call = .{
                                     .dst = null,
-                                    .callee = .{ .direct = try alloc.dupe(u8, "print_int_list") },
+                                    .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int_list") },
                                     .args = args,
                                 } });
                             }
@@ -81,21 +81,21 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         .bool => {
                             try new_instructions.append(alloc, .{ .function_call = .{
                                 .dst = null,
-                                .callee = .{ .direct = try alloc.dupe(u8, "print_bool") },
+                                .callee = .{ .direct = try alloc.dupe(u8, "_print__print_bool") },
                                 .args = args,
                             } });
                         },
                         .i64, .i32 => {
                             try new_instructions.append(alloc, .{ .function_call = .{
                                 .dst = null,
-                                .callee = .{ .direct = try alloc.dupe(u8, "print_int") },
+                                .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int") },
                                 .args = args,
                             } });
                         },
                         .f64, .f32 => {
                             try new_instructions.append(alloc, .{ .function_call = .{
                                 .dst = null,
-                                .callee = .{ .direct = try alloc.dupe(u8, "print_float") },
+                                .callee = .{ .direct = try alloc.dupe(u8, "_print__print_float") },
                                 .args = args,
                             } });
                         },

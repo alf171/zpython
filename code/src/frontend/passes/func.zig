@@ -13,7 +13,7 @@ pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
     var function_params: std.StringHashMap([]Param) = .init(alloc);
     defer function_params.deinit();
     for (program.functions.items) |*function| {
-        try function_params.put(function.name, function.params);
+        try function_params.put(function.label, function.params);
     }
 
     try rewriteFunction(&program.main, &function_params, alloc);
