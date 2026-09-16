@@ -96,6 +96,92 @@ pub fn declareClassesInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: std.me
     }
 }
 
+/// walk `__init__` so that cycle resolution can read fields
+pub fn walkClassInitializerInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+    const body = c.PyObject_GetAttrString(ast, "body");
+    std.debug.assert(body != null);
+
+    for (0..@intCast(c.PyList_Size(body))) |i| {
+        const stmt = c.PyList_GetItem(body, @intCast(i));
+        std.debug.assert(stmt != null);
+        if (getStmtKind(stmt) != .ClassDef) continue;
+        const name_obj = c.PyObject_GetAttrString(stmt, "name");
+        std.debug.assert(name_obj != null);
+        const name = std.mem.span(c.PyUnicode_AsUTF8(name_obj));
+
+        const class = ir_builder.findClass(name) orelse {
+            return error.ClassNotDeclared;
+        };
+
+        const class_body = c.PyObject_GetAttrString(stmt, "body");
+        std.debug.assert(class_body != null);
+        for (0..@intCast(c.PyList_Size(class_body))) |j| {
+            const member = c.PyList_GetItem(class_body, @intCast(j));
+            std.debug.assert(member != null);
+            if (getStmtKind(member) != .FuncDef) continue;
+
+            const method_name_raw = c.PyObject_GetAttrString(member, "name");
+            std.debug.assert(method_name_raw != null);
+            const method_name = std.mem.span(c.PyUnicode_AsUTF8(method_name_raw));
+            if (!std.mem.eql(u8, method_name, "__init__")) continue;
+
+            // set and restore current class
+            const saved_class = ir_builder.current_class;
+            ir_builder.current_class = class.id;
+            defer ir_builder.current_class = saved_class;
+            // type params
+            const saved_type_params = ir_builder.active_param_types;
+            ir_builder.active_param_types = class.type_params;
+            defer ir_builder.active_param_types = saved_type_params;
+
+            const init_body = c.PyObject_GetAttrString(member, "body");
+            std.debug.assert(init_body != null);
+
+            for (0..@intCast(c.PyList_Size(init_body))) |k| {
+                const init_stmt = c.PyList_GetItem(init_body, @intCast(k));
+                std.debug.assert(init_stmt != null);
+
+                // only support annotated assignment for now.
+                // type inference is done in walk so it's just easier
+                // to handle things being explicit.
+                if (getStmtKind(init_stmt) != .AnnotatedAssign) continue;
+                // AnnAssign(target=Attribute(value=Name(id='self', ctx=Load()), attr='data', ctx=Store()), annotation=Subscript(value=Name(id='list', ctx=Load()), slice=Name(id='T', ctx=Load()), ctx=Load()), value=Name(id='data', ctx=Load()), simple=0)
+                const target = c.PyObject_GetAttrString(init_stmt, "target");
+                std.debug.assert(target != null);
+                const receiver = c.PyObject_GetAttrString(target, "value");
+                std.debug.assert(receiver != null);
+                // require self.<field>
+                if (!std.mem.eql(u8, getPyType(receiver), "Name")) continue;
+                const id = c.PyObject_GetAttrString(receiver, "id");
+                std.debug.assert(id != null);
+                const receiver_name = std.mem.span(c.PyUnicode_AsUTF8(id));
+                if (!std.mem.eql(u8, receiver_name, "self")) continue;
+
+                const attr = c.PyObject_GetAttrString(target, "attr");
+                std.debug.assert(attr != null);
+                const field_name = std.mem.span(c.PyUnicode_AsUTF8(attr));
+                // walk each field once
+                if (class.findField(field_name) != null) continue;
+                const annotation = c.PyObject_GetAttrString(init_stmt, "annotation");
+                if (annotation == null) {
+                    return error.DuplicateFields;
+                }
+
+                const field_type = try parseTypeAnnotation(annotation, ir_builder, alloc);
+                const owned_name = alloc.dupe(u8, field_name) catch |err| {
+                    field_type.deinit(alloc);
+                    return err;
+                };
+
+                try class.fields.append(alloc, .{
+                    .name = owned_name,
+                    .type = field_type,
+                });
+            }
+        }
+    }
+}
+
 pub fn declareFunctionsInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
     const body = c.PyObject_GetAttrString(ast, "body");
     std.debug.assert(body != null);

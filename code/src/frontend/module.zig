@@ -11,6 +11,7 @@ const IrBuilder = @import("ir_builder.zig").IrBuilder;
 const walkAstIntoBuilder = @import("walk.zig").walkAstIntoBuilder;
 const FunctionType = @import("common").ir.FunctionType;
 const declareClassesInAst = python.declareClassesInAst;
+const walkClassInitializerInAst = python.walkClassInitializerInAst;
 const declareFunctionsInAst = python.declareFunctionsInAst;
 
 pub const LoadOptions = struct {
@@ -73,6 +74,14 @@ pub const ModuleGraph = struct {
             ir_builder.current_module_name = module.name;
             ir_builder.function_origin = module.origin;
             try declareClassesInAst(module.ast, ir_builder, alloc);
+        }
+        // declare class fields
+        for (self.modules) |module| {
+            ir_builder.current_module_id = module.id;
+            ir_builder.current_imports = self.imports[module.id];
+            ir_builder.current_module_name = module.name;
+            ir_builder.function_origin = module.origin;
+            try walkClassInitializerInAst(module.ast, ir_builder, alloc);
         }
         // declare functions
         for (self.modules) |module| {
