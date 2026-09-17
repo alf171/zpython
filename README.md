@@ -17,7 +17,7 @@ This is a project to learn more about the implementations of a compilers, linker
 ## Compilers Specs
 TODO
 
-## Example from Runtime (src/runtime/{tensor, kernels, indexing}.py)
+## Example from Runtime (`src/runtime/{tensor, kernels, indexing}.py`)
 ```python
 class Tensor[T]:
     def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:
