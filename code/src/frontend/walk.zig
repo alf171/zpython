@@ -46,7 +46,7 @@ const LoopCarry = @import("loop.zig").LoopCarry;
 
 const PyObject = c.PyObject;
 
-const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Unknown };
+const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Unknown };
 
 const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp, Exp2, Type };
 
@@ -477,6 +477,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
         .Constant => {
             const value_obj = c.PyObject_GetAttrString(stmt, "value");
             std.debug.assert(value_obj != null);
+            // <variable> = None
+            if (value_obj == c.Py_None()) {
+                return .{ .operand = .unknown, .type = .void };
+            }
             const parsed_constant = try parseConstant(value_obj, expected_type, alloc);
             switch (parsed_constant) {
                 .immediate => |imm| {
@@ -955,6 +959,93 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 } }, alloc);
                 break :blk try dst.clone(alloc);
             };
+        },
+        // Lambda(args=arguments(args=[arg(arg='x'), arg(arg='y')]), body=BinOp(left=Name(id='x', ctx=Load()), op=Add(), right=Name(id='y', ctx=Load())))
+        .Lambda => {
+            const callable_type = expected_type orelse return error.LambdaNeedsTypeDeclared;
+            const callable = switch (callable_type) {
+                .callable => |callable| callable,
+                else => return error.LambdaNeedsCallableType,
+            };
+            const lambda = c.PyObject_GetAttrString(stmt, "args");
+            std.debug.assert(lambda != null);
+            const args_obj = c.PyObject_GetAttrString(lambda, "args");
+            std.debug.assert(args_obj != null);
+            const arity: usize = @intCast(c.PyList_Size(args_obj));
+            const params = try alloc.alloc(Param, arity);
+            for (0..arity) |i| {
+                const arg_obj = c.PyList_GetItem(args_obj, @intCast(i));
+                std.debug.assert(arg_obj != null);
+                const name_obj = c.PyObject_GetAttrString(arg_obj, "arg");
+                std.debug.assert(name_obj != null);
+                const name = std.mem.span(c.PyUnicode_AsUTF8(name_obj));
+                params[i] = .{
+                    .name = try alloc.dupe(u8, name),
+                    .type = try callable.params[i].clone(alloc),
+                };
+            }
+            const id = ir_builder.nextFunctionId();
+            const callee_name = try std.fmt.allocPrint(alloc, "__lambda_{d}", .{id});
+            defer alloc.free(callee_name);
+            const function = try Function.init(
+                callee_name,
+                id,
+                ir_builder.current_module_id,
+                ir_builder.current_module_name,
+                params,
+                try alloc.alloc(TypeParam, 0),
+                try callable.returns.*.clone(alloc),
+                ir_builder.function_origin,
+                .host,
+                false,
+                alloc,
+            );
+            try ir_builder.program.functions.append(alloc, function);
+
+            const saved_function = ir_builder.current_function;
+            const saved_block = ir_builder.current_block;
+            var saved_local_values = try ir_builder.cloneLocalValues(alloc);
+            defer IrBuilder.deinitLocalValues(&saved_local_values, alloc);
+            ir_builder.current_function = id - 1;
+            ir_builder.current_block = 0;
+            ir_builder.clearLocalValues(alloc);
+            for (ir_builder.currentFunction().params, 0..) |param, i| {
+                const f_dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try param.type.clone(alloc),
+                };
+                try ir_builder.emit(.{ .function_param = .{
+                    .dst = f_dst,
+                    .name = try alloc.dupe(u8, param.name),
+                    .index = i,
+                } }, alloc);
+                const local = try ir_builder.getOrCreateLocal(param.name, param.type, alloc);
+                try ir_builder.putLocalValues(local, try f_dst.clone(alloc), alloc);
+            }
+            const body_obj = c.PyObject_GetAttrString(stmt, "body");
+            std.debug.assert(body_obj != null);
+            // lambda dont have explicit returns!
+            const body = try walkExpr(body_obj, ir_builder, callable.returns.*, alloc);
+            // handle null case as no return!
+            try ir_builder.emit(.{ .function_return = .{
+                .value = if (body.type != .void) body else null,
+            } }, alloc);
+
+            ir_builder.current_function = saved_function;
+            ir_builder.current_block = saved_block;
+            try ir_builder.restoreLocalValues(&saved_local_values, alloc);
+            const dst: TypedOperand = .{
+                .operand = ir_builder.nextTemp(),
+                .type = try callable_type.clone(alloc),
+            };
+
+            try ir_builder.emit(.{
+                .function_ref = .{
+                    .dst = try dst.clone(alloc),
+                    .label = try alloc.dupe(u8, function.label),
+                },
+            }, alloc);
+            return dst;
         },
         .Unknown => {
             const name = getPyType(stmt);
@@ -2162,6 +2253,7 @@ fn getExprKind(stmt: *PyObject) ExprKind {
     if (std.mem.eql(u8, name, "Attribute")) return .Attribute;
     if (std.mem.eql(u8, name, "BoolOp")) return .BoolOp;
     if (std.mem.eql(u8, name, "JoinedStr")) return .FString;
+    if (std.mem.eql(u8, name, "Lambda")) return .Lambda;
     return .Unknown;
 }
 

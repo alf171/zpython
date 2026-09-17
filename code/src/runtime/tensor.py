@@ -12,9 +12,6 @@ from kernels import sum_cols as _sum_cols_gpu
 from kernels import max_rows as _max_rows_gpu
 from kernels import max_cols as _max_cols_gpu
 
-def noop_backward(a: Tensor[f32], b: Tensor[f32], c: Tensor[f32]) -> None:
-    return
-
 class Tensor[T]:
     def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:
         self.data: list[T] = data
@@ -24,7 +21,7 @@ class Tensor[T]:
         self.col_stride: i32 = 1
         # info for backwards pass
         self.grad: list[f32] = [0] * len(data)
-        self.backward: Callable[[Tensor[f32], Tensor[f32], Tensor[f32]], None] = noop_backward
+        self.backward: Callable[[Tensor[f32], Tensor[f32], Tensor[f32]], None] = lambda: None
 
     @staticmethod
     def _view[U](data: list[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> Tensor[U]:
