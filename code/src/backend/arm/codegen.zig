@@ -347,32 +347,32 @@ fn emitFunction(
                             const src = try abi.regFor(c.src.operand, colors);
                             // type a -> type b
                             switch (c.src.type) {
-                                .i64 => switch (c.dst_target_type) {
+                                .i64 => switch (c.dst.type) {
                                     .f64 => try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
-                                            @tagName(c.dst_target_type),
+                                            @tagName(c.dst.type),
                                         });
                                         return error.UnsupportedCast;
                                     },
                                 },
-                                .i32 => switch (c.dst_target_type) {
+                                .i32 => switch (c.dst.type) {
                                     .i64 => try out.print(alloc, "\tsxtw {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
-                                            @tagName(c.dst_target_type),
+                                            @tagName(c.dst.type),
                                         });
                                         return error.UnsupportedCast;
                                     },
                                 },
-                                .f64 => switch (c.dst_target_type) {
+                                .f64 => switch (c.dst.type) {
                                     .i64 => try out.print(alloc, "\tfcvtzs {s}, {s}\n", .{ dst, src }),
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
-                                            @tagName(c.dst_target_type),
+                                            @tagName(c.dst.type),
                                         });
                                         return error.UnsupportedCast;
                                     },
@@ -380,7 +380,7 @@ fn emitFunction(
                                 else => {
                                     std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                         @tagName(c.src.type),
-                                        @tagName(c.dst_target_type),
+                                        @tagName(c.dst.type),
                                     });
                                     return error.UnsupportedCast;
                                 },

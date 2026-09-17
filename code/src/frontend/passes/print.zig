@@ -39,8 +39,10 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                                 .type = .f64,
                             };
                             try new_instructions.append(alloc, .{ .lir = .{ .cast = .{
-                                .dst = dst,
-                                .dst_target_type = .f64,
+                                .dst = .{
+                                    .operand = dst.operand,
+                                    .type = .f64,
+                                },
                                 .src = try p.src.clone(alloc),
                             } } });
                             break :blk try dst.clone(alloc);
@@ -51,8 +53,10 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                                 .type = .i64,
                             };
                             try new_instructions.append(alloc, .{ .lir = .{ .cast = .{
-                                .dst = dst,
-                                .dst_target_type = .i64,
+                                .dst = .{
+                                    .operand = dst.operand,
+                                    .type = .i64,
+                                },
                                 .src = try p.src.clone(alloc),
                             } } });
                             break :blk try dst.clone(alloc);

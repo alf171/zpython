@@ -19,7 +19,7 @@ def run() -> None:
     print(type(more_ints))
     floats = make_box(3.0)
     print(type(floats))
-    direct = Box([i32(4)])
+    direct = Box([f32(4)])
     print(type(direct))
     print(ints.values[0])
     print(more_ints.values[0])
@@ -31,20 +31,20 @@ def run() -> None:
 run()
 
 performance report: (ORIGIN=user)
-number of asm lines: 538
-mov count: 359
+number of asm lines: 562
+mov count: 364
 memory load count: 0
 memory store count: 0
-branch count: 23
+branch count: 26
 call count: 37
-spill count: 2
+spill count: 4
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 793
-mov count: 365
+number of asm lines: 808
+mov count: 400
 memory load count: 0
 memory store count: 0
-branch count: 78
+branch count: 85
 call count: 31
 spill count: 6
 
@@ -52,10 +52,10 @@ actual output:
 class_3[i64]
 class_3[i64]
 class_3[f64]
-class_3[i32]
+class_3[f32]
 1
 2
 3.00000
-4
+4.00000
 1
-[!!memory report!!]: allocs=22 frees=22 allocated_bytes=276 freed_bytes=276
+[!!memory report!!]: allocs=23 frees=23 allocated_bytes=286 freed_bytes=286

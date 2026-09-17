@@ -48,7 +48,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, GlobalIdx, Max, Exp, Exp2, Type };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type };
 
 const BoolOp = enum { And, Or };
 
@@ -1245,13 +1245,14 @@ fn walkNamedCall(
                 } }, alloc);
                 return try typed_dst.clone(alloc);
             },
-            .Int, .I32, .Float => |t| {
+            .Int, .I32, .Float, .F32 => |t| {
                 std.debug.assert(c.PyList_Size(args) == 1);
                 const arg0 = c.PyList_GetItem(args, 0);
                 std.debug.assert(arg0 != null);
                 const dst_type: TypeInfo = switch (t) {
                     .Int => .i64,
                     .I32 => .i32,
+                    .F32 => .f32,
                     .Float => .f64,
                     else => unreachable,
                 };
@@ -1262,7 +1263,6 @@ fn walkNamedCall(
                 };
                 try ir_builder.emit(.{ .lir = .{ .cast = .{
                     .dst = dst,
-                    .dst_target_type = dst_type,
                     .src = value,
                 } } }, alloc);
                 return try dst.clone(alloc);
@@ -2265,6 +2265,7 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "int")) return .Int;
     if (std.mem.eql(u8, name, "i32")) return .I32;
     if (std.mem.eql(u8, name, "float")) return .Float;
+    if (std.mem.eql(u8, name, "f32")) return .F32;
     if (std.mem.eql(u8, name, "global_id")) return .GlobalIdx;
     if (std.mem.eql(u8, name, "max")) return .Max;
     if (std.mem.eql(u8, name, "exp")) return .Exp;

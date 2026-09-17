@@ -77,8 +77,6 @@ pub const Instruction = union(enum) {
     },
     cast: struct {
         dst: TypedOperand,
-        // FIXME: remove this
-        dst_target_type: TypeInfo,
         src: TypedOperand,
     },
     unkown,
@@ -162,7 +160,7 @@ pub const Instruction = union(enum) {
             },
             .cast => |c| {
                 c.dst.operand.print();
-                debugPrint(" <- ({s})", .{@tagName(c.dst_target_type)});
+                debugPrint(" <- ({s})", .{@tagName(c.dst.type)});
                 c.src.operand.print();
                 debugPrint("\n", .{});
             },
@@ -422,7 +420,6 @@ pub const Instruction = union(enum) {
             },
             .cast => |c| {
                 c.dst.deinit(alloc);
-                c.dst_target_type.deinit(alloc);
                 c.src.deinit(alloc);
             },
             .select => |s| {
@@ -518,7 +515,6 @@ pub const Instruction = union(enum) {
             } },
             .cast => |c| .{ .cast = .{
                 .dst = try c.dst.clone(alloc),
-                .dst_target_type = try c.dst_target_type.clone(alloc),
                 .src = try c.src.clone(alloc),
             } },
             .unaryop => |uo| .{ .unaryop = .{

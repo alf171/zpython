@@ -17,7 +17,7 @@ def run() -> None:
     print(type(more_ints))
     floats = make_box(3.0)
     print(type(floats))
-    direct = Box([i32(4)])
+    direct = Box([f32(4)])
     print(type(direct))
     print(ints.values[0])
     print(more_ints.values[0])
