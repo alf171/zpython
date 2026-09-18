@@ -113,7 +113,16 @@ fn appendBlocks(
                     },
                     .local => |id| {
                         const src = locals.get(id) orelse {
-                            return error.LocalNotFound;
+                            switch (instruction) {
+                                .lir => |lir| switch (lir) {
+                                    .load_local => |ll| {
+                                        std.debug.print("cant find local \"{s}\"\n", .{ll.local.name});
+                                        return error.LocalNotFound;
+                                    },
+                                    else => return error.LocalNotFound,
+                                },
+                                else => return error.LocalNotFound,
+                            }
                         };
                         try line.uses.ops.put(src.operand, try reg_classes.get(src.operand));
                     },
