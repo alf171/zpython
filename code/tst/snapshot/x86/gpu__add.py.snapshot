@@ -15,20 +15,20 @@ for i in range(25):
 print("\n", end="")
 
 performance report: (ORIGIN=user)
-number of asm lines: 223
-mov count: 154
+number of asm lines: 241
+mov count: 155
 memory load count: 0
 memory store count: 0
-branch count: 6
+branch count: 9
 call count: 16
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 858
-mov count: 387
+number of asm lines: 866
+mov count: 421
 memory load count: 0
 memory store count: 0
-branch count: 85
+branch count: 92
 call count: 31
 spill count: 6
 

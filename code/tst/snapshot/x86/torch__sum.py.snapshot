@@ -12,21 +12,21 @@ print(z.cols)
 z.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 133
-mov count: 95
+number of asm lines: 151
+mov count: 96
 memory load count: 0
 memory store count: 0
-branch count: 2
+branch count: 5
 call count: 16
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1300
-mov count: 647
+number of asm lines: 1361
+mov count: 751
 memory load count: 0
 memory store count: 0
-branch count: 112
-call count: 46
+branch count: 119
+call count: 49
 spill count: 11
 
 actual output:
@@ -36,4 +36,4 @@ actual output:
 2
 1
 30.00000 70.00000 
-[!!memory report!!]: allocs=24 frees=24 allocated_bytes=310 freed_bytes=310
+[!!memory report!!]: allocs=30 frees=30 allocated_bytes=450 freed_bytes=450

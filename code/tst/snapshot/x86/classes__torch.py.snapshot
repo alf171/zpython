@@ -17,21 +17,21 @@ a = y + z
 a.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 201
-mov count: 147
+number of asm lines: 219
+mov count: 148
 memory load count: 0
 memory store count: 0
-branch count: 2
+branch count: 5
 call count: 24
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1249
-mov count: 592
+number of asm lines: 1356
+mov count: 704
 memory load count: 0
 memory store count: 0
-branch count: 111
-call count: 44
+branch count: 125
+call count: 47
 spill count: 10
 
 actual output:
@@ -41,4 +41,4 @@ actual output:
 42
 42
 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 84 
-[!!memory report!!]: allocs=274 frees=274 allocated_bytes=8981 freed_bytes=8981
+[!!memory report!!]: allocs=282 frees=282 allocated_bytes=12213 freed_bytes=12213

@@ -12,24 +12,24 @@ y = x2.broadcast_to((2,3))
 y.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 83
-mov count: 48
+number of asm lines: 101
+mov count: 49
 memory load count: 0
 memory store count: 0
-branch count: 2
+branch count: 5
 call count: 10
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1091
-mov count: 502
+number of asm lines: 1173
+mov count: 581
 memory load count: 0
 memory store count: 0
-branch count: 101
-call count: 40
+branch count: 115
+call count: 43
 spill count: 10
 
 actual output:
 10.00000 20.00000 10.00000 20.00000 10.00000 20.00000 
 10.00000 10.00000 10.00000 20.00000 20.00000 20.00000 
-[!!memory report!!]: allocs=33 frees=33 allocated_bytes=390 freed_bytes=390
+[!!memory report!!]: allocs=41 frees=41 allocated_bytes=566 freed_bytes=566

@@ -3,25 +3,25 @@ running program: (OPTIM=true)
 x = "foo"
 y = "bar"
 # FIXME: should become x + y?
-z = string_concat(x, y)
+z = _concat__string_concat(x, y)
 print(z)
 print(f"fstring print: {x} {y}")
 
 performance report: (ORIGIN=user)
-number of asm lines: 164
-mov count: 132
+number of asm lines: 182
+mov count: 133
 memory load count: 0
 memory store count: 0
-branch count: 2
+branch count: 5
 call count: 13
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 792
-mov count: 364
+number of asm lines: 809
+mov count: 401
 memory load count: 0
 memory store count: 0
-branch count: 78
+branch count: 85
 call count: 31
 spill count: 6
 
