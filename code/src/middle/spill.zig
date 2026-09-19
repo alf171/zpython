@@ -4,13 +4,13 @@ const live = @import("live.zig");
 const ArrayList = std.ArrayList;
 
 const common = @import("common");
-const TempId = common.ir.TempId;
-const MemoryId = common.ir.MemoryId;
+const TempId = common.function.TempId;
+const MemoryId = common.function.MemoryId;
 const Instruction = common.mir.Instruction;
 const IrProgram = common.program.Program;
-const Function = common.ir.Function;
+const Function = common.function.Function;
 const TypeParam = common.ir.TypeParam;
-const Param = common.ir.Param;
+const Param = common.function.Param;
 const AllocProgram = common.alloc.AllocProgram;
 const BasicBlock = common.ir.BasicBlock;
 const BlockId = common.ir.BlockId;

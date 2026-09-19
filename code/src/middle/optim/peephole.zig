@@ -3,7 +3,7 @@ const ArrayList = std.ArrayList;
 const HashMap = std.AutoHashMap;
 
 const Operand = @import("common").alloc.Operand;
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const ConstValue = @import("common").ir.ConstValue;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;

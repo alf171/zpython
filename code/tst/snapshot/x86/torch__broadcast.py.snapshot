@@ -12,20 +12,20 @@ y = x2.broadcast_to((2,3))
 y.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 101
-mov count: 49
+number of asm lines: 83
+mov count: 48
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 2
 call count: 10
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1173
-mov count: 581
+number of asm lines: 1211
+mov count: 585
 memory load count: 0
 memory store count: 0
-branch count: 115
+branch count: 121
 call count: 43
 spill count: 10
 

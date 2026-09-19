@@ -21,7 +21,7 @@ class Tensor[T]:
         self.col_stride: i32 = 1
         # info for backwards pass
         self.grad: list[f32] = [0] * len(data)
-        self.backward: Callable[[Tensor[f32], Tensor[f32], Tensor[f32]], None] = lambda: None
+        self.backward: Callable[[], None] = lambda: None
 
     @staticmethod
     def _view[U](data: list[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> Tensor[U]:
@@ -62,7 +62,9 @@ class Tensor[T]:
         _add_gpu(res, self, other, (self.rows, self.cols, 1))
 
         # need to keep track of lhs, rhs w.r.t to the closure
-        res.backward = backwards_add
+        res.backward: Callable[[], None] = lambda: None
+        # TODO: change to this once closure works
+        # res.backward: Callable[[], None] = lambda: backwards_add(res, self, other)
         return res
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:

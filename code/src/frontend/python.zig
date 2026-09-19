@@ -1,14 +1,14 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
-const ClassInfo = @import("common").ir.ClassInfo;
-const ClassId = @import("common").ir.ClassId;
-const TypeParam = @import("common").ir.TypeParam;
+const ClassInfo = @import("common").class.ClassInfo;
+const ClassId = @import("common").class.ClassId;
+const TypeParam = @import("common").function.TypeParam;
 const TypeInfo = @import("common").types.TypeInfo;
-const Param = @import("common").ir.Param;
-const ParsedConstant = @import("common").ir.ParsedConstant;
-const Function = @import("common").ir.Function;
-const FunctionKind = @import("common").ir.FunctionKind;
+const Param = @import("common").function.Param;
+const ParsedConstant = @import("common").function.ParsedConstant;
+const Function = @import("common").function.Function;
+const FunctionKind = @import("common").function.FunctionKind;
 const ConstValue = @import("common").ir.ConstValue;
 const ValueRef = @import("common").ir.ValueRef;
 
@@ -403,18 +403,18 @@ fn declareFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, a
     // save function state
     const saved_current_function = ir_builder.current_function;
     const saved_current_block = ir_builder.current_block;
-    var saved_local_values = try ir_builder.cloneLocalValues(alloc);
-    defer IrBuilder.deinitLocalValues(&saved_local_values, alloc);
+    var saved_local_values = try ir_builder.current_scope.local_values.clone(alloc);
+    defer saved_local_values.deinit(alloc);
 
     // set function state
     ir_builder.current_function = ir_builder.program.functions.items.len - 1;
     ir_builder.current_block = 0;
-    ir_builder.clearLocalValues(alloc);
+    ir_builder.current_scope.local_values.clear(alloc);
 
     // restore function state
     ir_builder.current_function = saved_current_function;
     ir_builder.current_block = saved_current_block;
-    try ir_builder.restoreLocalValues(&saved_local_values, alloc);
+    try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
 }
 
 pub fn parseConstant(

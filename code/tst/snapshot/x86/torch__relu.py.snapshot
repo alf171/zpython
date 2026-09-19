@@ -11,20 +11,20 @@ D = C.relu()
 print(D[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 117
-mov count: 62
+number of asm lines: 99
+mov count: 61
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 2
 call count: 11
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1201
-mov count: 618
+number of asm lines: 1237
+mov count: 620
 memory load count: 0
 memory store count: 0
-branch count: 111
+branch count: 117
 call count: 41
 spill count: 6
 

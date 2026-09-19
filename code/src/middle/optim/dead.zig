@@ -4,7 +4,7 @@ const HashMap = std.AutoHashMap;
 
 const BlockId = @import("common").ir.BlockId;
 const BasicBlock = @import("common").ir.BasicBlock;
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const Program = @import("common").program.Program;
 const AllocProgram = @import("common").alloc.AllocProgram;
 const Operand = @import("common").alloc.Operand;

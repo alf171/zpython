@@ -1,8 +1,8 @@
 const std = @import("std");
 pub const RegisterType = @import("register.zig").RegisterType;
-pub const Function = @import("ir.zig").Function;
-pub const FunctionKind = @import("ir.zig").FunctionKind;
-pub const ClassId = @import("ir.zig").ClassId;
+pub const Function = @import("function.zig").Function;
+pub const FunctionKind = @import("function.zig").FunctionKind;
+pub const ClassId = @import("class.zig").ClassId;
 pub const ConstValue = @import("ir.zig").ConstValue;
 pub const TypedOperand = @import("alloc.zig").TypedOperand;
 pub const ModuleId = @import("module.zig").ModuleId;

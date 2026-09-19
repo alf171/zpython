@@ -5,7 +5,7 @@ const HashMap = std.AutoHashMap;
 const common = @import("common");
 const BlockId = common.ir.BlockId;
 const Copy = common.mir.Copy;
-const Function = common.ir.Function;
+const Function = common.function.Function;
 const Instruction = common.mir.Instruction;
 const Program = common.program.Program;
 

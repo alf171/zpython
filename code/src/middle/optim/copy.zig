@@ -3,7 +3,7 @@ const ArrayList = std.array_list.Managed;
 
 const BlockId = @import("common").ir.BlockId;
 const BasicBlock = @import("common").ir.BasicBlock;
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const Program = @import("common").program.Program;
 const Operand = @import("common").alloc.Operand;
 const TypedOperand = @import("common").alloc.TypedOperand;

@@ -1,5 +1,5 @@
 const std = @import("std");
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const Program = @import("common").program.Program;
 const Operand = @import("common").alloc.Operand;
 const RegisterType = @import("common").register.RegisterType;

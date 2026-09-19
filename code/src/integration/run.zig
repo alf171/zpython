@@ -32,7 +32,7 @@ const parallel_copies = middle.parallel_copies;
 const copy = middle.copy;
 const dead = middle.dead;
 const peephole = middle.peephole;
-const FunctionType = @import("common").ir.FunctionType;
+const FunctionType = @import("common").function.FunctionType;
 const TimerMetrics = @import("common").timer.TimerMetrics;
 
 const underline_code = "\x1b[4m";
@@ -182,7 +182,7 @@ pub fn main(init: std.process.Init) !void {
     // generate interference graph
     var host_colors = color.ColoredGraph.initEmpty(alloc);
     defer host_colors.deinit();
-    var spill_rounds = std.EnumArray(FunctionType, usize).initFill(0);
+    var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
     for (register_files) |register_file| {
         timer.begin(.middle_igraph, io);
         var graph = try igraph.createIgraph(alloc_program.lines, register_file, alloc);

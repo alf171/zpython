@@ -1,7 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const Program = @import("common").program.Program;
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const Instruction = @import("common").mir.Instruction;
 const TypedOperand = @import("common").alloc.TypedOperand;
 

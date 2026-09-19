@@ -7,17 +7,18 @@ This is a project to learn more about the implementations of a compilers, linker
 ## Design Choices
 - leverage python
   - subset of its syntax
-  - additional types
-  - using annotation to invoke new actions (@gpu, @inline, ...)
+  - using annotation to invoke new functionality (@gpu, @inline, ...)
 - modular
 - compiled not interpreted
 - function types are enforced
 - deterministic
 
-## Compilers Specs
-TODO
+## Language Specs
+- circular imports are allowed!
+- additional types like `i32`, `f32`
+- [WIP] type inference and compiler errors
 
-## Example from Runtime (`src/runtime/{tensor, kernels, indexing}.py`)
+## Example from `src/runtime/{tensor,kernels,indexing}.py`
 ```python
 class Tensor[T]:
     def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:

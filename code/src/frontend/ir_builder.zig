@@ -3,14 +3,14 @@ const ArrayList = std.ArrayList;
 
 const BlockId = @import("common").ir.BlockId;
 const LocalId = @import("common").ir.LocalId;
-const ClassId = @import("common").ir.ClassId;
-const ClassInfo = @import("common").ir.ClassInfo;
+const ClassId = @import("common").class.ClassId;
+const ClassInfo = @import("common").class.ClassInfo;
 const LocalInfo = @import("common").ir.LocalInfo;
-const TempId = @import("common").ir.TempId;
-const Function = @import("common").ir.Function;
-const FunctionType = @import("common").ir.FunctionType;
+const TempId = @import("common").function.TempId;
+const Function = @import("common").function.Function;
+const FunctionType = @import("common").function.FunctionType;
 const TypeInfo = @import("common").types.TypeInfo;
-const TypeParam = @import("common").ir.TypeParam;
+const TypeParam = @import("common").function.TypeParam;
 
 const BasicBlock = @import("common").ir.BasicBlock;
 const Operand = @import("common").alloc.Operand;
@@ -22,19 +22,124 @@ const ImportEdge = @import("module.zig").ImportEdge;
 const ModuleId = @import("common").module.ModuleId;
 const ImportFunction = @import("common").module.ImportFunction;
 
-pub const LocalValues = std.AutoHashMap(LocalId, TypedOperand);
+pub const LocalValues = struct {
+    map: std.AutoHashMap(LocalId, TypedOperand),
 
-pub const IrBuilder = struct {
-    program: Program,
-    current_block: BlockId,
-    current_function: ?usize,
-    current_class: ?ClassId,
+    pub fn init(alloc: std.mem.Allocator) @This() {
+        return .{ .map = .init(alloc) };
+    }
+
+    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        var it = self.map.valueIterator();
+        while (it.next()) |value| {
+            value.deinit(alloc);
+        }
+        self.map.deinit();
+    }
+
+    pub fn clone(self: *@This(), alloc: std.mem.Allocator) !LocalValues {
+        var cloned: LocalValues = .init(alloc);
+        errdefer cloned.deinit(alloc);
+
+        var it = self.map.iterator();
+        while (it.next()) |entry| {
+            const value = try entry.value_ptr.*.clone(alloc);
+            cloned.map.put(entry.key_ptr.*, value) catch |err| {
+                value.deinit(alloc);
+                return err;
+            };
+        }
+
+        return cloned;
+    }
+
+    pub fn clear(self: *@This(), alloc: std.mem.Allocator) void {
+        var it = self.map.valueIterator();
+        while (it.next()) |entry| {
+            entry.deinit(alloc);
+        }
+        self.map.clearRetainingCapacity();
+    }
+};
+
+pub const LocalScope = struct {
     // name -> LocalId
     locals_by_name: std.StringHashMap(LocalId),
     // LocalId -> TypedOperand
     local_values: LocalValues,
     // LocalId -> LocalValues
     locals: ArrayList(LocalInfo),
+
+    pub fn init(alloc: std.mem.Allocator) @This() {
+        return .{
+            .locals_by_name = .init(alloc),
+            .local_values = .init(alloc),
+            .locals = .empty,
+        };
+    }
+
+    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        {
+            var it = self.locals_by_name.keyIterator();
+            while (it.next()) |key| {
+                alloc.free(key.*);
+            }
+            self.locals_by_name.deinit();
+        }
+        self.local_values.deinit(alloc);
+        for (self.locals.items) |local| {
+            local.type.deinit(alloc);
+            alloc.free(local.name);
+        }
+        self.locals.deinit(alloc);
+    }
+
+    pub fn restoreLocalValues(self: *@This(), locals: *const LocalValues, alloc: std.mem.Allocator) !void {
+        self.local_values.clear(alloc);
+
+        var it = locals.map.iterator();
+        while (it.next()) |entry| {
+            const value = try entry.value_ptr.*.clone(alloc);
+            self.local_values.map.put(entry.key_ptr.*, value) catch |err| {
+                value.deinit(alloc);
+                return err;
+            };
+        }
+    }
+
+    pub fn putLocalValues(self: *@This(), local: LocalId, value: TypedOperand, alloc: std.mem.Allocator) !void {
+        if (try self.local_values.map.fetchPut(local, value)) |previous| {
+            previous.value.deinit(alloc);
+        }
+    }
+
+    pub fn getOrCreateLocal(self: *@This(), name: []const u8, typeInfo: ?TypeInfo, alloc: std.mem.Allocator) !LocalId {
+        // already existed
+        if (self.locals_by_name.get(name)) |local| {
+            return local;
+        }
+        // needs to get created
+        const id: LocalId = @intCast(self.locals.items.len);
+        try self.locals_by_name.put(try alloc.dupe(u8, name), id);
+        try self.locals.append(alloc, .{
+            .id = id,
+            .name = try alloc.dupe(u8, name),
+            .type = if (typeInfo) |t|
+                try t.clone(alloc)
+            else
+                .any,
+        });
+        return id;
+    }
+};
+
+pub const IrBuilder = struct {
+    program: Program,
+    current_block: BlockId,
+    current_function: ?usize,
+    current_class: ?ClassId,
+    // TODO: support closure
+    current_scope: LocalScope,
     function_origin: FunctionType,
     active_param_types: []const TypeParam,
     // imports metadata
@@ -50,9 +155,7 @@ pub const IrBuilder = struct {
             .current_function = null,
             .current_block = 0,
             .current_class = null,
-            .locals_by_name = std.StringHashMap(LocalId).init(alloc),
-            .local_values = LocalValues.init(alloc),
-            .locals = .empty,
+            .current_scope = .init(alloc),
             .function_origin = origin,
             .active_param_types = &.{},
             .current_imports = &.{},
@@ -63,27 +166,7 @@ pub const IrBuilder = struct {
 
     /// free all but the generated program
     pub fn deinit(self: *IrBuilder, alloc: std.mem.Allocator) void {
-        {
-            var it = self.locals_by_name.keyIterator();
-            while (it.next()) |key| {
-                alloc.free(key.*);
-            }
-            self.locals_by_name.deinit();
-        }
-        IrBuilder.deinitLocalValues(&self.local_values, alloc);
-        for (self.locals.items) |local| {
-            local.type.deinit(alloc);
-            alloc.free(local.name);
-        }
-        self.locals.deinit(alloc);
-    }
-
-    pub fn deinitLocalValues(local_values: *LocalValues, alloc: std.mem.Allocator) void {
-        var it = local_values.valueIterator();
-        while (it.next()) |value| {
-            value.deinit(alloc);
-        }
-        local_values.deinit();
+        self.current_scope.deinit(alloc);
     }
 
     pub fn currentBlocks(self: *@This()) *ArrayList(BasicBlock) {
@@ -144,29 +227,10 @@ pub const IrBuilder = struct {
     }
 
     pub fn getLocal(self: *@This(), name: []const u8) !LocalId {
-        if (self.locals_by_name.get(name)) |local| {
+        if (self.current_scope.locals_by_name.get(name)) |local| {
             return local;
         }
         return error.CantFindLocal;
-    }
-
-    pub fn getOrCreateLocal(self: *@This(), name: []const u8, typeInfo: ?TypeInfo, alloc: std.mem.Allocator) !LocalId {
-        // already existed
-        if (self.locals_by_name.get(name)) |local| {
-            return local;
-        }
-        // needs to get created
-        const id: LocalId = @intCast(self.locals.items.len);
-        try self.locals_by_name.put(try alloc.dupe(u8, name), id);
-        try self.locals.append(alloc, .{
-            .id = id,
-            .name = try alloc.dupe(u8, name),
-            .type = if (typeInfo) |t|
-                try t.clone(alloc)
-            else
-                .any,
-        });
-        return id;
     }
 
     pub fn emit(self: *@This(), instruct: Instruction, alloc: std.mem.Allocator) !void {
@@ -197,49 +261,6 @@ pub const IrBuilder = struct {
         const current_block = self.currentBlocks();
         try current_block.items[to].predecessors.append(alloc, from);
         try current_block.items[from].successors.append(alloc, to);
-    }
-
-    pub fn cloneLocalValues(self: *@This(), alloc: std.mem.Allocator) !LocalValues {
-        var cloned: LocalValues = .init(alloc);
-        errdefer deinitLocalValues(&cloned, alloc);
-
-        var it = self.local_values.iterator();
-        while (it.next()) |entry| {
-            const value = try entry.value_ptr.*.clone(alloc);
-            cloned.put(entry.key_ptr.*, value) catch |err| {
-                value.deinit(alloc);
-                return err;
-            };
-        }
-
-        return cloned;
-    }
-
-    pub fn restoreLocalValues(self: *@This(), locals: *const LocalValues, alloc: std.mem.Allocator) !void {
-        self.clearLocalValues(alloc);
-
-        var it = locals.iterator();
-        while (it.next()) |entry| {
-            const value = try entry.value_ptr.*.clone(alloc);
-            self.local_values.put(entry.key_ptr.*, value) catch |err| {
-                value.deinit(alloc);
-                return err;
-            };
-        }
-    }
-
-    pub fn putLocalValues(self: *@This(), local: LocalId, value: TypedOperand, alloc: std.mem.Allocator) !void {
-        if (try self.local_values.fetchPut(local, value)) |previous| {
-            previous.value.deinit(alloc);
-        }
-    }
-
-    pub fn clearLocalValues(self: *@This(), alloc: std.mem.Allocator) void {
-        var it = self.local_values.valueIterator();
-        while (it.next()) |entry| {
-            entry.deinit(alloc);
-        }
-        self.local_values.clearRetainingCapacity();
     }
 
     /// fetch the current functions type_param by its name

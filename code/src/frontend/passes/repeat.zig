@@ -4,7 +4,7 @@ const Operand = @import("common").alloc.Operand;
 const ListStore = @import("common").mir.ListStore;
 const ValueRef = @import("common").ir.ValueRef;
 const TypedOperand = @import("common").alloc.TypedOperand;
-const Function = @import("common").ir.Function;
+const Function = @import("common").function.Function;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
 

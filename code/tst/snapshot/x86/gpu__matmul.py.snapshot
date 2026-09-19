@@ -20,20 +20,20 @@ C = A @ B
 C.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 291
-mov count: 220
+number of asm lines: 273
+mov count: 219
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 2
 call count: 21
 spill count: 4
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1737
-mov count: 958
+number of asm lines: 1772
+mov count: 959
 memory load count: 0
 memory store count: 0
-branch count: 145
+branch count: 151
 call count: 63
 spill count: 15
 

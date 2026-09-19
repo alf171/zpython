@@ -17,20 +17,20 @@ a = y + z
 a.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 219
-mov count: 148
+number of asm lines: 201
+mov count: 147
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 2
 call count: 24
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1356
-mov count: 704
+number of asm lines: 1393
+mov count: 707
 memory load count: 0
 memory store count: 0
-branch count: 125
+branch count: 131
 call count: 47
 spill count: 10
 

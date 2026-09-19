@@ -9,20 +9,20 @@ A[0, 1] = 99
 print(B[1,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 152
-mov count: 94
+number of asm lines: 134
+mov count: 93
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 2
 call count: 15
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1069
-mov count: 516
+number of asm lines: 1108
+mov count: 521
 memory load count: 0
 memory store count: 0
-branch count: 107
+branch count: 113
 call count: 37
 spill count: 6
 

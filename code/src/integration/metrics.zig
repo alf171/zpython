@@ -1,5 +1,5 @@
 const std = @import("std");
-const FunctionType = @import("common").ir.FunctionType;
+const FunctionType = @import("common").function.FunctionType;
 const Target = @import("backend").Target;
 
 const underline_code = "\x1b[4m";
@@ -16,7 +16,7 @@ pub const Metrics = struct {
     origin: FunctionType,
 
     pub fn init(origin: FunctionType, spill_count: usize) @This() {
-        return Metrics{
+        return .{
             .line_count = 0,
             .mov_count = 0,
             .memory_load_count = 0,

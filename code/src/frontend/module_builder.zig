@@ -6,7 +6,7 @@ const parseModule = @import("module.zig").parseModule;
 const loadModule = @import("module.zig").loadModule;
 const PyObject = @import("python.zig").PyObject;
 const ModuleId = @import("common").module.ModuleId;
-const FunctionType = @import("common").ir.FunctionType;
+const FunctionType = @import("common").function.FunctionType;
 
 const ModuleStatus = struct {
     id: ModuleId,

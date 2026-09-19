@@ -7,6 +7,3 @@ print(C[0,0])
 
 D = B - A
 print(D[0,0])
-
-E = A + B
-print(E[0, 0])
