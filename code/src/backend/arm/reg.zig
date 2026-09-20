@@ -84,7 +84,7 @@ pub const ArmRegister = enum {
         return .{
             .id = @intFromEnum(self),
             .index = index,
-            .type = registerType(self),
+            .type = self.registerType(),
             .width = width,
         };
     }
@@ -95,26 +95,84 @@ const gp_scratch_reg = ArmRegister.x16.physical(0, 8);
 const gp_scratch_reg_2 = ArmRegister.x17.physical(0, 8);
 
 /// function param registers
-const gp_function_param_regs = [_]PhysicalReg{ ArmRegister.x0.physical(0, 8), ArmRegister.x1.physical(1, 8), ArmRegister.x2.physical(2, 8), ArmRegister.x3.physical(3, 8), ArmRegister.x4.physical(4, 8), ArmRegister.x5.physical(5, 8), ArmRegister.x6.physical(6, 8), ArmRegister.x7.physical(7, 8) };
+const gp_function_param_regs = [_]PhysicalReg{
+    ArmRegister.x0.physical(0, 8),
+    ArmRegister.x1.physical(1, 8),
+    ArmRegister.x2.physical(2, 8),
+    ArmRegister.x3.physical(3, 8),
+    ArmRegister.x4.physical(4, 8),
+    ArmRegister.x5.physical(5, 8),
+    ArmRegister.x6.physical(6, 8),
+    ArmRegister.x7.physical(7, 8),
+};
 
 /// callee save registers
-const gp_callee_save_regs = [_]PhysicalReg{ ArmRegister.x19.physical(16, 8), ArmRegister.x20.physical(17, 8), ArmRegister.x21.physical(18, 8), ArmRegister.x22.physical(19, 8), ArmRegister.x23.physical(20, 8), ArmRegister.x24.physical(21, 8), ArmRegister.x25.physical(22, 8), ArmRegister.x26.physical(23, 8), ArmRegister.x27.physical(24, 8), ArmRegister.x28.physical(25, 8) };
+const gp_callee_save_regs = [_]PhysicalReg{
+    ArmRegister.x19.physical(16, 8),
+    ArmRegister.x20.physical(17, 8),
+    ArmRegister.x21.physical(18, 8),
+    ArmRegister.x22.physical(19, 8),
+    ArmRegister.x23.physical(20, 8),
+    ArmRegister.x24.physical(21, 8),
+    ArmRegister.x25.physical(22, 8),
+    ArmRegister.x26.physical(23, 8),
+    ArmRegister.x27.physical(24, 8),
+    ArmRegister.x28.physical(25, 8),
+};
 
 /// caller save registers
 /// in order to allow using x0-x7, we need to write percoloring code so that we dont have a collision
-const gp_caller_save_regs = [_]PhysicalReg{ ArmRegister.x8.physical(8, 8), ArmRegister.x9.physical(9, 8), ArmRegister.x10.physical(10, 8), ArmRegister.x11.physical(11, 8), ArmRegister.x12.physical(12, 8), ArmRegister.x13.physical(13, 8), ArmRegister.x14.physical(14, 8), ArmRegister.x15.physical(15, 8) };
+const gp_caller_save_regs = [_]PhysicalReg{
+    ArmRegister.x8.physical(8, 8),
+    ArmRegister.x9.physical(9, 8),
+    ArmRegister.x10.physical(10, 8),
+    ArmRegister.x11.physical(11, 8),
+    ArmRegister.x12.physical(12, 8),
+    ArmRegister.x13.physical(13, 8),
+    ArmRegister.x14.physical(14, 8),
+    ArmRegister.x15.physical(15, 8),
+};
 
 pub const fp_scratch_reg = ArmRegister.d16.physical(0, 8);
 
 /// function param registers
-const fp_function_param_regs = [_]PhysicalReg{ ArmRegister.d0.physical(0, 8), ArmRegister.d1.physical(1, 8), ArmRegister.d2.physical(2, 8), ArmRegister.d3.physical(3, 8), ArmRegister.d4.physical(4, 8), ArmRegister.d5.physical(5, 8), ArmRegister.d6.physical(6, 8), ArmRegister.d7.physical(7, 8) };
+const fp_function_param_regs = [_]PhysicalReg{
+    ArmRegister.d0.physical(0, 8),
+    ArmRegister.d1.physical(1, 8),
+    ArmRegister.d2.physical(2, 8),
+    ArmRegister.d3.physical(3, 8),
+    ArmRegister.d4.physical(4, 8),
+    ArmRegister.d5.physical(5, 8),
+    ArmRegister.d6.physical(6, 8),
+    ArmRegister.d7.physical(7, 8),
+};
 
 /// callee save registers
-const fp_callee_save_regs = [_]PhysicalReg{ ArmRegister.d19.physical(16, 8), ArmRegister.d20.physical(17, 8), ArmRegister.d21.physical(18, 8), ArmRegister.d22.physical(19, 8), ArmRegister.d23.physical(20, 8), ArmRegister.d24.physical(21, 8), ArmRegister.d25.physical(22, 8), ArmRegister.d26.physical(23, 8), ArmRegister.d27.physical(24, 8), ArmRegister.d28.physical(25, 8) };
+const fp_callee_save_regs = [_]PhysicalReg{
+    ArmRegister.d19.physical(16, 8),
+    ArmRegister.d20.physical(17, 8),
+    ArmRegister.d21.physical(18, 8),
+    ArmRegister.d22.physical(19, 8),
+    ArmRegister.d23.physical(20, 8),
+    ArmRegister.d24.physical(21, 8),
+    ArmRegister.d25.physical(22, 8),
+    ArmRegister.d26.physical(23, 8),
+    ArmRegister.d27.physical(24, 8),
+    ArmRegister.d28.physical(25, 8),
+};
 
 /// caller save registers
 /// in order to allow using d0-d7, we need to write percoloring code so that we dont have a collision
-const fp_caller_save_regs = [_]PhysicalReg{ ArmRegister.d8.physical(8, 8), ArmRegister.d9.physical(9, 8), ArmRegister.d10.physical(10, 8), ArmRegister.d11.physical(11, 8), ArmRegister.d12.physical(12, 8), ArmRegister.d13.physical(13, 8), ArmRegister.d14.physical(14, 8), ArmRegister.d15.physical(15, 8) };
+const fp_caller_save_regs = [_]PhysicalReg{
+    ArmRegister.d8.physical(8, 8),
+    ArmRegister.d9.physical(9, 8),
+    ArmRegister.d10.physical(10, 8),
+    ArmRegister.d11.physical(11, 8),
+    ArmRegister.d12.physical(12, 8),
+    ArmRegister.d13.physical(13, 8),
+    ArmRegister.d14.physical(14, 8),
+    ArmRegister.d15.physical(15, 8),
+};
 
 pub fn getRegisterName(register: PhysicalReg) []const u8 {
     const arm_register: ArmRegister = @enumFromInt(register.id);

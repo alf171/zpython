@@ -48,16 +48,24 @@ pub const X86Register = enum(u8) {
         return .{
             .id = @intFromEnum(self),
             .index = index,
-            .type = registerType(self),
+            .type = self.registerType(),
             .width = width,
         };
     }
 };
 
+// FIXME: scratch registers shouldnt have a color set
 const gp_scratch_reg: PhysicalReg = X86Register.r11.physical(0, 8);
 
 /// general purpose function param registers
-const gp_function_param_regs = [_]PhysicalReg{ X86Register.rdi.physical(0, 8), X86Register.rsi.physical(1, 8), X86Register.rdx.physical(2, 8), X86Register.rcx.physical(3, 8), X86Register.r8.physical(4, 8), X86Register.r9.physical(5, 8) };
+const gp_function_param_regs = [_]PhysicalReg{
+    X86Register.rdi.physical(0, 8),
+    X86Register.rsi.physical(1, 8),
+    X86Register.rdx.physical(2, 8),
+    X86Register.rcx.physical(3, 8),
+    X86Register.r8.physical(4, 8),
+    X86Register.r9.physical(5, 8),
+};
 
 /// general purpose callee save registers
 const gp_callee_save_regs = [_]PhysicalReg{ X86Register.rbx.physical(8, 8), X86Register.r12.physical(9, 8), X86Register.r13.physical(10, 8), X86Register.r14.physical(11, 8), X86Register.r15.physical(12, 8) };
@@ -65,11 +73,18 @@ const gp_callee_save_regs = [_]PhysicalReg{ X86Register.rbx.physical(8, 8), X86R
 /// general purpose caller save registers
 const gp_caller_save_regs = [_]PhysicalReg{ X86Register.rax.physical(6, 8), X86Register.r10.physical(7, 8) };
 
+// FIXME: scratch registers shouldnt have a color set
 const fp_scratch_reg = X86Register.xmm15.physical(0, 8);
 
 const fp_function_param_regs = [_]PhysicalReg{
-    X86Register.xmm0.physical(0, 8), X86Register.xmm1.physical(1, 8), X86Register.xmm2.physical(2, 8), X86Register.xmm3.physical(3, 8),
-    X86Register.xmm4.physical(4, 8), X86Register.xmm5.physical(5, 8), X86Register.xmm6.physical(6, 8), X86Register.xmm7.physical(7, 8),
+    X86Register.xmm0.physical(0, 8),
+    X86Register.xmm1.physical(1, 8),
+    X86Register.xmm2.physical(2, 8),
+    X86Register.xmm3.physical(3, 8),
+    X86Register.xmm4.physical(4, 8),
+    X86Register.xmm5.physical(5, 8),
+    X86Register.xmm6.physical(6, 8),
+    X86Register.xmm7.physical(7, 8),
 };
 
 const fp_caller_save_regs = [_]PhysicalReg{

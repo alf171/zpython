@@ -24,6 +24,8 @@ pub const SeenValue = union(enum) {
     local: LocalId,
 };
 
+// TODO: rename id -> target_id
+// index -> color
 pub const PhysicalReg = struct {
     /// target-specific architectural register id
     id: u8,
@@ -39,7 +41,7 @@ pub const PhysicalReg = struct {
 
     /// the nunber of registers required
     pub fn count(self: @This()) u8 {
-        return @divExact(self.width, 8);
+        return @divExact(self.width, self.type.width());
     }
 };
 

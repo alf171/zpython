@@ -10,6 +10,14 @@ pub const RegisterType = enum {
     sgpr,
     /// vector general purpose register
     vgpr,
+
+    /// size in bytes of a single register
+    pub fn width(self: @This()) u8 {
+        return switch (self) {
+            .gp, .f => 8,
+            .sgpr, .vgpr => 4,
+        };
+    }
 };
 
 pub const RegisterFile = struct {

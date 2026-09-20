@@ -7,7 +7,7 @@ const RegisterType = @import("common").register.RegisterType;
 const RegisterFile = @import("common").register.RegisterFile;
 const PhysicalReg = @import("common").ir.PhysicalReg;
 
-// function_return_idx = idnex of in mask of the function return register
+// function_return_idx = index of in mask of the function return register
 // mask calculation could be moved to comptime
 pub const CpuAbi = struct {
     gp_function_arg_regs: []const PhysicalReg,
@@ -80,30 +80,11 @@ pub const CpuAbi = struct {
         };
     }
 
-    pub fn getIndexForType(self: @This(), index: usize, type_info: TypeInfo) !u8 {
-        return switch (type_info) {
-            .f64, .f32 => try self.getIndex(index, .f),
-            else => try self.getIndex(index, .gp),
-        };
-    }
-
     pub fn getFunctionReturn(self: @This(), type_info: TypeInfo) PhysicalReg {
         return switch (type_info) {
             .f64, .f32 => self.fp_allocatable_regs[self.fp_function_return_idx],
             else => self.gp_allocatable_regs[self.gp_function_return_idx],
         };
-    }
-
-    /// checks if index provided is in bounds
-    pub fn getIndex(self: @This(), index: usize, reg_type: RegisterType) !u8 {
-        const function_arg_regs_len = switch (reg_type) {
-            .f => self.fp_function_arg_regs.len,
-            .gp => self.gp_function_arg_regs.len,
-            else => unreachable,
-        };
-
-        if (index >= function_arg_regs_len) return error.OutOfBounds;
-        return @intCast(index);
     }
 
     /// convert an index into a register
