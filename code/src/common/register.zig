@@ -1,6 +1,6 @@
 const std = @import("std");
 const Operand = @import("alloc.zig").Operand;
-// FIXME: be consistent between RegisterType and RegisterClass
+
 pub const RegisterType = enum {
     /// general purpose register
     gp,
@@ -31,7 +31,8 @@ pub const RegisterOperand = struct {
 
 pub const RegisterClass = struct {
     type: RegisterType,
-    width: u8,
+    /// the number of registers needed
+    count: u8,
 };
 
 pub const RegisterClasses = struct {
@@ -55,7 +56,7 @@ pub const RegisterClasses = struct {
         return switch (operand) {
             .reg => |reg| .{
                 .type = reg.type,
-                .width = reg.width,
+                .count = reg.count(),
             },
             // HACK: we are going to give mem a register type
             .temp, .mem => self.map.get(operand) orelse {

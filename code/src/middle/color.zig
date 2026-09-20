@@ -335,7 +335,7 @@ fn scanForRegister(cnode: *ColoredNode, g: *ColoredGraph, k: u16) !?u8 {
     std.debug.assert(cnode.register == null);
     scan: for (0..k) |scan_reg| {
         // bit mask skip logic
-        const end = scan_reg + cnode.reg_class.width;
+        const end = scan_reg + cnode.reg_class.count;
         if (end > k) continue;
 
         for (scan_reg..end) |reg| {
@@ -346,7 +346,7 @@ fn scanForRegister(cnode: *ColoredNode, g: *ColoredGraph, k: u16) !?u8 {
         }
 
         // align width 2 sclar registers
-        if (cnode.reg_class.type == .sgpr and cnode.reg_class.width == 2 and scan_reg % 2 != 0) {
+        if (cnode.reg_class.type == .sgpr and cnode.reg_class.count == 2 and scan_reg % 2 != 0) {
             continue;
         }
 
@@ -360,7 +360,7 @@ fn scanForRegister(cnode: *ColoredNode, g: *ColoredGraph, k: u16) !?u8 {
             const nbor_reg = nbor.register orelse {
                 continue;
             };
-            if (overlaps(@intCast(scan_reg), cnode.reg_class.width, nbor_reg, nbor.reg_class.width)) {
+            if (overlaps(@intCast(scan_reg), cnode.reg_class.count, nbor_reg, nbor.reg_class.count)) {
                 continue :scan;
             }
         }

@@ -32,16 +32,16 @@ fn classifyFunction(
             const register_class: RegisterClass = switch (function.kind) {
                 .host => .{
                     .type = value.type.toRegisterType(.host),
-                    .width = 1,
+                    .count = 1,
                 },
                 .gpu_kernel => switch (instruction) {
                     .function_param => .{
                         .type = .sgpr,
-                        .width = @intCast((try value.type.sizeOfType() + 3) / 4),
+                        .count = @intCast((try value.type.sizeOfType() + 3) / 4),
                     },
                     else => .{
                         .type = .vgpr,
-                        .width = @intCast((try value.type.sizeOfType() + 3) / 4),
+                        .count = @intCast((try value.type.sizeOfType() + 3) / 4),
                     },
                 },
             };

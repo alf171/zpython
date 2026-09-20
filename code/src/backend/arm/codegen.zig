@@ -173,7 +173,7 @@ fn emitFunction(
                                                         .gp => try out.print(alloc, "\tmov ", .{}),
                                                         else => unreachable,
                                                     }
-                                                    const src = try abi.regForFromIndex(reg.id, reg.type);
+                                                    const src = abi.getRegisterName(reg);
                                                     try out.print(alloc, "{s}, {s}\n", .{ dst, src });
                                                 },
                                                 // temp <- mem
@@ -216,8 +216,8 @@ fn emitFunction(
                                                 },
                                                 // reg <- reg
                                                 .reg => |src_reg| {
-                                                    const dst = try abi.regForFromIndex(reg.id, reg.type);
-                                                    const src = try abi.regForFromIndex(src_reg.id, src_reg.type);
+                                                    const dst = abi.getRegisterName(reg);
+                                                    const src = abi.getRegisterName(src_reg);
                                                     switch (reg.type) {
                                                         .f => {
                                                             try out.print(alloc, "\tfmov {s}, {s}\n", .{ dst, src });
@@ -466,8 +466,8 @@ fn saveCalleeSaveReg(out: *ArrayList(u8), abi: Abi, alloc: std.mem.Allocator) !v
     std.debug.assert(abi.gp_callee_save_regs.len % 2 == 0);
     var i: usize = 0;
     while (i < abi.gp_callee_save_regs.len) : (i += 2) {
-        const reg1 = abi.gp_callee_save_regs[i];
-        const reg2 = abi.gp_callee_save_regs[i + 1];
+        const reg1 = abi.getRegisterName(abi.gp_callee_save_regs[i]);
+        const reg2 = abi.getRegisterName(abi.gp_callee_save_regs[i + 1]);
         try out.print(alloc, "\tstp {s}, {s}, [sp, #-16]!\n", .{ reg1, reg2 });
     }
 }
@@ -478,8 +478,8 @@ fn restoreCallleeSafeReg(out: *ArrayList(u8), abi: Abi, alloc: std.mem.Allocator
     var i: usize = abi.gp_callee_save_regs.len;
     while (i > 0) {
         i -= 2;
-        const reg1 = abi.gp_callee_save_regs[i];
-        const reg2 = abi.gp_callee_save_regs[i + 1];
+        const reg1 = abi.getRegisterName(abi.gp_callee_save_regs[i]);
+        const reg2 = abi.getRegisterName(abi.gp_callee_save_regs[i + 1]);
         try out.print(alloc, "\tldp {s}, {s}, [sp], #16\n", .{ reg1, reg2 });
     }
 }

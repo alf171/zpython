@@ -8,7 +8,7 @@ const Copy = common.mir.Copy;
 const FrontEndProgram = common.program.Program;
 const Function = common.function.Function;
 const Param = common.function.Param;
-const TypeParam = common.ir.TypeParam;
+const TypeParam = common.function.TypeParam;
 const Instruction = common.mir.Instruction;
 const Operand = common.alloc.Operand;
 

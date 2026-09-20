@@ -25,12 +25,21 @@ pub const SeenValue = union(enum) {
 };
 
 pub const PhysicalReg = struct {
+    /// target-specific architectural register id
     id: u8,
+    /// index within register class
+    index: u8,
     type: RegisterType,
+    /// measured in bytes
     width: u8,
 
     pub fn equal(self: @This(), other: @This()) bool {
-        return self.id == other.id and self.type == other.type and self.width == other.width;
+        return self.id == other.id and self.index == other.index and self.type == other.type and self.width == other.width;
+    }
+
+    /// the nunber of registers required
+    pub fn count(self: @This()) u8 {
+        return @divExact(self.width, 8);
     }
 };
 

@@ -38,7 +38,7 @@ pub fn emit(
                         if (dst.reg_type != .sgpr) return error.InvalidGpuRegisterClass;
 
                         const kernel_offset = fp.index * 8;
-                        switch (dst.width) {
+                        switch (dst.count) {
                             1 => {
                                 try out.print(alloc, "\ts_load_b32 s{d}, s[0:1], {d}\n", .{ dst.base, kernel_offset });
                             },
@@ -60,7 +60,7 @@ pub fn emit(
                                 // bit field extract work item asked for
                                 // x=0 (bits 0-9), y=1 (bits 10-19), z=2 (bits 20-29)
                                 try out.print(alloc, "\tv_bfe_u32 v{d}, v0, {d}, {d}\n", .{ dst.base, bit_offset, 10 });
-                                if (dst.width == 2)
+                                if (dst.count == 2)
                                     try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                             },
                             else => |e| {
@@ -82,10 +82,10 @@ pub fn emit(
                                             else => unreachable,
                                         };
                                         const low: u32 = @truncate(bits);
-                                        if (dst.width == 1) {
+                                        if (dst.count == 1) {
                                             try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
                                         } else {
-                                            std.debug.assert(dst.width == 2);
+                                            std.debug.assert(dst.count == 2);
                                             const high: u32 = @truncate(bits >> 32);
 
                                             try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
@@ -98,7 +98,7 @@ pub fn emit(
                                             .f32 => |f| @bitCast(f),
                                             else => unreachable,
                                         };
-                                        std.debug.assert(dst.width == 1);
+                                        std.debug.assert(dst.count == 1);
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{
                                             dst.base,
                                             bits,
@@ -113,8 +113,8 @@ pub fn emit(
                                     .list, .ptr, .i64, .f64, .instance => {
                                         const src = try abi.regFor(top.operand, colors);
                                         std.debug.assert(dst.reg_type == .vgpr);
-                                        std.debug.assert(dst.width == 2);
-                                        std.debug.assert(src.width == 2);
+                                        std.debug.assert(dst.count == 2);
+                                        std.debug.assert(src.count == 2);
                                         const src_reg_lo = try src.toString(alloc);
                                         defer alloc.free(src_reg_lo);
                                         const src_reg_hi = try src.toStringAt(1, alloc);
@@ -127,8 +127,8 @@ pub fn emit(
                                         const src = try abi.regFor(top.operand, colors);
                                         const src_reg = try src.toString(alloc);
                                         defer alloc.free(src_reg);
-                                        std.debug.assert(dst.width == 1);
-                                        std.debug.assert(src.width == 1);
+                                        std.debug.assert(dst.count == 1);
+                                        std.debug.assert(src.count == 1);
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg });
                                     },
                                     else => |e| {
@@ -163,7 +163,7 @@ pub fn emit(
                                         .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
                                         else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
                                     }
-                                    if (dst.width == 2)
+                                    if (dst.count == 2)
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                 },
                                 .mul => {
@@ -176,7 +176,7 @@ pub fn emit(
                                         },
                                     }
                                     // 0 out bits [32..64]
-                                    if (dst.width == 2)
+                                    if (dst.count == 2)
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                 },
                                 .sub => {
@@ -243,8 +243,8 @@ pub fn emit(
                                     }
                                 },
                                 .vgpr => {
-                                    std.debug.assert(base.width == 2);
-                                    std.debug.assert(offset.width == 2);
+                                    std.debug.assert(base.count == 2);
+                                    std.debug.assert(offset.count == 2);
                                     // *(base + offset) = src
                                     // address = base + offset
                                     const address = try abi.scratchReg(0, 2, .vgpr);
@@ -268,7 +268,7 @@ pub fn emit(
                                             });
                                         },
                                         .i64 => {
-                                            std.debug.assert(src.width == 2);
+                                            std.debug.assert(src.count == 2);
                                             try out.print(alloc, "\tglobal_store_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{
                                                 address.base,
                                                 address.base + 1,
@@ -309,20 +309,20 @@ pub fn emit(
                             // dst = *(src + offset)
                             switch (src.reg_type) {
                                 .vgpr => {
-                                    std.debug.assert(src.width == 2);
-                                    std.debug.assert(offset.width == 2);
+                                    std.debug.assert(src.count == 2);
+                                    std.debug.assert(offset.count == 2);
                                     std.debug.assert(offset.reg_type == .vgpr);
                                     const address = try abi.scratchReg(0, 2, .vgpr);
                                     try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
                                     try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
                                     switch (lo.dst.type) {
                                         .i32, .f32 => {
-                                            std.debug.assert(dst.width == 1);
+                                            std.debug.assert(dst.count == 1);
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
                                         .i64, .list => {
-                                            std.debug.assert(dst.width == 2);
+                                            std.debug.assert(dst.count == 2);
                                             try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
@@ -345,8 +345,8 @@ pub fn emit(
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
                                         .i32, .f32 => {
-                                            std.debug.assert(dst.width == 1);
-                                            std.debug.assert(src.width == 2);
+                                            std.debug.assert(dst.count == 1);
+                                            std.debug.assert(src.count == 2);
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
                                                 dst.base,
                                                 offset.base,
@@ -370,7 +370,7 @@ pub fn emit(
                         .branch => |b| {
                             const condition = try abi.regFor(b.condition.operand, colors);
                             std.debug.assert(condition.reg_type == .vgpr);
-                            std.debug.assert(condition.width == 1);
+                            std.debug.assert(condition.count == 1);
                             const scalar_scratch = try abi.scratchReg(0, 1, .sgpr);
                             try out.print(alloc, "\tv_readfirstlane_b32 s{d}, v{d}\n", .{ scalar_scratch.base, condition.base });
                             // sets scc bit
@@ -385,15 +385,15 @@ pub fn emit(
                             std.debug.assert(dst.reg_type == .vgpr);
                             std.debug.assert(lhs.reg_type == .vgpr);
                             std.debug.assert(rhs.reg_type == .vgpr);
-                            std.debug.assert(lhs.width == 1);
-                            std.debug.assert(rhs.width == 1);
+                            std.debug.assert(lhs.count == 1);
+                            std.debug.assert(rhs.count == 1);
                             // NOTE: rhs can technically be vector or scalar!
                             try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ c.op.condForCmp(), "i32", lhs.base, rhs.base });
                             try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
                         },
                         .select => |s| {
                             const dst = try abi.regFor(s.dst.operand, colors);
-                            std.debug.assert(dst.width == 1);
+                            std.debug.assert(dst.count == 1);
                             std.debug.assert(dst.reg_type == .vgpr);
                             const condition = try abi.regFor(s.condition.operand, colors);
                             std.debug.assert(condition.reg_type == .vgpr);
@@ -423,9 +423,9 @@ pub fn emit(
                                     const src = try abi.regFor(uo.src.operand, colors);
                                     switch (uo.src.type) {
                                         .f32 => {
-                                            std.debug.assert(dst.width == 1);
+                                            std.debug.assert(dst.count == 1);
                                             std.debug.assert(dst.reg_type == .vgpr);
-                                            std.debug.assert(src.width == 1);
+                                            std.debug.assert(src.count == 1);
                                             std.debug.assert(src.reg_type == .vgpr);
                                             try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
                                         },

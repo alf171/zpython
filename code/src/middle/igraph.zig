@@ -4,7 +4,7 @@ const RegisterFile = @import("common").register.RegisterFile;
 
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
-const Writer = std.io.Writer;
+const Writer = std.Io.Writer;
 const Line = @import("common").alloc.AllocLine;
 const Operand = @import("common").alloc.Operand;
 const RegisterClass = @import("common").register.RegisterClass;
@@ -72,7 +72,7 @@ pub const IGraph = struct {
     pub fn defineNodeIfDoesntExist(graph: *IGraph, val: Operand, reg_class: RegisterClass, allocator: Allocator) !void {
         if (graph.nodes.getPtr(val)) |node| {
             std.debug.assert(node.reg_class.type == reg_class.type);
-            std.debug.assert(node.reg_class.width == reg_class.width);
+            std.debug.assert(node.reg_class.count == reg_class.count);
             return;
         }
         if (!graph.nodes.contains(val)) {
@@ -97,9 +97,9 @@ pub const IGraph = struct {
                 .temp => {
                     try defineNodeIfDoesntExist(self, b, b_class, alloc);
                     std.debug.assert(self.nodes.contains(b));
-                    for (0..reg.width) |offset| {
-                        const id = @as(usize, reg.id) + offset;
-                        self.nodes.getPtr(b).?.forbidden_colors |= (@as(u32, 1) << @intCast(id));
+                    for (0..reg.count()) |offset| {
+                        const index = @as(usize, reg.index) + offset;
+                        self.nodes.getPtr(b).?.forbidden_colors |= (@as(u32, 1) << @intCast(index));
                     }
                     return;
                 },
@@ -118,8 +118,8 @@ pub const IGraph = struct {
                 .reg => |reg| {
                     try defineNodeIfDoesntExist(self, a, a_class, alloc);
                     std.debug.assert(self.nodes.contains(a));
-                    for (0..reg.width) |offset| {
-                        const id: usize = reg.id + offset;
+                    for (0..reg.count()) |offset| {
+                        const id: usize = reg.index + offset;
                         self.nodes.getPtr(a).?.forbidden_colors |= (@as(u32, 1) << @intCast(id));
                     }
                     return;
@@ -347,7 +347,7 @@ fn placeNodes(
                 return;
             }
 
-            if (define_class.width != uses_class.width) return;
+            if (define_class.count != uses_class.count) return;
             if (define.equal(uses)) return;
 
             try igraph.defineNodeIfDoesntExist(define, define_class, allocator);
@@ -370,9 +370,9 @@ test "coalesce removes stale move refs" {
     const b = Operand{ .temp = .{ .id = 1, .function_id = 0 } };
     const c = Operand{ .temp = .{ .id = 2, .function_id = 0 } };
     // init nodes
-    try graph.nodes.put(a, Node.init(a, .{ .type = .gp, .width = 1 }, alloc));
-    try graph.nodes.put(b, Node.init(b, .{ .type = .gp, .width = 1 }, alloc));
-    try graph.nodes.put(c, Node.init(c, .{ .type = .gp, .width = 1 }, alloc));
+    try graph.nodes.put(a, Node.init(a, .{ .type = .gp, .count = 1 }, alloc));
+    try graph.nodes.put(b, Node.init(b, .{ .type = .gp, .count = 1 }, alloc));
+    try graph.nodes.put(c, Node.init(c, .{ .type = .gp, .count = 1 }, alloc));
     // establish moves
     try graph.nodes.getPtr(a).?.moves.put(b, {});
     try graph.nodes.getPtr(b).?.moves.put(a, {});

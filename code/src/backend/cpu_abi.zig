@@ -5,36 +5,39 @@ const ColoredGraph = @import("middle").color.ColoredGraph;
 const TypeInfo = @import("common").types.TypeInfo;
 const RegisterType = @import("common").register.RegisterType;
 const RegisterFile = @import("common").register.RegisterFile;
+const PhysicalReg = @import("common").ir.PhysicalReg;
 
 // function_return_idx = idnex of in mask of the function return register
 // mask calculation could be moved to comptime
 pub const CpuAbi = struct {
-    gp_function_arg_regs: []const []const u8,
-    gp_caller_save_regs: []const []const u8,
-    gp_callee_save_regs: []const []const u8,
-    gp_allocatable_regs: []const []const u8,
+    gp_function_arg_regs: []const PhysicalReg,
+    gp_caller_save_regs: []const PhysicalReg,
+    gp_callee_save_regs: []const PhysicalReg,
+    gp_allocatable_regs: []const PhysicalReg,
     gp_call_clobber_mask: u32,
     gp_function_return_idx: u8,
-    gp_scratch_regs: []const []const u8,
-    fp_function_arg_regs: []const []const u8,
-    fp_caller_save_regs: []const []const u8,
-    fp_callee_save_regs: []const []const u8,
-    fp_allocatable_regs: []const []const u8,
+    gp_scratch_regs: []const PhysicalReg,
+    fp_function_arg_regs: []const PhysicalReg,
+    fp_caller_save_regs: []const PhysicalReg,
+    fp_callee_save_regs: []const PhysicalReg,
+    fp_allocatable_regs: []const PhysicalReg,
     fp_call_clobber_mask: u32,
     fp_function_return_idx: u8,
-    fp_scratch_regs: []const []const u8,
+    fp_scratch_regs: []const PhysicalReg,
+    getRegisterName: *const fn (reg: PhysicalReg) []const u8,
 
     pub fn init(
-        gp_function_arg_regs: []const []const u8,
-        gp_caller_save_regs: []const []const u8,
-        gp_callee_save_regs: []const []const u8,
+        gp_function_arg_regs: []const PhysicalReg,
+        gp_caller_save_regs: []const PhysicalReg,
+        gp_callee_save_regs: []const PhysicalReg,
         gp_function_return_idx: u8,
-        gp_scratch_regs: []const []const u8,
-        fp_function_arg_regs: []const []const u8,
-        fp_caller_save_regs: []const []const u8,
-        fp_callee_save_regs: []const []const u8,
+        gp_scratch_regs: []const PhysicalReg,
+        fp_function_arg_regs: []const PhysicalReg,
+        fp_caller_save_regs: []const PhysicalReg,
+        fp_callee_save_regs: []const PhysicalReg,
         fp_function_return_idx: u8,
-        fp_scratch_regs: []const []const u8,
+        fp_scratch_regs: []const PhysicalReg,
+        getRegisterName: *const fn (reg: PhysicalReg) []const u8,
     ) @This() {
         // [ high bits ] [ low bits ]
         // [ callee safe bits ] [ caller safe bits ] [function param bits]
@@ -58,6 +61,7 @@ pub const CpuAbi = struct {
             .fp_call_clobber_mask = fp_caller_save_mask | fp_function_param_mask,
             .fp_function_return_idx = fp_function_return_idx,
             .fp_scratch_regs = fp_scratch_regs,
+            .getRegisterName = getRegisterName,
         };
     }
 
@@ -83,10 +87,10 @@ pub const CpuAbi = struct {
         };
     }
 
-    pub fn getFunctionReturnIdx(self: @This(), type_info: TypeInfo) u8 {
+    pub fn getFunctionReturn(self: @This(), type_info: TypeInfo) PhysicalReg {
         return switch (type_info) {
-            .f64, .f32 => self.fp_function_return_idx,
-            else => self.gp_function_return_idx,
+            .f64, .f32 => self.fp_allocatable_regs[self.fp_function_return_idx],
+            else => self.gp_allocatable_regs[self.gp_function_return_idx],
         };
     }
 
@@ -103,7 +107,7 @@ pub const CpuAbi = struct {
     }
 
     /// convert an index into a register
-    pub fn paramRegFor(self: @This(), index: usize, reg_type: RegisterType) ![]const u8 {
+    pub fn paramRegFor(self: @This(), index: usize, reg_type: RegisterType) !PhysicalReg {
         const function_arg_regs = switch (reg_type) {
             .f => self.fp_function_arg_regs,
             .gp => self.gp_function_arg_regs,
@@ -114,7 +118,7 @@ pub const CpuAbi = struct {
         return function_arg_regs[index];
     }
 
-    pub fn regForFromIndex(self: @This(), index: usize, reg_type: RegisterType) ![]const u8 {
+    pub fn regForFromIndex(self: @This(), index: usize, reg_type: RegisterType) !PhysicalReg {
         const allocatable_regs = switch (reg_type) {
             .f => self.fp_allocatable_regs,
             .gp => self.gp_allocatable_regs,
@@ -134,11 +138,10 @@ pub const CpuAbi = struct {
                     return error.MissingColor;
                 };
                 const reg_id = node.register orelse return error.MissingColor;
-                return try regForFromIndex(self, reg_id, node.reg_class.type);
+                const physical_reg = try regForFromIndex(self, reg_id, node.reg_class.type);
+                return self.getRegisterName(physical_reg);
             },
-            .reg => |reg| {
-                return try regForFromIndex(self, reg.id, reg.type);
-            },
+            .reg => |reg| return self.getRegisterName(reg),
             else => return error.UnsupportedOperand,
         }
     }
@@ -147,11 +150,13 @@ pub const CpuAbi = struct {
         switch (reg_type) {
             .f => {
                 if (index >= self.fp_scratch_regs.len) return error.InvalidScratchReg;
-                return self.fp_scratch_regs[index];
+                const physical_reg = self.fp_scratch_regs[index];
+                return self.getRegisterName(physical_reg);
             },
             .gp => {
                 if (index >= self.gp_scratch_regs.len) return error.InvalidScratchReg;
-                return self.gp_scratch_regs[index];
+                const physical_reg = self.gp_scratch_regs[index];
+                return self.getRegisterName(physical_reg);
             },
             else => unreachable,
         }

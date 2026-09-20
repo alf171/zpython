@@ -566,7 +566,8 @@ fn createFunctionHeader(out: *ArrayList(u8), name: []const u8, local_stack_size:
 }
 
 fn saveCalleeSaveReg(out: *ArrayList(u8), abi: Abi, alloc: std.mem.Allocator) !void {
-    for (abi.gp_callee_save_regs) |reg| {
+    for (abi.gp_callee_save_regs) |physical_reg| {
+        const reg = abi.getRegisterName(physical_reg);
         try out.print(alloc, "\tpushq %{s}\n", .{reg});
     }
 }
@@ -575,7 +576,8 @@ fn restoreCalleeSafeReg(out: *ArrayList(u8), abi: Abi, alloc: std.mem.Allocator)
     var i = abi.gp_callee_save_regs.len;
     while (i > 0) {
         i -= 1;
-        const reg = abi.gp_callee_save_regs[i];
+        const physical_reg = abi.gp_callee_save_regs[i];
+        const reg = abi.getRegisterName(physical_reg);
         try out.print(alloc, "\tpopq %{s}\n", .{reg});
     }
 }

@@ -27,16 +27,12 @@ pub fn applyFunction(function: *Function, abi: CpuAbi, alloc: std.mem.Allocator)
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
                 .function_param => |fp| {
-                    const id = try abi.getIndexForType(fp.index, fp.dst.type);
+                    const reg = try abi.paramRegFor(fp.index, fp.dst.type.toRegisterType(function.kind));
                     try new_instructions.append(alloc, .{ .lir = .{ .move = .{
                         .dst = try fp.dst.clone(alloc),
                         .src = .{ .top = .{
                             .operand = .{
-                                .reg = .{
-                                    .id = id,
-                                    .type = fp.dst.type.toRegisterType(function.kind),
-                                    .width = 1,
-                                },
+                                .reg = reg,
                             },
                             .type = try fp.dst.type.clone(alloc),
                         } },
@@ -46,11 +42,7 @@ pub fn applyFunction(function: *Function, abi: CpuAbi, alloc: std.mem.Allocator)
                 .function_return => |fr| {
                     if (fr.value) |src_op| {
                         const reg: TypedOperand = .{
-                            .operand = .{ .reg = .{
-                                .id = abi.getFunctionReturnIdx(function.return_type),
-                                .type = function.return_type.toRegisterType(function.kind),
-                                .width = 1,
-                            } },
+                            .operand = .{ .reg = abi.getFunctionReturn(function.return_type) },
                             .type = try function.return_type.clone(alloc),
                         };
                         try new_instructions.append(alloc, .{ .lir = .{ .move = .{
@@ -76,11 +68,7 @@ pub fn applyFunction(function: *Function, abi: CpuAbi, alloc: std.mem.Allocator)
                     var args = try alloc.alloc(TypedOperand, fc.args.len);
                     errdefer alloc.free(args);
                     for (fc.args, 0..) |arg, i| {
-                        const reg: Operand = .{ .reg = .{
-                            .id = @intCast(i),
-                            .type = arg.type.toRegisterType(function.kind),
-                            .width = 1,
-                        } };
+                        const reg: Operand = .{ .reg = try abi.paramRegFor(i, arg.type.toRegisterType(function.kind)) };
                         copies[i] = .{
                             .dst = .{
                                 .operand = reg,
@@ -107,11 +95,7 @@ pub fn applyFunction(function: *Function, abi: CpuAbi, alloc: std.mem.Allocator)
                             .move = .{
                                 .dst = try dst.clone(alloc),
                                 .src = .{ .top = .{
-                                    .operand = .{ .reg = .{
-                                        .id = abi.getFunctionReturnIdx(dst.type),
-                                        .type = dst.type.toRegisterType(function.kind),
-                                        .width = 1,
-                                    } },
+                                    .operand = .{ .reg = abi.getFunctionReturn(dst.type) },
                                     .type = try dst.type.clone(alloc),
                                 } },
                             },

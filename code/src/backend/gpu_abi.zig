@@ -14,7 +14,7 @@ pub const RegisterUsage = struct {
 pub const GpuReg = struct {
     reg_type: RegisterType,
     base: u16,
-    width: u8,
+    count: u8,
 
     pub fn toString(self: @This(), alloc: std.mem.Allocator) ![]const u8 {
         const reg_type = switch (self.reg_type) {
@@ -79,34 +79,34 @@ pub const GpuAbi = struct {
                 return .{
                     .reg_type = node.reg_class.type,
                     .base = idx,
-                    .width = node.reg_class.width,
+                    .count = node.reg_class.count,
                 };
             },
             .reg => |reg| {
                 return .{
                     .reg_type = reg.type,
                     .base = reg.id,
-                    .width = reg.width,
+                    .count = reg.count(),
                 };
             },
             else => return error.UnsupportedOperand,
         }
     }
 
-    pub fn scratchReg(self: @This(), index: usize, width: u8, reg_type: RegisterType) !GpuReg {
+    pub fn scratchReg(self: @This(), index: usize, count: u8, reg_type: RegisterType) !GpuReg {
         const regs = switch (reg_type) {
             .vgpr => self.vgpr_scratch_regs,
             .sgpr => self.sgpr_scratch_regs,
             else => unreachable,
         };
 
-        if (width == 0 or index + width > regs.len)
+        if (count == 0 or index + count > regs.len)
             return error.InvalidScratchReg;
 
         const base = regs[index];
         return .{
             .base = base,
-            .width = width,
+            .count = count,
             .reg_type = reg_type,
         };
     }
@@ -140,7 +140,7 @@ pub const GpuAbi = struct {
             const color = node.register orelse continue;
 
             const base = try self.regForFromIndex(color, node.reg_class.type);
-            const next = base + node.reg_class.width;
+            const next = base + node.reg_class.count;
 
             switch (node.reg_class.type) {
                 .vgpr => usage.vgpr_next = @max(usage.vgpr_next, next),

@@ -4,6 +4,7 @@ const ValueRef = @import("common").ir.ValueRef;
 const ColoredGraph = @import("middle").color.ColoredGraph;
 const TypeInfo = @import("common").types.TypeInfo;
 const RegisterType = @import("common").ir.CpuRegisterType;
+const PhysicalReg = @import("common").ir.PhysicalReg;
 
 // function_return_idx = idnex of in mask of the function return register
 // mask calculation could be moved to comptime
@@ -86,7 +87,7 @@ pub const Abi = struct {
     }
 
     /// convert an index into a register
-    pub fn paramRegFor(self: @This(), index: usize, reg_type: RegisterType) ![]const u8 {
+    pub fn paramRegFor(self: @This(), index: usize, reg_type: RegisterType) !PhysicalReg {
         const function_arg_regs = switch (reg_type) {
             .f => self.fp_function_arg_regs,
             .gp => self.gp_function_arg_regs,
