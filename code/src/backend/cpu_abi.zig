@@ -111,17 +111,6 @@ pub const CpuAbi = struct {
 
     pub fn regFor(self: @This(), op: Operand) ![]const u8 {
         switch (op) {
-            // .temp => {
-            //     const node = colors.nodes.get(op) orelse {
-            //         std.debug.print("Missing color for operand: ", .{});
-            //         op.print();
-            //         std.debug.print("\n", .{});
-            //         return error.MissingColor;
-            //     };
-            //     const reg_id = node.register orelse return error.MissingColor;
-            //     const physical_reg = try self.regForColor(reg_id, node.reg_class);
-            //     return self.getRegisterName(physical_reg);
-            // },
             .reg => |reg| return self.getRegisterName(reg),
             else => return error.UnsupportedOperand,
         }

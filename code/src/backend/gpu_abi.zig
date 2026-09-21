@@ -71,21 +71,6 @@ pub const GpuAbi = struct {
 
     pub fn regFor(self: @This(), op: Operand) !GpuReg {
         switch (op) {
-            // .temp => {
-            //     const node = colors.nodes.get(op) orelse {
-            //         std.debug.print("Missing color for operand: ", .{});
-            //         op.print();
-            //         std.debug.print("\n", .{});
-            //         return error.MissingColor;
-            //     };
-            //     const reg_id = node.register orelse return error.MissingColor;
-            //     const physical_reg = try self.regForColor(reg_id, node.reg_class);
-            //     return .{
-            //         .reg_type = physical_reg.type,
-            //         .base = physical_reg.id,
-            //         .count = physical_reg.count(),
-            //     };
-            // },
             .reg => |reg| {
                 const physical_reg = try self.regForColor(reg.id, .{
                     .count = reg.count(),

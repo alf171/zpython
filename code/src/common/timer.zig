@@ -14,7 +14,6 @@ const Phase = enum {
     middle_coalesce,
     middle_reg_class,
     middle_reg_alloc_build,
-    middle_reg_apply_color,
     backend_total,
     backend_codegen,
     backend_write_asm,
