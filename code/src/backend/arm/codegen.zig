@@ -84,6 +84,14 @@ fn emitFunction(
                                             std.debug.assert(src[0] == 'x');
                                             try out.print(alloc, "\tstr w{s}, [{s}, {s}]\n", .{ src[1..], dst, offset });
                                         },
+                                        .f64 => {
+                                            std.debug.assert(src[0] == 'd');
+                                            try out.print(alloc, "\tstr {s}, [{s}, {s}]\n", .{ src, dst, offset });
+                                        },
+                                        .f32 => {
+                                            std.debug.assert(src[0] == 'd');
+                                            try out.print(alloc, "\tstr s{s}, [{s}, {s}]\n", .{ src[1..], dst, offset });
+                                        },
                                         .char, .bool => {
                                             std.debug.assert(src[0] == 'x');
                                             try out.print(alloc, "\tstrb w{s}, [{s}, {s}]\n", .{ src[1..], dst, offset });
@@ -147,7 +155,19 @@ fn emitFunction(
                                             try emitMovUnsigned(out, scratch_reg, bits, alloc);
                                             try out.print(alloc, "\tfmov {s}, {s}\n", .{ dst, scratch_reg });
                                         },
-                                        else => return error.NotImpl,
+                                        .f32 => |value| {
+                                            const dst = try abi.regFor(m.dst.operand);
+                                            const bits: u32 = @bitCast(value);
+                                            const scratch_reg = try abi.scratchReg(0, .gp);
+                                            try emitMovUnsigned(out, scratch_reg, bits, alloc);
+                                            std.debug.assert(dst[0] == 'd');
+                                            std.debug.assert(scratch_reg[0] == 'x');
+                                            try out.print(alloc, "\tfmov s{s}, w{s}\n", .{ dst[1..], scratch_reg[1..] });
+                                        },
+                                        // else => |e| {
+                                        //     std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        //     return error.NotImpl;
+                                        // },
                                     }
                                 },
                                 .top => |src_top| {
@@ -347,6 +367,11 @@ fn emitFunction(
                             switch (c.src.type) {
                                 .i64 => switch (c.dst.type) {
                                     .f64 => try out.print(alloc, "\tscvtf {s}, {s}\n", .{ dst, src }),
+                                    .f32 => {
+                                        std.debug.assert(dst[0] == 'd');
+                                        std.debug.assert(src[0] == 'x');
+                                        try out.print(alloc, "\tscvtf s{s}, {s}\n", .{ dst[1..], src });
+                                    },
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
@@ -367,6 +392,25 @@ fn emitFunction(
                                 },
                                 .f64 => switch (c.dst.type) {
                                     .i64 => try out.print(alloc, "\tfcvtzs {s}, {s}\n", .{ dst, src }),
+                                    .f32 => {
+                                        std.debug.assert(dst[0] == 'd');
+                                        std.debug.assert(src[0] == 'd');
+                                        try out.print(alloc, "\tfcvtzs {s}, s{s}\n", .{ dst, src[1..] });
+                                    },
+                                    else => {
+                                        std.debug.print("unsupported cast: {s} -> {s}\n", .{
+                                            @tagName(c.src.type),
+                                            @tagName(c.dst.type),
+                                        });
+                                        return error.UnsupportedCast;
+                                    },
+                                },
+                                .f32 => switch (c.dst.type) {
+                                    .f64 => {
+                                        std.debug.assert(dst[0] == 'd');
+                                        std.debug.assert(src[0] == 'd');
+                                        try out.print(alloc, "\tfcvt {s}, s{s}\n", .{ dst, src[1..] });
+                                    },
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
@@ -424,7 +468,7 @@ fn emitFunction(
                 },
                 // abi specific component are handled in pre_color
                 .function_return => {
-                    try out.print(alloc, "\tb _{s}_epilogue\n", .{function.name});
+                    try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
                 },
                 .function_ref => |fr| {
                     const dst = try abi.regFor(fr.dst.operand);

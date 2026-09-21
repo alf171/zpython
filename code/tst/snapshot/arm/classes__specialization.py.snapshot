@@ -1,0 +1,61 @@
+running program: (OPTIM=true)
+
+
+class Box[T]:
+    def __init__(self, values: list[T]) -> None:
+        self.values = values
+
+def make_box[T](value: T) -> Box[T]:
+    return Box([value])
+
+def consume_box[T](box: Box[T]) -> T:
+    return box.values[0]
+
+# FIXME: name main is not allowed actually!
+def run() -> None:
+    ints = make_box(1)
+    print(type(ints))
+    more_ints = make_box(2)
+    print(type(more_ints))
+    floats = make_box(3.0)
+    print(type(floats))
+    direct = Box([f32(4)])
+    print(type(direct))
+    print(ints.values[0])
+    print(more_ints.values[0])
+    print(floats.values[0])
+    print(direct.values[0])
+
+    print(consume_box(ints))
+
+run()
+
+performance report: (ORIGIN=user)
+number of asm lines: 510
+mov count: 246
+memory load count: 10
+memory store count: 92
+branch count: 23
+call count: 37
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 705
+mov count: 224
+memory load count: 32
+memory store count: 49
+branch count: 78
+call count: 31
+spill count: 0
+
+actual output:
+class_3[i64]
+class_3[i64]
+class_3[f64]
+class_3[f32]
+1
+2
+3.00000
+4.00000
+1
+[!!memory report!!]: allocs=23 frees=23 allocated_bytes=286 freed_bytes=286

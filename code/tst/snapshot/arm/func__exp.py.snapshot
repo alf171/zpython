@@ -1,18 +1,18 @@
 running program: (OPTIM=true)
 
-x = range(3, 5)
-print(len(x))
+x: float = 5.0
+print(exp(x))
 
-y = (1, 2, 3, 4)
-print(len(y))
+zero: f32 = 0.0
+print(type(zero))
 
 performance report: (ORIGIN=user)
-number of asm lines: 59
-mov count: 25
+number of asm lines: 67
+mov count: 32
 memory load count: 0
-memory store count: 10
+memory store count: 11
 branch count: 2
-call count: 5
+call count: 7
 spill count: 0
 
 performance report: (ORIGIN=runtime)
@@ -25,6 +25,6 @@ call count: 31
 spill count: 0
 
 actual output:
-2
-4
-[!!memory report!!]: allocs=2 frees=2 allocated_bytes=20 freed_bytes=20
+148.41315
+f32
+[!!memory report!!]: allocs=4 frees=4 allocated_bytes=42 freed_bytes=42

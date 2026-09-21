@@ -1,18 +1,19 @@
 running program: (OPTIM=true)
 
-x: int = 2
-y: int = 3
-z: int = x + y
-# we should be able to fold into print(x + y)
+x = "foo"
+y = "bar"
+# FIXME: should become x + y?
+z = _concat__string_concat(x, y)
 print(z)
+print(f"fstring print: {x} {y}")
 
 performance report: (ORIGIN=user)
-number of asm lines: 31
-mov count: 11
+number of asm lines: 157
+mov count: 94
 memory load count: 0
-memory store count: 3
+memory store count: 36
 branch count: 2
-call count: 3
+call count: 13
 spill count: 0
 
 performance report: (ORIGIN=runtime)
@@ -25,5 +26,6 @@ call count: 31
 spill count: 0
 
 actual output:
-5
-[!!memory report!!]: allocs=1 frees=1 allocated_bytes=10 freed_bytes=10
+foobar
+fstring print: foo bar
+[!!memory report!!]: allocs=14 frees=14 allocated_bytes=215 freed_bytes=215

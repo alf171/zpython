@@ -1,0 +1,33 @@
+running program: (OPTIM=true)
+
+from cycle_a import a
+
+a(5)
+
+def b(x: int) -> None:
+    # FIXME: fstrings dont support ints right now since they hardcode concat!
+    print(f"b got ", end="")
+    print(x)
+
+performance report: (ORIGIN=user)
+number of asm lines: 155
+mov count: 72
+memory load count: 0
+memory store count: 26
+branch count: 8
+call count: 13
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 706
+mov count: 225
+memory load count: 32
+memory store count: 49
+branch count: 78
+call count: 31
+spill count: 0
+
+actual output:
+b got 10
+a got 5
+[!!memory report!!]: allocs=6 frees=6 allocated_bytes=68 freed_bytes=68

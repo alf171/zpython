@@ -1,7 +1,5 @@
 running program: (OPTIM=true)
 
-from typing import Callable
-
 def f(c: bool) -> int:
   if c:
       x = 1
@@ -17,8 +15,8 @@ y = g(f_temp, False)
 print(y)
 
 performance report: (ORIGIN=user)
-number of asm lines: 91
-mov count: 28
+number of asm lines: 80
+mov count: 20
 memory load count: 0
 memory store count: 3
 branch count: 11
@@ -26,12 +24,12 @@ call count: 5
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 537
-mov count: 215
-memory load count: 10
-memory store count: 41
-branch count: 48
-call count: 28
+number of asm lines: 706
+mov count: 225
+memory load count: 32
+memory store count: 49
+branch count: 78
+call count: 31
 spill count: 0
 
 actual output:
