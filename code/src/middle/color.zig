@@ -89,7 +89,7 @@ pub const ColoredGraph = struct {
     }
 
     pub fn absorb(self: *@This(), other: *@This()) !void {
-        // ensure we have enough space to aovid partial failures
+        // ensure we have enough space to avoid partial failures
         try self.nodes.ensureUnusedCapacity(other.nodes.count());
 
         var other_it = other.nodes.iterator();

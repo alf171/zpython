@@ -14,8 +14,8 @@ print(A.grad[0])
 print(B.grad[0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 135
-mov count: 95
+number of asm lines: 131
+mov count: 91
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -23,8 +23,8 @@ call count: 13
 spill count: 3
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1258
-mov count: 638
+number of asm lines: 1235
+mov count: 615
 memory load count: 0
 memory store count: 0
 branch count: 117

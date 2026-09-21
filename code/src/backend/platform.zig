@@ -1,6 +1,5 @@
 const std = @import("std");
 const Program = @import("common").program.Program;
-const ColoredGraph = @import("middle").color.ColoredGraph;
 const CpuAbi = @import("cpu_abi.zig").CpuAbi;
 const GpuAbi = @import("gpu_abi.zig").GpuAbi;
 const ArmAbi = @import("arm/reg.zig").ArmAbi;
@@ -72,7 +71,6 @@ pub const HostPlatform = struct {
     abi: CpuAbi,
     emit: *const fn (
         program: *const Program,
-        colors: *const ColoredGraph,
         abi: CpuAbi,
         alloc: std.mem.Allocator,
     ) anyerror![]u8,
@@ -82,7 +80,6 @@ pub const DevicePlatform = struct {
     abi: GpuAbi,
     emit: *const fn (
         program: *const Program,
-        colors: *const ColoredGraph,
         abi: GpuAbi,
         alloc: std.mem.Allocator,
     ) anyerror![]u8,
@@ -103,15 +100,12 @@ pub const CompilationArifacts = struct {
 pub const CompileRequest = struct {
     program: *const Program,
     target: Target,
-    host_colors: *const ColoredGraph,
-    device_colors: *const ColoredGraph,
 
     pub fn compile(self: @This(), alloc: std.mem.Allocator) !CompilationArifacts {
         const host_platform = self.target.host.getPlatform();
 
         const host_asm = try host_platform.emit(
             self.program,
-            self.host_colors,
             host_platform.abi,
             alloc,
         );
@@ -123,7 +117,6 @@ pub const CompileRequest = struct {
                 const device_platform = self.target.device.getPlatform();
                 break :blk try device_platform.emit(
                     self.program,
-                    self.device_colors,
                     device_platform.abi,
                     alloc,
                 );

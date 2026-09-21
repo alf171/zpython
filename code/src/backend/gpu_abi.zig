@@ -1,10 +1,11 @@
 const std = @import("std");
 const Operand = @import("common").alloc.Operand;
 const ValueRef = @import("common").ir.ValueRef;
-const ColoredGraph = @import("middle").color.ColoredGraph;
 const TypeInfo = @import("common").types.TypeInfo;
+const RegisterClass = @import("common").register.RegisterClass;
 const RegisterFile = @import("common").register.RegisterFile;
 const RegisterType = @import("common").register.RegisterType;
+const PhysicalReg = @import("common").ir.PhysicalReg;
 
 pub const RegisterUsage = struct {
     vgpr_next: u16,
@@ -36,16 +37,16 @@ pub const GpuReg = struct {
 };
 
 pub const GpuAbi = struct {
-    sgpr_allocatable_regs: []const u16,
-    vgpr_allocatable_regs: []const u16,
-    sgpr_scratch_regs: []const u16,
-    vgpr_scratch_regs: []const u16,
+    sgpr_allocatable_regs: []const PhysicalReg,
+    vgpr_allocatable_regs: []const PhysicalReg,
+    sgpr_scratch_regs: []const PhysicalReg,
+    vgpr_scratch_regs: []const PhysicalReg,
 
     pub fn init(
-        sgpr_allocatable_regs: []const u16,
-        vgpr_allocatable_regs: []const u16,
-        sgpr_scratch_regs: []const u16,
-        vgpr_scratch_regs: []const u16,
+        sgpr_allocatable_regs: []const PhysicalReg,
+        vgpr_allocatable_regs: []const PhysicalReg,
+        sgpr_scratch_regs: []const PhysicalReg,
+        vgpr_scratch_regs: []const PhysicalReg,
     ) @This() {
         return .{
             .sgpr_allocatable_regs = sgpr_allocatable_regs,
@@ -55,38 +56,45 @@ pub const GpuAbi = struct {
         };
     }
 
-    fn regForFromIndex(self: @This(), index: usize, reg_type: RegisterType) !u16 {
-        const allocatable_regs = switch (reg_type) {
+    pub fn regForColor(self: @This(), color: usize, class: RegisterClass) !PhysicalReg {
+        const allocatable_regs = switch (class.type) {
             .vgpr => self.vgpr_allocatable_regs,
             .sgpr => self.sgpr_allocatable_regs,
             else => unreachable,
         };
-        if (index >= allocatable_regs.len) return error.TooManyArgs;
-        return allocatable_regs[index];
+        if (color >= allocatable_regs.len) return error.TooManyArgs;
+        var reg = allocatable_regs[color];
+        // recalculate width since we cant assume constant width
+        reg.width = class.count * class.type.width();
+        return reg;
     }
 
-    pub fn regFor(self: @This(), op: Operand, colors: *const ColoredGraph) !GpuReg {
+    pub fn regFor(self: @This(), op: Operand) !GpuReg {
         switch (op) {
-            .temp => {
-                const node = colors.nodes.get(op) orelse {
-                    std.debug.print("Missing color for operand: ", .{});
-                    op.print();
-                    std.debug.print("\n", .{});
-                    return error.MissingColor;
-                };
-                const reg_id = node.register orelse return error.MissingColor;
-                const idx = try regForFromIndex(self, reg_id, node.reg_class.type);
-                return .{
-                    .reg_type = node.reg_class.type,
-                    .base = idx,
-                    .count = node.reg_class.count,
-                };
-            },
+            // .temp => {
+            //     const node = colors.nodes.get(op) orelse {
+            //         std.debug.print("Missing color for operand: ", .{});
+            //         op.print();
+            //         std.debug.print("\n", .{});
+            //         return error.MissingColor;
+            //     };
+            //     const reg_id = node.register orelse return error.MissingColor;
+            //     const physical_reg = try self.regForColor(reg_id, node.reg_class);
+            //     return .{
+            //         .reg_type = physical_reg.type,
+            //         .base = physical_reg.id,
+            //         .count = physical_reg.count(),
+            //     };
+            // },
             .reg => |reg| {
-                return .{
-                    .reg_type = reg.type,
-                    .base = reg.id,
+                const physical_reg = try self.regForColor(reg.id, .{
                     .count = reg.count(),
+                    .type = reg.type,
+                });
+                return .{
+                    .reg_type = physical_reg.type,
+                    .base = physical_reg.id,
+                    .count = physical_reg.count(),
                 };
             },
             else => return error.UnsupportedOperand,
@@ -103,9 +111,9 @@ pub const GpuAbi = struct {
         if (count == 0 or index + count > regs.len)
             return error.InvalidScratchReg;
 
-        const base = regs[index];
+        const reg = regs[index];
         return .{
-            .base = base,
+            .base = reg.id,
             .count = count,
             .reg_type = reg_type,
         };
@@ -126,7 +134,7 @@ pub const GpuAbi = struct {
         };
     }
 
-    pub fn registerUsage(self: @This(), colors: *const ColoredGraph) !RegisterUsage {
+    pub fn registerUsage(self: @This()) !RegisterUsage {
         var usage: RegisterUsage = .{
             // v0 contains work items (x=bits[0-9],y=bits[10,19],z=bits[20-20])
             .vgpr_next = 1,
@@ -134,27 +142,12 @@ pub const GpuAbi = struct {
             .sgpr_next = 4,
         };
 
-        var it = colors.nodes.iterator();
-        while (it.next()) |entry| {
-            const node = entry.value_ptr.*;
-            const color = node.register orelse continue;
-
-            const base = try self.regForFromIndex(color, node.reg_class.type);
-            const next = base + node.reg_class.count;
-
-            switch (node.reg_class.type) {
-                .vgpr => usage.vgpr_next = @max(usage.vgpr_next, next),
-                .sgpr => usage.sgpr_next = @max(usage.sgpr_next, next),
-                else => unreachable,
-            }
-        }
-
         for (self.vgpr_scratch_regs) |reg| {
-            usage.vgpr_next = @max(usage.vgpr_next, reg + 1);
+            usage.vgpr_next = @max(usage.vgpr_next, reg.id + 1);
         }
 
         for (self.sgpr_scratch_regs) |reg| {
-            usage.sgpr_next = @max(usage.sgpr_next, reg + 1);
+            usage.sgpr_next = @max(usage.sgpr_next, reg.id + 1);
         }
         return usage;
     }

@@ -8,8 +8,8 @@ print(z)
 print(f"fstring print: {x} {y}")
 
 performance report: (ORIGIN=user)
-number of asm lines: 164
-mov count: 132
+number of asm lines: 163
+mov count: 131
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -17,8 +17,8 @@ call count: 13
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 845
-mov count: 403
+number of asm lines: 826
+mov count: 384
 memory load count: 0
 memory store count: 0
 branch count: 91

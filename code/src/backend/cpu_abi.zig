@@ -1,8 +1,8 @@
 const std = @import("std");
 const Operand = @import("common").alloc.Operand;
 const ValueRef = @import("common").ir.ValueRef;
-const ColoredGraph = @import("middle").color.ColoredGraph;
 const TypeInfo = @import("common").types.TypeInfo;
+const RegisterClass = @import("common").register.RegisterClass;
 const RegisterType = @import("common").register.RegisterType;
 const RegisterFile = @import("common").register.RegisterFile;
 const PhysicalReg = @import("common").ir.PhysicalReg;
@@ -99,8 +99,8 @@ pub const CpuAbi = struct {
         return function_arg_regs[index];
     }
 
-    pub fn regForFromIndex(self: @This(), index: usize, reg_type: RegisterType) !PhysicalReg {
-        const allocatable_regs = switch (reg_type) {
+    pub fn regForColor(self: @This(), index: usize, class: RegisterClass) !PhysicalReg {
+        const allocatable_regs = switch (class.type) {
             .f => self.fp_allocatable_regs,
             .gp => self.gp_allocatable_regs,
             else => unreachable,
@@ -109,19 +109,19 @@ pub const CpuAbi = struct {
         return allocatable_regs[index];
     }
 
-    pub fn regFor(self: @This(), op: Operand, colors: *const ColoredGraph) ![]const u8 {
+    pub fn regFor(self: @This(), op: Operand) ![]const u8 {
         switch (op) {
-            .temp => {
-                const node = colors.nodes.get(op) orelse {
-                    std.debug.print("Missing color for operand: ", .{});
-                    op.print();
-                    std.debug.print("\n", .{});
-                    return error.MissingColor;
-                };
-                const reg_id = node.register orelse return error.MissingColor;
-                const physical_reg = try regForFromIndex(self, reg_id, node.reg_class.type);
-                return self.getRegisterName(physical_reg);
-            },
+            // .temp => {
+            //     const node = colors.nodes.get(op) orelse {
+            //         std.debug.print("Missing color for operand: ", .{});
+            //         op.print();
+            //         std.debug.print("\n", .{});
+            //         return error.MissingColor;
+            //     };
+            //     const reg_id = node.register orelse return error.MissingColor;
+            //     const physical_reg = try self.regForColor(reg_id, node.reg_class);
+            //     return self.getRegisterName(physical_reg);
+            // },
             .reg => |reg| return self.getRegisterName(reg),
             else => return error.UnsupportedOperand,
         }

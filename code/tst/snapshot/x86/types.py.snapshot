@@ -12,8 +12,8 @@ infer_floats = [0.0, 1.0, 2.0]
 print(type(infer_floats))
 
 performance report: (ORIGIN=user)
-number of asm lines: 268
-mov count: 232
+number of asm lines: 266
+mov count: 230
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -21,8 +21,8 @@ call count: 17
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 847
-mov count: 405
+number of asm lines: 828
+mov count: 386
 memory load count: 0
 memory store count: 0
 branch count: 91

@@ -12,8 +12,8 @@ print(z.cols)
 z.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 133
-mov count: 95
+number of asm lines: 130
+mov count: 92
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -21,8 +21,8 @@ call count: 16
 spill count: 0
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 1399
-mov count: 755
+number of asm lines: 1371
+mov count: 727
 memory load count: 0
 memory store count: 0
 branch count: 125

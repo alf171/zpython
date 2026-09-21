@@ -25,6 +25,8 @@ const reg_class = middle.reg_class;
 const live = middle.live;
 const igraph = middle.igraph;
 const color = middle.color;
+const apply_colors = middle.apply_colors;
+const identity = middle.identity;
 const RegisterFile = @import("common").register.RegisterFile;
 const precolor = middle.precolor;
 const phi = middle.phi;
@@ -216,7 +218,7 @@ pub fn main(init: std.process.Init) !void {
         try ir_program.print();
     }
 
-    var device_colors = color.ColoredGraph.initEmpty(alloc);
+    var device_colors: color.ColoredGraph = .initEmpty(alloc);
     defer device_colors.deinit();
     switch (target.device) {
         .host => {},
@@ -241,16 +243,19 @@ pub fn main(init: std.process.Init) !void {
                 defer result.graph.deinit();
                 try device_colors.absorb(&result.graph);
             }
+            // FIXME: apply_colors only once
+            try apply_colors.run(&ir_program, &device_colors, device_platform.abi, alloc);
         },
     }
+    // FIXME: apply_colors only once
+    try apply_colors.run(&ir_program, &host_colors, host_platform.abi, alloc);
+    if (should_optim) try identity.run(&ir_program, alloc);
     timer.finish(.middle_total, io);
 
     timer.begin(.backend_total, io);
     timer.begin(.backend_codegen, io);
     var artifacts = try (backend.CompileRequest{
         .program = &ir_program,
-        .host_colors = &host_colors,
-        .device_colors = &device_colors,
         .target = target,
     }).compile(alloc);
     defer artifacts.deinit(alloc);

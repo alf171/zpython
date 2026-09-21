@@ -43,7 +43,7 @@ fn spillRegInFunction(
 ) !void {
     var spill_slot: ?Operand = null;
     for (function.blocks.items) |*block| {
-        var new_instructions = ArrayList(Instruction).empty;
+        var new_instructions: ArrayList(Instruction) = .empty;
         for (block.instructions.items) |old_instruction| {
             var instruction = old_instruction;
             const maybe_defines = old_instruction.getDefines();

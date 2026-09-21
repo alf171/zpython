@@ -7,8 +7,8 @@ zero: f32 = 0.0
 print(type(zero))
 
 performance report: (ORIGIN=user)
-number of asm lines: 74
-mov count: 46
+number of asm lines: 73
+mov count: 45
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -16,8 +16,8 @@ call count: 7
 spill count: 1
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 845
-mov count: 403
+number of asm lines: 826
+mov count: 384
 memory load count: 0
 memory store count: 0
 branch count: 91

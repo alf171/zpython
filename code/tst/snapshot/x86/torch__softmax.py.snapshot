@@ -10,8 +10,8 @@ y.print()
 y.sum(1).print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 86
-mov count: 50
+number of asm lines: 85
+mov count: 49
 memory load count: 0
 memory store count: 0
 branch count: 2
@@ -19,8 +19,8 @@ call count: 10
 spill count: 2
 
 performance report: (ORIGIN=runtime)
-number of asm lines: 2214
-mov count: 1331
+number of asm lines: 2172
+mov count: 1289
 memory load count: 0
 memory store count: 0
 branch count: 153

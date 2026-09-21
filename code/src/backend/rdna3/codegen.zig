@@ -16,7 +16,6 @@ const RegisterUsage = @import("../gpu_abi.zig").RegisterUsage;
 
 pub fn emit(
     program: *const Program,
-    colors: *const ColoredGraph,
     abi: Abi,
     alloc: std.mem.Allocator,
 ) ![]u8 {
@@ -34,7 +33,7 @@ pub fn emit(
             for (block.instructions.items) |instruction| {
                 switch (instruction) {
                     .function_param => |fp| {
-                        const dst = try abi.regFor(fp.dst.operand, colors);
+                        const dst = try abi.regFor(fp.dst.operand);
                         if (dst.reg_type != .sgpr) return error.InvalidGpuRegisterClass;
 
                         const kernel_offset = fp.index * 8;
@@ -51,7 +50,7 @@ pub fn emit(
                         try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
                     },
                     .global_idx => |gi| {
-                        const dst = try abi.regFor(gi.dst.operand, colors);
+                        const dst = try abi.regFor(gi.dst.operand);
                         if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
                         switch (gi.axis) {
                             .constant => |c| {
@@ -71,7 +70,7 @@ pub fn emit(
                     },
                     .lir => |lir| switch (lir) {
                         .move => |m| {
-                            const dst = try abi.regFor(m.dst.operand, colors);
+                            const dst = try abi.regFor(m.dst.operand);
                             if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
                             switch (m.src) {
                                 .constant => |c| switch (c) {
@@ -111,7 +110,7 @@ pub fn emit(
                                 },
                                 .top => |top| switch (top.type) {
                                     .list, .ptr, .i64, .f64, .instance => {
-                                        const src = try abi.regFor(top.operand, colors);
+                                        const src = try abi.regFor(top.operand);
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         std.debug.assert(dst.count == 2);
                                         std.debug.assert(src.count == 2);
@@ -124,7 +123,7 @@ pub fn emit(
                                     },
                                     .i32, .f32 => {
                                         std.debug.assert(dst.reg_type == .vgpr);
-                                        const src = try abi.regFor(top.operand, colors);
+                                        const src = try abi.regFor(top.operand);
                                         const src_reg = try src.toString(alloc);
                                         defer alloc.free(src_reg);
                                         std.debug.assert(dst.count == 1);
@@ -139,10 +138,10 @@ pub fn emit(
                             }
                         },
                         .binop => |bop| {
-                            const dst = try abi.regFor(bop.dst.operand, colors);
+                            const dst = try abi.regFor(bop.dst.operand);
                             std.debug.assert(dst.reg_type == .vgpr);
-                            const lhs = try abi.regFor(bop.lhs.operand, colors);
-                            const rhs = try abi.regFor(bop.rhs.operand, colors);
+                            const lhs = try abi.regFor(bop.lhs.operand);
+                            const rhs = try abi.regFor(bop.rhs.operand);
                             var src0 = lhs;
                             var src1 = rhs;
                             if (bop.op.isCommutative() and src0.reg_type == .vgpr and src1.reg_type == .sgpr) {
@@ -209,12 +208,12 @@ pub fn emit(
                             }
                         },
                         .store_offset => |so| {
-                            const base = try abi.regFor(so.dst.operand, colors);
+                            const base = try abi.regFor(so.dst.operand);
                             const offset = switch (so.offset) {
                                 .constant => return error.NotImpl,
-                                .top => |top| try abi.regFor(top.operand, colors),
+                                .top => |top| try abi.regFor(top.operand),
                             };
-                            const src = try abi.regFor(so.src.operand, colors);
+                            const src = try abi.regFor(so.src.operand);
                             switch (base.reg_type) {
                                 .sgpr => {
                                     // *(base + offset) = src
@@ -286,7 +285,7 @@ pub fn emit(
                             }
                         },
                         .load_offset => |lo| {
-                            const dst = try abi.regFor(lo.dst.operand, colors);
+                            const dst = try abi.regFor(lo.dst.operand);
                             const offset = switch (lo.offset) {
                                 .constant => |constant| blk: {
                                     const value: i64 = switch (constant) {
@@ -302,9 +301,9 @@ pub fn emit(
                                     try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base + 1, high });
                                     break :blk scratch;
                                 },
-                                .top => |top| try abi.regFor(top.operand, colors),
+                                .top => |top| try abi.regFor(top.operand),
                             };
-                            const src = try abi.regFor(lo.src.operand, colors);
+                            const src = try abi.regFor(lo.src.operand);
                             std.debug.assert(dst.reg_type == .vgpr);
                             // dst = *(src + offset)
                             switch (src.reg_type) {
@@ -368,7 +367,7 @@ pub fn emit(
                             try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, j.target });
                         },
                         .branch => |b| {
-                            const condition = try abi.regFor(b.condition.operand, colors);
+                            const condition = try abi.regFor(b.condition.operand);
                             std.debug.assert(condition.reg_type == .vgpr);
                             std.debug.assert(condition.count == 1);
                             const scalar_scratch = try abi.scratchReg(0, 1, .sgpr);
@@ -379,9 +378,9 @@ pub fn emit(
                             try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, b.else_block });
                         },
                         .compare => |c| {
-                            const dst = try abi.regFor(c.dst.operand, colors);
-                            const lhs = try abi.regFor(c.lhs.operand, colors);
-                            const rhs = try abi.regFor(c.rhs.operand, colors);
+                            const dst = try abi.regFor(c.dst.operand);
+                            const lhs = try abi.regFor(c.lhs.operand);
+                            const rhs = try abi.regFor(c.rhs.operand);
                             std.debug.assert(dst.reg_type == .vgpr);
                             std.debug.assert(lhs.reg_type == .vgpr);
                             std.debug.assert(rhs.reg_type == .vgpr);
@@ -392,16 +391,16 @@ pub fn emit(
                             try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
                         },
                         .select => |s| {
-                            const dst = try abi.regFor(s.dst.operand, colors);
+                            const dst = try abi.regFor(s.dst.operand);
                             std.debug.assert(dst.count == 1);
                             std.debug.assert(dst.reg_type == .vgpr);
-                            const condition = try abi.regFor(s.condition.operand, colors);
+                            const condition = try abi.regFor(s.condition.operand);
                             std.debug.assert(condition.reg_type == .vgpr);
                             try out.print(alloc, "\tv_cmp_ne_u32 vcc_lo, v{d}, 0\n", .{condition.base});
                             try out.print(alloc, "v_cndmask_b32 v{d}, ", .{dst.base});
                             switch (s.else_value) {
                                 .top => |top| {
-                                    const else_value = try abi.regFor(top.operand, colors);
+                                    const else_value = try abi.regFor(top.operand);
                                     try out.print(alloc, "v{d}, ", .{else_value.base});
                                 },
                                 .constant => |c| {
@@ -410,7 +409,7 @@ pub fn emit(
                             }
                             switch (s.if_value) {
                                 .top => |top| {
-                                    const if_value = try abi.regFor(top.operand, colors);
+                                    const if_value = try abi.regFor(top.operand);
                                     try out.print(alloc, "v{d}, vcc_lo\n", .{if_value.base});
                                 },
                                 else => return error.NotImpl,
@@ -419,8 +418,8 @@ pub fn emit(
                         .unaryop => |uo| {
                             switch (uo.op) {
                                 .exp2 => {
-                                    const dst = try abi.regFor(uo.dst.operand, colors);
-                                    const src = try abi.regFor(uo.src.operand, colors);
+                                    const dst = try abi.regFor(uo.dst.operand);
+                                    const src = try abi.regFor(uo.src.operand);
                                     switch (uo.src.type) {
                                         .f32 => {
                                             std.debug.assert(dst.count == 1);
@@ -456,7 +455,7 @@ pub fn emit(
             }
         }
         try emitKernelFooter(&out, function.label, alloc);
-        const register_usage = try abi.registerUsage(colors);
+        const register_usage = try abi.registerUsage();
         try emitKernelDescriptor(&out, function.label, register_usage, function.params.len, alloc);
     }
 
