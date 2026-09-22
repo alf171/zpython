@@ -262,7 +262,7 @@ pub const Function = struct {
         cloned.blocks.clearRetainingCapacity();
 
         for (function.blocks.items) |source| {
-            var block = BasicBlock.init(source.id);
+            var block: BasicBlock = .init(source.id);
             errdefer block.deinit(alloc);
             try block.predecessors.appendSlice(alloc, source.predecessors.items);
             try block.successors.appendSlice(alloc, source.successors.items);

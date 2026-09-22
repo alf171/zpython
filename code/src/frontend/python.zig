@@ -399,22 +399,6 @@ fn declareFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, a
             .is_static = is_static,
         });
     }
-
-    // save function state
-    const saved_current_function = ir_builder.current_function;
-    const saved_current_block = ir_builder.current_block;
-    var saved_local_values = try ir_builder.current_scope.local_values.clone(alloc);
-    defer saved_local_values.deinit(alloc);
-
-    // set function state
-    ir_builder.current_function = ir_builder.program.functions.items.len - 1;
-    ir_builder.current_block = 0;
-    ir_builder.current_scope.local_values.clear(alloc);
-
-    // restore function state
-    ir_builder.current_function = saved_current_function;
-    ir_builder.current_block = saved_current_block;
-    try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
 }
 
 pub fn parseConstant(

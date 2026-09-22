@@ -1004,13 +1004,9 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             );
             try ir_builder.program.functions.append(alloc, function);
 
-            const saved_function = ir_builder.current_function;
-            const saved_block = ir_builder.current_block;
-            var saved_local_values = try ir_builder.current_scope.local_values.clone(alloc);
-            defer saved_local_values.deinit(alloc);
-            ir_builder.current_function = id - 1;
-            ir_builder.current_block = 0;
-            ir_builder.current_scope.local_values.clear(alloc);
+            // save function state
+            const function_context = ir_builder.enterFunction(id - 1, .init(alloc));
+
             for (ir_builder.currentFunction().params, 0..) |param, i| {
                 const f_dst: TypedOperand = .{
                     .operand = ir_builder.nextTemp(),
@@ -1033,9 +1029,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 .value = if (body.type != .void) body else null,
             } }, alloc);
 
-            ir_builder.current_function = saved_function;
-            ir_builder.current_block = saved_block;
-            try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
+            ir_builder.leaveFunction(function_context, alloc);
+            // ir_builder.current_function = saved_function;
+            // ir_builder.current_block = saved_block;
+            // try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
             const dst: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),
                 .type = try callable_type.clone(alloc),
@@ -2064,23 +2061,13 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
     defer if (class_id != null) alloc.free(definition_name);
 
     // save function state
-    const saved_current_function = ir_builder.current_function;
-    const saved_current_block = ir_builder.current_block;
-    var saved_local_values = try ir_builder.current_scope.local_values.clone(alloc);
-    defer saved_local_values.deinit(alloc);
-
-    // set function state
     const declared = ir_builder.getModuleFunction(ir_builder.current_module_id, definition_name) orelse {
         std.debug.print("cant find function {s}\n", .{definition_name});
         return error.FunctionNotDeclared;
     };
-    const saved_type_params = ir_builder.active_param_types;
-    ir_builder.active_param_types = declared.type_params;
-    defer ir_builder.active_param_types = saved_type_params;
-    // restore state
-    ir_builder.current_function = declared.id - 1;
-    ir_builder.current_block = 0;
-    ir_builder.current_scope.local_values.clear(alloc);
+    const function_context = ir_builder.enterFunction(declared.id - 1, .init(alloc));
+    // restore function state when exiting
+    defer ir_builder.leaveFunction(function_context, alloc);
 
     // load function params
     const function = ir_builder.currentFunction();
@@ -2121,11 +2108,6 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
     if (!termianted and function.return_type == .void) {
         try ir_builder.emit(.{ .function_return = .{ .value = null } }, alloc);
     }
-
-    // restore function state
-    ir_builder.current_function = saved_current_function;
-    ir_builder.current_block = saved_current_block;
-    try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
 }
 
 fn emitResolvedCall(

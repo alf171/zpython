@@ -133,6 +133,13 @@ pub const LocalScope = struct {
     }
 };
 
+pub const FunctionContext = struct {
+    function: ?usize,
+    block: BlockId,
+    scope: LocalScope,
+    active_param_types: []const TypeParam,
+};
+
 pub const IrBuilder = struct {
     program: Program,
     current_block: BlockId,
@@ -311,6 +318,30 @@ pub const IrBuilder = struct {
             }
         }
         return null;
+    }
+
+    /// save current function state and change to new
+    pub fn enterFunction(self: *@This(), function_id: usize, new_scope: LocalScope) FunctionContext {
+        const saved: FunctionContext = .{
+            .function = self.current_function,
+            .block = self.current_block,
+            .scope = self.current_scope,
+            .active_param_types = self.active_param_types,
+        };
+        self.current_function = function_id;
+        self.current_block = 0;
+        self.current_scope = new_scope;
+        self.active_param_types = self.currentFunction().type_params;
+        return saved;
+    }
+
+    /// restore function state
+    pub fn leaveFunction(self: *@This(), context: FunctionContext, alloc: std.mem.Allocator) void {
+        self.current_function = context.function;
+        self.current_block = context.block;
+        self.current_scope.deinit(alloc);
+        self.current_scope = context.scope;
+        self.active_param_types = context.active_param_types;
     }
 };
 
