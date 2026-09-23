@@ -48,6 +48,9 @@ pub const PhysicalReg = struct {
 pub const BlockId = u32;
 // python defined variable
 pub const LocalId = u32;
+// scope of our variable
+pub const ScopeId = u16;
+
 pub const LocalInfo = struct {
     id: LocalId,
     name: []const u8,

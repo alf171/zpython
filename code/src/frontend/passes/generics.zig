@@ -55,7 +55,6 @@ fn rewriteFunction(
                                 pending,
                                 if (fc.dst) |*dst| dst else null,
                                 fc.args,
-                                function,
                                 alloc,
                             );
                         },
@@ -64,7 +63,7 @@ fn rewriteFunction(
                     try new_instructions.append(alloc, instruction.*);
                 },
                 .gpu_launch => |*gl| {
-                    try specializeInvocation(&gl.kernel, program, pending, null, gl.args, function, alloc);
+                    try specializeInvocation(&gl.kernel, program, pending, null, gl.args, alloc);
                     try new_instructions.append(alloc, instruction.*);
                 },
                 else => try new_instructions.append(alloc, instruction.*),
@@ -75,14 +74,12 @@ fn rewriteFunction(
     }
 }
 
-fn specializeInvocation(callee_name: *[]const u8, program: *Program, pending: *ArrayList(Function), maybe_dst: ?*TypedOperand, args: []TypedOperand, function: *Function, alloc: std.mem.Allocator) !void {
+fn specializeInvocation(callee_name: *[]const u8, program: *Program, pending: *ArrayList(Function), maybe_dst: ?*TypedOperand, args: []TypedOperand, alloc: std.mem.Allocator) !void {
     var maybe_specialized = try specializeCall(callee_name.*, program, pending, args, alloc);
     if (maybe_specialized) |*specialized| {
         defer specialized.deinit(alloc);
         if (maybe_dst) |dst| {
             dst.replaceType(specialized.takeReturnType(), alloc);
-
-            try function.setValueType(dst.operand, dst.type, alloc);
         }
 
         alloc.free(callee_name.*);

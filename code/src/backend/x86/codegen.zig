@@ -591,7 +591,7 @@ fn emitLoadConstant(
     alloc: std.mem.Allocator,
 ) !void {
     switch (type_) {
-        .i64, .list => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
+        .i64, .list, .callable => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .i32 => try out.print(alloc, "\tmovslq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .bool => try out.print(alloc, "\tmovsbl {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         else => |e| {

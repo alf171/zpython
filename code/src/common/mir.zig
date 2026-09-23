@@ -100,6 +100,25 @@ pub const Instruction = union(enum) {
         // `module_name`__`function_name`
         label: []const u8,
     },
+    // similar to `load_local` but for captures
+    load_capture: struct {
+        dst: TypedOperand,
+        env: TypedOperand,
+        index: usize,
+    },
+    // similar to `function_ref` but accepts a capture
+    closure_create: struct {
+        dst: TypedOperand,
+        // `module_name`__`function_name`
+        label: []const u8,
+        captures: []TypedOperand,
+    },
+    closure_call: struct {
+        dst: ?TypedOperand,
+        // closure in a lambda
+        callee: TypedOperand,
+        args: []TypedOperand,
+    },
     // heap based variable size
     list_literal: struct {
         dst: TypedOperand,
@@ -273,6 +292,26 @@ pub const Instruction = union(enum) {
             },
             .class_alloc => |ca| {
                 ca.dst.deinit(alloc);
+            },
+            .load_capture => |lc| {
+                lc.dst.deinit(alloc);
+                lc.env.deinit(alloc);
+            },
+            .closure_create => |cc| {
+                cc.dst.deinit(alloc);
+                alloc.free(cc.label);
+                for (cc.captures) |capture| {
+                    capture.deinit(alloc);
+                }
+                alloc.free(cc.captures);
+            },
+            .closure_call => |cc| {
+                if (cc.dst) |dst| dst.deinit(alloc);
+                cc.callee.deinit(alloc);
+                for (cc.args) |arg| {
+                    arg.deinit(alloc);
+                }
+                alloc.free(cc.args);
             },
             .lir => |*lir| lir.deinit(alloc),
             else => {},
@@ -568,6 +607,7 @@ pub const Instruction = union(enum) {
             .field_load => |*fl| .{ .top = &fl.dst },
             .class_init => |*ci| .{ .top = &ci.dst },
             .class_alloc => |*ca| .{ .top = &ca.dst },
+            .closure_create => |*cc| .{ .top = &cc.dst },
             .lir => |*l| return l.getDefinePtrs(),
             else => |e| {
                 debugPrint("getDefines cant handle {s}\n", .{@tagName(e)});
@@ -687,6 +727,11 @@ pub const Instruction = union(enum) {
                 try res.append(alloc, .{ .top = &fl.instance });
             },
             .class_alloc => {},
+            .closure_create => |*cc| {
+                for (cc.captures) |*capture| {
+                    try res.append(alloc, .{ .top = capture });
+                }
+            },
             .lir => |*l| {
                 var seen = try l.getUsePtrs(alloc);
                 defer seen.deinit(alloc);
@@ -819,6 +864,17 @@ pub const Instruction = union(enum) {
             .class_alloc => |ca| .{ .class_alloc = .{
                 .dst = try ca.dst.clone(alloc),
             } },
+            .closure_create => |cc| blk: {
+                const captures = try alloc.alloc(TypedOperand, cc.captures.len);
+                for (cc.captures, 0..) |capture, i| {
+                    captures[i] = try capture.clone(alloc);
+                }
+                break :blk .{ .closure_create = .{
+                    .dst = try cc.dst.clone(alloc),
+                    .label = try alloc.dupe(u8, cc.label),
+                    .captures = captures,
+                } };
+            },
             .lir => |*lir| .{
                 .lir = try lir.clone(alloc),
             },

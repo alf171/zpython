@@ -1,0 +1,33 @@
+running program: (OPTIM=true)
+
+def make() -> Callable[[], i32]:
+    x: i32 = 1
+    f: Callable[[], i32] = lambda: x
+    # different from python semantics (this is a no op)
+    x += 1
+    return f
+
+f = make()
+print(f())
+
+performance report: (ORIGIN=user)
+number of asm lines: 88
+mov count: 28
+memory load count: 0
+memory store count: 0
+branch count: 8
+call count: 6
+spill count: 0
+
+performance report: (ORIGIN=runtime)
+number of asm lines: 826
+mov count: 384
+memory load count: 0
+memory store count: 0
+branch count: 91
+call count: 31
+spill count: 6
+
+actual output:
+1
+[!!memory report!!]: allocs=2 frees=2 allocated_bytes=26 freed_bytes=26

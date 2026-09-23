@@ -250,13 +250,6 @@ pub const TypedOperand = struct {
     /// type snapshot
     type: TypeInfo,
 
-    /// current type following aliases
-    pub fn getType(self: @This(), function: *const Function) !*const TypeInfo {
-        return function.value_to_type.getPtr(self.operand) orelse {
-            return error.TypeNotFound;
-        };
-    }
-
     pub fn equal(self: @This(), other: @This()) bool {
         return self.operand.equal(other.operand);
     }

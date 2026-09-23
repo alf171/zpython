@@ -140,14 +140,15 @@ fn lowerListAlloc(
     new_instructions: *std.ArrayList(Instruction),
     alloc: std.mem.Allocator,
 ) !void {
-    const size_temp = function.nextTemp();
+    const size_temp: TypedOperand = .{
+        .operand = function.nextTemp(),
+        .type = .i64,
+    };
     try new_instructions.append(alloc, .{ .lir = .{ .move = .{
-        .dst = .{ .operand = size_temp, .type = .i64 },
+        .dst = size_temp,
         .src = byte_count,
     } } });
-    const args = try alloc.dupe(TypedOperand, &.{
-        .{ .operand = size_temp, .type = .i64 },
-    });
+    const args = try alloc.dupe(TypedOperand, &.{size_temp});
     try new_instructions.append(alloc, .{ .function_call = .{
         .dst = try dst.clone(alloc),
         .callee = .{

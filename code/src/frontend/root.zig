@@ -8,6 +8,7 @@ pub const lazy = @import("passes/lazy.zig");
 pub const list = @import("passes/list.zig");
 pub const inline_ = @import("passes/inline.zig");
 pub const func = @import("passes/func.zig");
+pub const closure = @import("passes/closure.zig");
 pub const gpu = @import("passes/gpu.zig");
 pub const print = @import("passes/print.zig");
 pub const class = @import("passes/class.zig");

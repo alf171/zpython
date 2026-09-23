@@ -199,8 +199,8 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
             std.debug.assert(id_obj != null);
             const id = c.PyUnicode_AsUTF8(id_obj);
 
-            const local = try ir_builder.current_scope.getOrCreateLocal(std.mem.span(id), null, alloc);
-            try ir_builder.current_scope.putLocalValues(local, rhs_value, alloc);
+            const local = try ir_builder.currentScope().getOrCreateLocal(std.mem.span(id), null, alloc);
+            try ir_builder.currentScope().putLocalValues(local, rhs_value, alloc);
             try ir_builder.emit(.{ .lir = .{ .store_local = .{
                 .local = .{
                     .id = local,
@@ -279,9 +279,9 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
                 std.debug.assert(id_obj != null);
                 const id = c.PyUnicode_AsUTF8(id_obj);
 
-                const local = try ir_builder.current_scope.getOrCreateLocal(std.mem.span(id), null, alloc);
+                const local = try ir_builder.currentScope().getOrCreateLocal(std.mem.span(id), null, alloc);
 
-                try ir_builder.current_scope.putLocalValues(
+                try ir_builder.currentScope().putLocalValues(
                     local,
                     .{
                         .operand = elem_dst.operand,
@@ -365,12 +365,12 @@ fn walkAnnotatedAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.m
             const target_id_obj = c.PyObject_GetAttrString(target, "id");
             std.debug.assert(target_id_obj != null);
             const target_id = c.PyUnicode_AsUTF8(target_id_obj);
-            const local = try ir_builder.current_scope.getOrCreateLocal(
+            const local = try ir_builder.currentScope().getOrCreateLocal(
                 std.mem.span(target_id),
                 annotation_type,
                 alloc,
             );
-            try ir_builder.current_scope.putLocalValues(local, rhs_value, alloc);
+            try ir_builder.currentScope().putLocalValues(local, rhs_value, alloc);
             try ir_builder.emit(.{ .lir = .{ .store_local = .{
                 .local = .{
                     .id = local,
@@ -708,10 +708,42 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             std.debug.assert(id != null);
 
             const name = std.mem.span(id);
-            const localId = try ir_builder.current_scope.getOrCreateLocal(name, null, alloc);
+            // resolve local in scope(s)
+            if (ir_builder.resolveLocal(name)) |resolved| {
+                const scope = &ir_builder.scopes.items[resolved.scope];
+                const local_info = &scope.locals.items[resolved.local];
+                // closure invoked
+                if (resolved.scope != ir_builder.current_scope) {
+                    const dst: TypedOperand = .{
+                        .operand = ir_builder.nextTemp(),
+                        .type = try local_info.type.clone(alloc),
+                    };
+                    const idx = try ir_builder.currentFunction().getOrCreateCapture(name, resolved.scope, local_info.id, local_info.type, alloc);
+                    const env: TypedOperand = .{
+                        .operand = ir_builder.function_closure_env orelse return error.CantFindEnv,
+                        .type = .ptr,
+                    };
+                    try ir_builder.emit(.{ .load_capture = .{
+                        .dst = try dst.clone(alloc),
+                        .env = env,
+                        .index = idx,
+                    } }, alloc);
+                    return dst;
+                }
 
-            if (ir_builder.current_scope.local_values.map.get(localId)) |value| {
-                return try value.clone(alloc);
+                // if we've already seen so just return!
+                if (ir_builder.currentScope().local_values.map.get(resolved.local)) |value| {
+                    return try value.clone(alloc);
+                }
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try local_info.type.clone(alloc),
+                };
+                try ir_builder.emit(.{ .lir = .{ .load_local = .{
+                    .dst = dst,
+                    .local = try local_info.clone(alloc),
+                } } }, alloc);
+                return try dst.clone(alloc);
             }
 
             if (ir_builder.findImportModule(name)) |module_id| {
@@ -750,16 +782,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 }, alloc);
                 return try function_dst.clone(alloc);
             }
-            const local = try ir_builder.current_scope.locals.items[localId].clone(alloc);
-            const dst: TypedOperand = .{
-                .operand = ir_builder.nextTemp(),
-                .type = local.type,
-            };
-            try ir_builder.emit(.{ .lir = .{ .load_local = .{
-                .dst = dst,
-                .local = local,
-            } } }, alloc);
-            return try dst.clone(alloc);
+            return error.CantFindLocal;
         },
         // Compare(left=Constant(1),ops=[Lt()],comparators=[Constant(2)])
         .Compare => {
@@ -1005,20 +1028,36 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             try ir_builder.program.functions.append(alloc, function);
 
             // save function state
-            const function_context = ir_builder.enterFunction(id - 1, .init(alloc));
+            const scope_id = try ir_builder.createScope(ir_builder.current_scope, alloc);
+            const function_context = ir_builder.enterFunction(id - 1, scope_id);
+
+            // first param is function closure
+            const env: TypedOperand = .{
+                .operand = ir_builder.nextTemp(),
+                .type = .ptr,
+            };
+            try ir_builder.emit(.{ .function_param = .{
+                .dst = env,
+                .index = 0,
+                .name = try alloc.dupe(u8, "__closure_env"),
+            } }, alloc);
+            ir_builder.function_closure_env = env.operand;
 
             for (ir_builder.currentFunction().params, 0..) |param, i| {
                 const f_dst: TypedOperand = .{
                     .operand = ir_builder.nextTemp(),
                     .type = try param.type.clone(alloc),
                 };
-                try ir_builder.emit(.{ .function_param = .{
-                    .dst = f_dst,
-                    .name = try alloc.dupe(u8, param.name),
-                    .index = i,
-                } }, alloc);
-                const local = try ir_builder.current_scope.getOrCreateLocal(param.name, param.type, alloc);
-                try ir_builder.current_scope.putLocalValues(local, try f_dst.clone(alloc), alloc);
+                try ir_builder.emit(.{
+                    .function_param = .{
+                        .dst = f_dst,
+                        .name = try alloc.dupe(u8, param.name),
+                        // append by one b/c of closure
+                        .index = i + 1,
+                    },
+                }, alloc);
+                const local = try ir_builder.currentScope().getOrCreateLocal(param.name, param.type, alloc);
+                try ir_builder.currentScope().putLocalValues(local, try f_dst.clone(alloc), alloc);
             }
             const body_obj = c.PyObject_GetAttrString(stmt, "body");
             std.debug.assert(body_obj != null);
@@ -1029,19 +1068,28 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 .value = if (body.type != .void) body else null,
             } }, alloc);
 
-            ir_builder.leaveFunction(function_context, alloc);
-            // ir_builder.current_function = saved_function;
-            // ir_builder.current_block = saved_block;
-            // try ir_builder.current_scope.restoreLocalValues(&saved_local_values, alloc);
+            ir_builder.leaveFunction(function_context);
+
             const dst: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),
                 .type = try callable_type.clone(alloc),
             };
 
+            const lambda_function = ir_builder.getFunction(id).?;
+            const captures = try alloc.alloc(TypedOperand, lambda_function.captures.items.len);
+            for (lambda_function.captures.items, 0..) |capture, i| {
+                const scope = &ir_builder.scopes.items[capture.scope];
+                const top = scope.local_values.map.get(capture.source) orelse {
+                    return error.CantFindLocal;
+                };
+                captures[i] = try top.clone(alloc);
+            }
+
             try ir_builder.emit(.{
-                .function_ref = .{
+                .closure_create = .{
                     .dst = try dst.clone(alloc),
-                    .label = try alloc.dupe(u8, function.label),
+                    .label = try alloc.dupe(u8, lambda_function.label),
+                    .captures = captures,
                 },
             }, alloc);
             return dst;
@@ -1448,7 +1496,7 @@ fn walkNamedCall(
     }
 
     if (ir_builder.getLocal(name_slice) catch null) |local_id| {
-        if (ir_builder.current_scope.local_values.map.get(local_id)) |callee| {
+        if (ir_builder.currentScope().local_values.map.get(local_id)) |callee| {
             if (callee.type == .callable) {
                 const maybe_dst: ?TypedOperand = if (callee.type.callable.returns.* == .void)
                     null
@@ -1459,8 +1507,8 @@ fn walkNamedCall(
                     };
 
                 try ir_builder.emit(.{
-                    .function_call = .{
-                        .callee = .{ .indirect = try callee.clone(alloc) },
+                    .closure_call = .{
+                        .callee = try callee.clone(alloc),
                         .dst = if (maybe_dst) |dst| try dst.clone(alloc) else null,
                         .args = try arguments.toOwnedSlice(alloc),
                     },
@@ -1564,7 +1612,7 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
                     // establish self
                     const self_name = ir_builder.currentFunction().params[0].name;
                     const self_id = try ir_builder.getLocal(self_name);
-                    const self_value = ir_builder.current_scope.local_values.map.get(self_id) orelse {
+                    const self_value = ir_builder.currentScope().local_values.map.get(self_id) orelse {
                         return error.CantFindSelf;
                     };
                     self = try self_value.clone(alloc);
@@ -1711,7 +1759,7 @@ fn walkGenericCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, all
 
 // If(test=Compare(...), body=[...], orelse=[...])
 pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!void {
-    var before_values = try ir_builder.current_scope.local_values.clone(alloc);
+    var before_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer before_values.deinit(alloc);
 
     const test_ = c.PyObject_GetAttrString(stmt, "test");
@@ -1734,11 +1782,11 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     // then block
     ir_builder.setCurrentBlock(then_block);
     // restore in case condition set variables
-    try ir_builder.current_scope.restoreLocalValues(&before_values, alloc);
+    try ir_builder.currentScope().restoreLocalValues(&before_values, alloc);
     try walkStmtList(body, ir_builder, alloc);
     const then_exit_block = ir_builder.current_block;
     // save then locals
-    var then_values = try ir_builder.current_scope.local_values.clone(alloc);
+    var then_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer then_values.deinit(alloc);
     try ir_builder.emit(.{ .lir = .{
         .jump = .{ .target = merge_block },
@@ -1748,11 +1796,11 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     // else block
     ir_builder.setCurrentBlock(else_block);
     // restore in case condition set variables
-    try ir_builder.current_scope.restoreLocalValues(&before_values, alloc);
+    try ir_builder.currentScope().restoreLocalValues(&before_values, alloc);
     try walkStmtList(orelse_, ir_builder, alloc);
     // save else locals
     const else_exit_block = ir_builder.current_block;
-    var else_values = try ir_builder.current_scope.local_values.clone(alloc);
+    var else_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer else_values.deinit(alloc);
     try ir_builder.emit(.{ .lir = .{
         .jump = .{ .target = merge_block },
@@ -1761,7 +1809,7 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
 
     ir_builder.setCurrentBlock(merge_block);
     // get locals orelse use branch value
-    ir_builder.current_scope.local_values.clear(alloc);
+    ir_builder.currentScope().local_values.clear(alloc);
     var all_locals: std.AutoHashMap(LocalId, void) = .init(alloc);
     defer all_locals.deinit();
 
@@ -1791,7 +1839,7 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
         const has_else = else_value != null;
         // variable isn't touch so no need to use a phi
         if (has_then and has_else and then_value.?.equal(else_value.?)) {
-            try ir_builder.current_scope.local_values.map.put(local.*, try before_value.?.clone(alloc));
+            try ir_builder.currentScope().local_values.map.put(local.*, try before_value.?.clone(alloc));
         }
         // emit a phi
         else if (has_then and has_else) {
@@ -1808,7 +1856,7 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
             try ir_builder.emit(.{
                 .phi = .{ .dst = typed_dst, .inputs = inputs },
             }, alloc);
-            try ir_builder.current_scope.local_values.map.put(local.*, try typed_dst.clone(alloc));
+            try ir_builder.currentScope().local_values.map.put(local.*, try typed_dst.clone(alloc));
         } else if (!has_before and ((has_then and !has_else) or (!has_then and has_else))) {
             continue;
         } else {
@@ -1902,7 +1950,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
             const index = carries[0].current;
             const value = ir_builder_.nextTemp();
             const iterable = if (body_.iterator_local) |local|
-                ir_builder_.current_scope.local_values.map.get(local) orelse return error.NotFound
+                ir_builder_.currentScope().local_values.map.get(local) orelse return error.NotFound
             else
                 body_.iterator;
             switch (iterable.type) {
@@ -1938,7 +1986,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
             }
 
             const elem_type = try iterable.type.getElementType();
-            const local = try ir_builder_.current_scope.getOrCreateLocal(
+            const local = try ir_builder_.currentScope().getOrCreateLocal(
                 body_.condition_var_name,
                 try elem_type.clone(alloc_),
                 alloc_,
@@ -1947,7 +1995,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 .operand = value,
                 .type = elem_type,
             };
-            try ir_builder_.current_scope.local_values.map.put(local, typed_value);
+            try ir_builder_.currentScope().local_values.map.put(local, typed_value);
             try ir_builder_.emit(.{ .lir = .{ .store_local = .{
                 .local = .{
                     .id = local,
@@ -2016,7 +2064,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
         const id = c.PyUnicode_AsUTF8(id_obj);
         std.debug.assert(id != null);
 
-        break :blk try ir_builder.current_scope.getOrCreateLocal(std.mem.span(id), null, alloc);
+        break :blk try ir_builder.currentScope().getOrCreateLocal(std.mem.span(id), null, alloc);
     } else null;
 
     try walkLoop(
@@ -2065,9 +2113,10 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
         std.debug.print("cant find function {s}\n", .{definition_name});
         return error.FunctionNotDeclared;
     };
-    const function_context = ir_builder.enterFunction(declared.id - 1, .init(alloc));
+    const scope_id = try ir_builder.createScope(ir_builder.current_scope, alloc);
+    const function_context = ir_builder.enterFunction(declared.id - 1, scope_id);
     // restore function state when exiting
-    defer ir_builder.leaveFunction(function_context, alloc);
+    defer ir_builder.leaveFunction(function_context);
 
     // load function params
     const function = ir_builder.currentFunction();
@@ -2083,12 +2132,12 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
             .index = i,
         } }, alloc);
 
-        const local = try ir_builder.current_scope.getOrCreateLocal(
+        const local = try ir_builder.currentScope().getOrCreateLocal(
             param.name,
             param.type,
             alloc,
         );
-        try ir_builder.current_scope.local_values.map.put(local, value);
+        try ir_builder.currentScope().local_values.map.put(local, value);
     }
 
     const body = c.PyObject_GetAttrString(stmt, "body");

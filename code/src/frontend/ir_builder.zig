@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 
 const BlockId = @import("common").ir.BlockId;
 const LocalId = @import("common").ir.LocalId;
+const ScopeId = @import("common").ir.ScopeId;
 const ClassId = @import("common").class.ClassId;
 const ClassInfo = @import("common").class.ClassInfo;
 const LocalInfo = @import("common").ir.LocalInfo;
@@ -63,6 +64,7 @@ pub const LocalValues = struct {
 };
 
 pub const LocalScope = struct {
+    parent: ?ScopeId,
     // name -> LocalId
     locals_by_name: std.StringHashMap(LocalId),
     // LocalId -> TypedOperand
@@ -70,8 +72,9 @@ pub const LocalScope = struct {
     // LocalId -> LocalValues
     locals: ArrayList(LocalInfo),
 
-    pub fn init(alloc: std.mem.Allocator) @This() {
+    pub fn init(parent: ?ScopeId, alloc: std.mem.Allocator) @This() {
         return .{
+            .parent = parent,
             .locals_by_name = .init(alloc),
             .local_values = .init(alloc),
             .locals = .empty,
@@ -136,8 +139,14 @@ pub const LocalScope = struct {
 pub const FunctionContext = struct {
     function: ?usize,
     block: BlockId,
-    scope: LocalScope,
+    scope: ScopeId,
+    closure_env: ?Operand,
     active_param_types: []const TypeParam,
+};
+
+pub const ResolvedLocal = struct {
+    scope: ScopeId,
+    local: LocalId,
 };
 
 pub const IrBuilder = struct {
@@ -145,8 +154,10 @@ pub const IrBuilder = struct {
     current_block: BlockId,
     current_function: ?usize,
     current_class: ?ClassId,
-    // TODO: support closure
-    current_scope: LocalScope,
+    // `current_scope` and `scopes` handles closure
+    current_scope: ScopeId,
+    scopes: ArrayList(LocalScope),
+    function_closure_env: ?Operand,
     function_origin: FunctionType,
     active_param_types: []const TypeParam,
     // imports metadata
@@ -156,13 +167,17 @@ pub const IrBuilder = struct {
 
     pub fn init(origin: FunctionType, module_id: ModuleId, module_name: []const u8, alloc: std.mem.Allocator) !IrBuilder {
         const program = try Program.init(module_id, module_name, alloc);
+        var scopes: ArrayList(LocalScope) = .empty;
+        try scopes.append(alloc, .init(null, alloc));
 
         return .{
             .program = program,
             .current_function = null,
             .current_block = 0,
             .current_class = null,
-            .current_scope = .init(alloc),
+            .current_scope = 0,
+            .scopes = scopes,
+            .function_closure_env = null,
             .function_origin = origin,
             .active_param_types = &.{},
             .current_imports = &.{},
@@ -173,7 +188,10 @@ pub const IrBuilder = struct {
 
     /// free all but the generated program
     pub fn deinit(self: *IrBuilder, alloc: std.mem.Allocator) void {
-        self.current_scope.deinit(alloc);
+        for (self.scopes.items) |*scope| {
+            scope.deinit(alloc);
+        }
+        self.scopes.deinit(alloc);
     }
 
     pub fn currentBlocks(self: *@This()) *ArrayList(BasicBlock) {
@@ -191,6 +209,17 @@ pub const IrBuilder = struct {
             return &self.program.functions.items[i];
         }
         return &self.program.main;
+    }
+
+    pub fn currentScope(self: *const @This()) *LocalScope {
+        return &self.scopes.items[self.current_scope];
+    }
+
+    pub fn createScope(self: *@This(), parent: ?ScopeId, alloc: std.mem.Allocator) !ScopeId {
+        const id: ScopeId = @intCast(self.scopes.items.len);
+        const scope: LocalScope = .init(parent, alloc);
+        try self.scopes.append(alloc, scope);
+        return id;
     }
 
     pub fn nextTemp(self: *@This()) Operand {
@@ -233,21 +262,30 @@ pub const IrBuilder = struct {
         return null;
     }
 
-    pub fn getLocal(self: *@This(), name: []const u8) !LocalId {
-        if (self.current_scope.locals_by_name.get(name)) |local| {
+    pub fn getLocal(self: *const @This(), name: []const u8) !LocalId {
+        if (self.currentScope().locals_by_name.get(name)) |local| {
             return local;
         }
         return error.CantFindLocal;
     }
 
-    pub fn emit(self: *@This(), instruct: Instruction, alloc: std.mem.Allocator) !void {
-        const function = self.currentFunction();
-        if (instruct.getDefines()) |defines| {
-            switch (defines) {
-                .top => |top| try function.setValueType(top.operand, top.type, alloc),
-                .local => {},
+    pub fn resolveLocal(self: *@This(), name: []const u8) ?ResolvedLocal {
+        var scope_id: ?ScopeId = self.current_scope;
+        while (scope_id) |id| {
+            const scope = &self.scopes.items[id];
+            if (scope.locals_by_name.get(name)) |local_id| {
+                return .{
+                    .scope = id,
+                    .local = local_id,
+                };
             }
+
+            scope_id = scope.parent;
         }
+        return null;
+    }
+
+    pub fn emit(self: *@This(), instruct: Instruction, alloc: std.mem.Allocator) !void {
         try self.currentBlocks().items[self.current_block].instructions.append(alloc, instruct);
     }
 
@@ -321,25 +359,26 @@ pub const IrBuilder = struct {
     }
 
     /// save current function state and change to new
-    pub fn enterFunction(self: *@This(), function_id: usize, new_scope: LocalScope) FunctionContext {
+    pub fn enterFunction(self: *@This(), function_id: usize, scope_id: ScopeId) FunctionContext {
         const saved: FunctionContext = .{
             .function = self.current_function,
             .block = self.current_block,
             .scope = self.current_scope,
+            .closure_env = self.function_closure_env,
             .active_param_types = self.active_param_types,
         };
         self.current_function = function_id;
         self.current_block = 0;
-        self.current_scope = new_scope;
+        self.current_scope = scope_id;
         self.active_param_types = self.currentFunction().type_params;
+        self.function_closure_env = null;
         return saved;
     }
 
     /// restore function state
-    pub fn leaveFunction(self: *@This(), context: FunctionContext, alloc: std.mem.Allocator) void {
+    pub fn leaveFunction(self: *@This(), context: FunctionContext) void {
         self.current_function = context.function;
         self.current_block = context.block;
-        self.current_scope.deinit(alloc);
         self.current_scope = context.scope;
         self.active_param_types = context.active_param_types;
     }

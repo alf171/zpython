@@ -5,6 +5,8 @@ const TypeVarId = @import("types.zig").TypeVarId;
 const TypeInfo = @import("types.zig").TypeInfo;
 const TypeBindings = @import("types.zig").TypeBindings;
 const ConstValue = @import("ir.zig").ConstValue;
+const LocalId = @import("ir.zig").LocalId;
+const ScopeId = @import("ir.zig").ScopeId;
 const ValueRef = @import("ir.zig").ValueRef;
 const BasicBlock = @import("ir.zig").BasicBlock;
 const BlockId = @import("ir.zig").BlockId;
@@ -96,25 +98,42 @@ pub const FunctionKind = enum {
     gpu_kernel,
 };
 
+pub const Capture = struct {
+    name: []const u8,
+    scope: ScopeId,
+    source: LocalId,
+    type: TypeInfo,
+
+    pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
+        alloc.free(self.name);
+        self.type.deinit(alloc);
+    }
+};
+
 pub const Function = struct {
     // function name
     name: []const u8,
     // asm label (`module_name`__`name`)
     label: []const u8,
     id: usize,
+    // imports
     module_id: ModuleId,
     module_name: []const u8,
+    // types + params
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
+    // locals captured
+    captures: ArrayList(Capture),
+    // machinary
     blocks: ArrayList(BasicBlock),
     entry_block: BlockId,
     next_temp: TempId,
     next_mem: MemoryId,
+    // annotation
     origin: FunctionType,
     kind: FunctionKind,
     is_inline: bool,
-    value_to_type: std.AutoHashMap(Operand, TypeInfo),
 
     pub fn nextTemp(self: *@This()) Operand {
         const id = self.next_temp;
@@ -165,6 +184,7 @@ pub const Function = struct {
             .params = params,
             .type_params = type_params,
             .return_type = return_type,
+            .captures = .empty,
             .blocks = blocks,
             .entry_block = 0,
             .next_temp = 0,
@@ -172,7 +192,6 @@ pub const Function = struct {
             .origin = origin,
             .kind = kind,
             .is_inline = is_inline,
-            .value_to_type = std.AutoHashMap(Operand, TypeInfo).init(alloc),
         };
     }
 
@@ -183,6 +202,10 @@ pub const Function = struct {
         self.blocks.deinit(alloc);
         // function metadata
         self.return_type.deinit(alloc);
+        for (self.captures.items) |capture| {
+            capture.deinit(alloc);
+        }
+        self.captures.deinit(alloc);
         alloc.free(self.name);
         for (self.params) |*param| {
             param.deinit(alloc);
@@ -192,24 +215,9 @@ pub const Function = struct {
             t_param.deinit(alloc);
         }
         alloc.free(self.type_params);
-        var it = self.value_to_type.valueIterator();
-        while (it.next()) |t| {
-            t.deinit(alloc);
-        }
-        self.value_to_type.deinit();
         // free module stuff
         alloc.free(self.label);
         alloc.free(self.module_name);
-    }
-
-    pub fn setValueType(self: *@This(), operand: Operand, type_info: TypeInfo, alloc: std.mem.Allocator) !void {
-        if (self.value_to_type.getPtr(operand)) |existing| {
-            existing.deinit(alloc);
-            existing.* = try type_info.clone(alloc);
-            return;
-        }
-
-        try self.value_to_type.put(operand, try type_info.clone(alloc));
     }
 
     pub fn findTypeParam(self: *const @This(), name: []const u8) ?TypeParam {
@@ -281,5 +289,30 @@ pub const Function = struct {
         cloned.next_mem = function.next_mem;
 
         return cloned;
+    }
+
+    pub fn getOrCreateCapture(
+        self: *@This(),
+        name: []const u8,
+        scope: ScopeId,
+        source: LocalId,
+        @"type": TypeInfo,
+        alloc: std.mem.Allocator,
+    ) !u32 {
+        for (self.captures.items, 0..) |capture, i| {
+            if (capture.scope == scope and capture.source == source) {
+                return @intCast(i);
+            }
+        }
+        const index: u32 = @intCast(self.captures.items.len);
+        const captured_name = try alloc.dupe(u8, name);
+        const captured_type = try @"type".clone(alloc);
+        try self.captures.append(alloc, .{
+            .name = captured_name,
+            .scope = scope,
+            .source = source,
+            .type = captured_type,
+        });
+        return index;
     }
 };

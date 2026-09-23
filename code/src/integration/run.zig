@@ -7,6 +7,7 @@ const lazy = @import("frontend").lazy;
 const list = @import("frontend").list;
 const print = @import("frontend").print;
 const func = @import("frontend").func;
+const closure = @import("frontend").closure;
 const inline_ = @import("frontend").inline_;
 const runtime = @import("frontend").runtime;
 const class = @import("frontend").class;
@@ -109,6 +110,7 @@ pub fn main(init: std.process.Init) !void {
     generics.dropTemplates(&ir_program, alloc);
     try gpu.rewrite(&ir_program, alloc);
     try print.rewrite(&ir_program, alloc);
+    try closure.rewrite(&ir_program, alloc);
     try func.rewrite(&ir_program, alloc);
     try lazy.rewrite(&ir_program, alloc);
     try list.rewrite(&ir_program, alloc);
