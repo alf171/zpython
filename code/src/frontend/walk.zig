@@ -222,7 +222,12 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
             defer container.deinit(alloc);
 
             switch (container.type) {
-                .list => {
+                .list => |list| {
+                    const element_type = list.element.*;
+                    if (!element_type.equal(rhs_value.type)) {
+                        std.debug.print("cannot store {s} in list of type {s}\n", .{ @tagName(rhs_value.type), @tagName(element_type) });
+                        return error.TypeMismatch;
+                    }
                     try ir_builder.emit(.{ .subscript_store = .{
                         .target = try container.clone(alloc),
                         .index = try slice.clone(alloc),
@@ -714,11 +719,14 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 const local_info = &scope.locals.items[resolved.local];
                 // closure invoked
                 if (resolved.scope != ir_builder.current_scope) {
+                    const captured_type = (scope.local_values.map.get(resolved.local) orelse {
+                        return error.CantFindCapturedValue;
+                    }).type;
                     const dst: TypedOperand = .{
                         .operand = ir_builder.nextTemp(),
-                        .type = try local_info.type.clone(alloc),
+                        .type = try captured_type.clone(alloc),
                     };
-                    const idx = try ir_builder.currentFunction().getOrCreateCapture(name, resolved.scope, local_info.id, local_info.type, alloc);
+                    const idx = try ir_builder.currentFunction().getOrCreateCapture(name, resolved.scope, local_info.id, captured_type, alloc);
                     const env: TypedOperand = .{
                         .operand = ir_builder.function_closure_env orelse return error.CantFindEnv,
                         .type = .ptr,
