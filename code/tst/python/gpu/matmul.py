@@ -4,8 +4,7 @@ A = Tensor(A_data, (2,3))
 B_data: list[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
 B = Tensor(B_data, (3,4))
 C = A @ B
-print(C.rows, end = ", ")
-print(C.cols)
+C.print_shape()
 C.print()
 
 # f32 matmul

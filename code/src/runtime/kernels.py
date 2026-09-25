@@ -1,8 +1,8 @@
-from tensor import Tensor
+from data import TensorData
 from indexing import index_2d
 
 @gpu
-def add[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+def add[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
 
@@ -12,7 +12,7 @@ def add[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     out.data[out_i] = a.data[a_i] + b.data[b_i]
 
 @gpu
-def sub[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+def sub[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
 
@@ -22,7 +22,7 @@ def sub[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     out.data[out_i] = a.data[a_i] - b.data[b_i]
 
 @gpu
-def mul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+def mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
 
@@ -32,7 +32,7 @@ def mul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     out.data[out_i] = a.data[a_i] * b.data[b_i]
 
 @gpu
-def div[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+def div[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
 
@@ -43,7 +43,7 @@ def div[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
 
 @gpu
 # (i, j) @ (j,k) = (i,k)
-def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
+def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     i = global_id(0)
     k = global_id(1)
 
@@ -58,7 +58,7 @@ def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     out.data[out_i] = acc
 
 @gpu
-def relu[U](out: Tensor[U], a: Tensor[U]) -> None:
+def relu[U](out: TensorData[U], a: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
     zero: U = 0
@@ -74,7 +74,7 @@ def exp[U](out: list[U], a: list[U]) -> None:
     out[i] = exp2(a[i] * log2_e)
 
 @gpu
-def sum_cols[U](out: list[U], a: Tensor[U]) -> None:
+def sum_cols[U](out: list[U], a: TensorData[U]) -> None:
     col = global_id(0)
     total: U = 0
 
@@ -84,7 +84,7 @@ def sum_cols[U](out: list[U], a: Tensor[U]) -> None:
     out[col] = total
 
 @gpu
-def sum_rows[U](out: list[U], a: Tensor[U]) -> None:
+def sum_rows[U](out: list[U], a: TensorData[U]) -> None:
     row = global_id(0)
     total: U = 0
 
@@ -94,7 +94,7 @@ def sum_rows[U](out: list[U], a: Tensor[U]) -> None:
     out[row] = total
 
 @gpu
-def max_cols[U](out: list[U], a: Tensor[U]) -> None:
+def max_cols[U](out: list[U], a: TensorData[U]) -> None:
     col = global_id(0)
     best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
 
@@ -104,7 +104,7 @@ def max_cols[U](out: list[U], a: Tensor[U]) -> None:
     out[col] = best
 
 @gpu
-def max_rows[U](out: list[U], a: Tensor[U]) -> None:
+def max_rows[U](out: list[U], a: TensorData[U]) -> None:
     row = global_id(0)
     best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
 
