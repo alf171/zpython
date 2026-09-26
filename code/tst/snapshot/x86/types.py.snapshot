@@ -20,15 +20,6 @@ branch count: 2
 call count: 17
 spill count: 0
 
-performance report: (ORIGIN=runtime)
-number of asm lines: 828
-mov count: 386
-memory load count: 0
-memory store count: 0
-branch count: 91
-call count: 31
-spill count: 6
-
 actual output:
 list_i32
 list_f32

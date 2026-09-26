@@ -86,6 +86,8 @@ pub const Instruction = union(enum) {
         copies: []Copy,
     },
     function_param: struct {
+        // TODO: remove label
+        label: []const u8,
         dst: TypedOperand,
         name: []const u8,
         index: usize,
@@ -196,6 +198,7 @@ pub const Instruction = union(enum) {
                 alloc.free(phi.inputs);
             },
             .function_param => |fp| {
+                alloc.free(fp.label);
                 fp.dst.deinit(alloc);
                 alloc.free(fp.name);
             },
@@ -750,6 +753,7 @@ pub const Instruction = union(enum) {
     pub fn clone(self: *@This(), alloc: std.mem.Allocator) !@This() {
         return switch (self.*) {
             .function_param => |fp| .{ .function_param = .{
+                .label = try alloc.dupe(u8, fp.label),
                 .dst = try fp.dst.clone(alloc),
                 .name = try alloc.dupe(u8, fp.name),
                 .index = fp.index,

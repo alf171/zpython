@@ -7,33 +7,28 @@ B = Tensor.fill((3,3), three)
 
 C = A + B
 print(C[0, 0])
-# initialized as 0
-print(A.grad[0])
-C.grad[0] = 1.0
-print(A.grad[0])
-print(B.grad[0])
+# FIXME: subscriptions dont coherse
+one: f32 = 1.0
+C.grad[0, 0] = one
+print(A.grad[0, 0])
+print(B.grad[0, 0])
+C.backward()
+print(A.grad[0, 0])
+print(B.grad[0, 0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 131
-mov count: 91
+number of asm lines: 177
+mov count: 123
 memory load count: 0
 memory store count: 0
 branch count: 2
-call count: 13
-spill count: 3
-
-performance report: (ORIGIN=runtime)
-number of asm lines: 1235
-mov count: 615
-memory load count: 0
-memory store count: 0
-branch count: 117
-call count: 41
-spill count: 6
+call count: 21
+spill count: 4
 
 actual output:
 5
 0.00000
 0.00000
-0.00000
-[!!memory report!!]: allocs=22 frees=22 allocated_bytes=526 freed_bytes=526
+1.00000
+1.00000
+[!!memory report!!]: allocs=40 frees=40 allocated_bytes=906 freed_bytes=906

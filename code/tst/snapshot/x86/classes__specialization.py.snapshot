@@ -31,28 +31,19 @@ def run() -> None:
 run()
 
 performance report: (ORIGIN=user)
-number of asm lines: 538
-mov count: 357
+number of asm lines: 540
+mov count: 359
 memory load count: 0
 memory store count: 0
 branch count: 23
 call count: 37
 spill count: 4
 
-performance report: (ORIGIN=runtime)
-number of asm lines: 828
-mov count: 386
-memory load count: 0
-memory store count: 0
-branch count: 91
-call count: 31
-spill count: 6
-
 actual output:
-class_3[i64]
-class_3[i64]
-class_3[f64]
-class_3[f32]
+class_4[i64]
+class_4[i64]
+class_4[f64]
+class_4[f32]
 1
 2
 3.00000

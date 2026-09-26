@@ -148,6 +148,8 @@ pub fn walkClassInitializerInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: 
                 // AnnAssign(target=Attribute(value=Name(id='self', ctx=Load()), attr='data', ctx=Store()), annotation=Subscript(value=Name(id='list', ctx=Load()), slice=Name(id='T', ctx=Load()), ctx=Load()), value=Name(id='data', ctx=Load()), simple=0)
                 const target = c.PyObject_GetAttrString(init_stmt, "target");
                 std.debug.assert(target != null);
+                // only parse attributes
+                if (!std.mem.eql(u8, getPyType(target), "Attribute")) continue;
                 const receiver = c.PyObject_GetAttrString(target, "value");
                 std.debug.assert(receiver != null);
                 // require self.<field>

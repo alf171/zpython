@@ -166,7 +166,7 @@ fn walkAugAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.All
 
     const result: TypedOperand = .{
         .operand = ir_builder.nextTemp(),
-        .type = lhs_value.type,
+        .type = try lhs_value.type.clone(alloc),
     };
     try ir_builder.emit(.{ .lir = .{ .binop = .{
         .dst = result,
@@ -174,7 +174,7 @@ fn walkAugAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.All
         .op = try getBinOp(stmt),
         .rhs = rhs_value,
     } } }, alloc);
-    try storeAssignmentTarget(lhs, result, ir_builder, alloc);
+    try storeAssignmentTarget(lhs, try result.clone(alloc), ir_builder, alloc);
 }
 
 fn walkAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
@@ -1045,6 +1045,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 .type = .ptr,
             };
             try ir_builder.emit(.{ .function_param = .{
+                .label = try alloc.dupe(u8, function.label),
                 .dst = env,
                 .index = 0,
                 .name = try alloc.dupe(u8, "__closure_env"),
@@ -1058,10 +1059,11 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 };
                 try ir_builder.emit(.{
                     .function_param = .{
+                        .label = try alloc.dupe(u8, function.label),
                         .dst = f_dst,
                         .name = try alloc.dupe(u8, param.name),
                         // append by one b/c of closure
-                        .index = i + 1,
+                        .index = i + @intFromBool(function.captures.items.len > 0),
                     },
                 }, alloc);
                 const local = try ir_builder.currentScope().getOrCreateLocal(param.name, param.type, alloc);
@@ -1647,18 +1649,62 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
         }
         var receiver_expr: ?TypedOperand = try walkExpr(instance_obj, ir_builder, null, alloc);
         errdefer if (receiver_expr) |*value| value.deinit(alloc);
+        // FIXME: cleanup this code now that it handles fields of type callable now too
         const method = switch (receiver_expr.?.type) {
             .instance => |inst| module_blk: {
-                self = receiver_expr.?;
-                receiver_expr = null;
                 const class = ir_builder.getClass(inst.class_id);
-                const method_info = class.findMethod(method_name) orelse {
-                    std.debug.print("cant find method {s}\n", .{method_name});
-                    return error.CantFindMethod;
-                };
-                break :module_blk ir_builder.getFunction(method_info.function_id) orelse {
-                    return error.CantFindFunction;
-                };
+                if (class.findMethod(method_name)) |method_info| {
+                    self = receiver_expr.?;
+                    receiver_expr = null;
+                    break :module_blk ir_builder.getFunction(method_info.function_id) orelse {
+                        return error.CantFindFunction;
+                    };
+                } else if (class.findField(method_name)) |field| {
+                    if (field.type != .callable) {
+                        std.debug.print("cant invoke {s}\n", .{method_name});
+                        return error.UncallableField;
+                    }
+                    const dst: TypedOperand = .{
+                        .operand = ir_builder.nextTemp(),
+                        .type = try class.resolveFieldType(field, inst, alloc),
+                    };
+                    const field_index = class.findFieldIdx(method_name) orelse return error.CantFindField;
+                    try ir_builder.emit(.{ .field_load = .{
+                        .dst = dst,
+                        .instance = receiver_expr.?,
+                        .field_index = field_index,
+                    } }, alloc);
+                    const callable = dst.type.callable;
+                    const result: ?TypedOperand = if (callable.returns.* != .void) .{
+                        .operand = ir_builder.nextTemp(),
+                        .type = try callable.returns.*.clone(alloc),
+                    } else null;
+                    var arguments: ArrayList(TypedOperand) = .empty;
+                    errdefer {
+                        for (arguments.items) |arg| {
+                            arg.type.deinit(alloc);
+                        }
+                        arguments.deinit(alloc);
+                    }
+                    const args_obj = c.PyObject_GetAttrString(stmt, "args");
+                    std.debug.assert(args_obj != null);
+                    for (0..@intCast(c.PyList_Size(args_obj))) |i| {
+                        const arg_obj = c.PyList_GetItem(args_obj, @intCast(i));
+                        std.debug.assert(arg_obj != null);
+                        const arg = try walkExpr(arg_obj, ir_builder, null, alloc);
+                        try arguments.append(alloc, arg);
+                    }
+                    try ir_builder.emit(.{
+                        .closure_call = .{
+                            .dst = result,
+                            .callee = try dst.clone(alloc),
+                            .args = try arguments.toOwnedSlice(alloc),
+                        },
+                    }, alloc);
+                    return if (result) |r| try r.clone(alloc) else .{ .operand = .unknown, .type = .any };
+                }
+                std.debug.print("cant find method {s}\n", .{method_name});
+                return error.CantFindMethod;
             },
             .module => |module_id| {
                 break :blk ir_builder.getModuleFunction(module_id, method_name) orelse {
@@ -1963,6 +2009,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 body_.iterator;
             switch (iterable.type) {
                 .tuple => {
+                    std.debug.print("tuple\n", .{});
                     try ir_builder_.emit(.{ .subscript = .{
                         .dst = .{ .operand = value, .type = .any },
                         .src = try iterable.clone(alloc_),
@@ -1970,6 +2017,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                     } }, alloc_);
                 },
                 .list => {
+                    std.debug.print("list\n", .{});
                     try ir_builder_.emit(.{ .subscript = .{
                         .dst = .{ .operand = value, .type = .any },
                         .src = try iterable.clone(alloc_),
@@ -1977,6 +2025,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                     } }, alloc_);
                 },
                 .iterable => {
+                    std.debug.print("iterable\n", .{});
                     try ir_builder_.emit(.{ .subscript = .{
                         .dst = .{ .operand = value, .type = .any },
                         .src = try iterable.clone(alloc_),
@@ -2135,6 +2184,7 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
         };
 
         try ir_builder.emit(.{ .function_param = .{
+            .label = try alloc.dupe(u8, function.label),
             .dst = try value.clone(alloc),
             .name = try alloc.dupe(u8, param.name),
             .index = i,

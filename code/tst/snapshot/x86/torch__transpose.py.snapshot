@@ -9,25 +9,16 @@ A[0, 1] = 99
 print(B[1,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 131
-mov count: 90
+number of asm lines: 132
+mov count: 91
 memory load count: 0
 memory store count: 0
 branch count: 2
 call count: 15
 spill count: 0
 
-performance report: (ORIGIN=runtime)
-number of asm lines: 1086
-mov count: 499
-memory load count: 0
-memory store count: 0
-branch count: 113
-call count: 37
-spill count: 6
-
 actual output:
 2
 3
 99
-[!!memory report!!]: allocs=10 frees=10 allocated_bytes=222 freed_bytes=222
+[!!memory report!!]: allocs=15 frees=15 allocated_bytes=310 freed_bytes=310

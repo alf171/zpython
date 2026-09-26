@@ -6,8 +6,7 @@ A = Tensor(A_data, (2,3))
 B_data: list[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
 B = Tensor(B_data, (3,4))
 C = A @ B
-print(C.rows, end = ", ")
-print(C.cols)
+C.print_shape()
 C.print()
 
 # f32 matmul
@@ -20,25 +19,16 @@ C = A @ B
 C.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 270
-mov count: 216
+number of asm lines: 239
+mov count: 188
 memory load count: 0
 memory store count: 0
 branch count: 2
-call count: 21
+call count: 18
 spill count: 4
 
-performance report: (ORIGIN=runtime)
-number of asm lines: 1738
-mov count: 925
-memory load count: 0
-memory store count: 0
-branch count: 151
-call count: 63
-spill count: 15
-
 actual output:
-2, 4
+(2, 4)
 74 80 86 92 173 188 203 218 
 0.00000 -5.50000 4.75000 6.00000 4.87500 6.50000 -6.50000 0.00000 -1.25000 2.00000 -1.50000 -4.00000 
-[!!memory report!!]: allocs=69 frees=69 allocated_bytes=1277 freed_bytes=1277
+[!!memory report!!]: allocs=87 frees=87 allocated_bytes=1555 freed_bytes=1555

@@ -369,18 +369,16 @@ fn emitFunction(
                             }
                         },
                         .cast => |c| {
+                            const dst = try abi.regFor(c.dst.operand);
+                            const src = try abi.regFor(c.src.operand);
                             // type a -> type b
                             switch (c.src.type) {
                                 // TODO: consolidate this logic
                                 .i32 => switch (c.dst.type) {
                                     .f64 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tcvtsi2sdl %{s}, %{s}\n", .{ reg32(src), dst });
                                     },
                                     .i64 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tmovslq %{s}, %{s}\n", .{ reg32(src), dst });
                                     },
                                     else => {
@@ -393,18 +391,12 @@ fn emitFunction(
                                 },
                                 .i64 => switch (c.dst.type) {
                                     .f64 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tcvtsi2sdq %{s}, %{s}\n", .{ src, dst });
                                     },
                                     .f32 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tcvtsi2ssq %{s}, %{s}\n", .{ src, dst });
                                     },
                                     .i32 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tmovl %{s}, %{s}\n", .{ reg32(src), reg32(dst) });
                                     },
                                     else => {
@@ -417,9 +409,10 @@ fn emitFunction(
                                 },
                                 .f64 => switch (c.dst.type) {
                                     .i64 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tcvttsd2siq %{s}, %{s}\n", .{ src, dst });
+                                    },
+                                    .f32 => {
+                                        try out.print(alloc, "\tcvtsd2ss %{s}, %{s}\n", .{ src, dst });
                                     },
                                     else => {
                                         std.debug.print(
@@ -431,8 +424,6 @@ fn emitFunction(
                                 },
                                 .f32 => switch (c.dst.type) {
                                     .f64 => {
-                                        const dst = try abi.regFor(c.dst.operand);
-                                        const src = try abi.regFor(c.src.operand);
                                         try out.print(alloc, "\tcvtss2sd %{s}, %{s}\n", .{ src, dst });
                                     },
                                     else => {
@@ -591,7 +582,7 @@ fn emitLoadConstant(
     alloc: std.mem.Allocator,
 ) !void {
     switch (type_) {
-        .i64, .list, .callable => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
+        .i64, .list, .callable, .instance => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .i32 => try out.print(alloc, "\tmovslq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .bool => try out.print(alloc, "\tmovsbl {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         else => |e| {

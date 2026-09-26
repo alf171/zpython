@@ -30,7 +30,7 @@ pub fn run(
         file_name,
         "/tmp/out.s",
         "--run",
-        "--dump-stats",
+        "--dump-user-stats",
         "--omit-escape-codes",
         "--optim",
         host_arg,

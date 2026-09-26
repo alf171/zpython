@@ -69,6 +69,7 @@ pub fn main(init: std.process.Init) !void {
     var should_optim = false;
     var should_dump_ir = false;
     var should_dump_stats = false;
+    var should_dump_user_stats = false;
     var should_dump_time = false;
     var use_escape_codes = true;
     var std_lib_enabled = true;
@@ -82,6 +83,7 @@ pub fn main(init: std.process.Init) !void {
         if (std.mem.eql(u8, arg, "--optim")) should_optim = true;
         if (std.mem.eql(u8, arg, "--dump-ir")) should_dump_ir = true;
         if (std.mem.eql(u8, arg, "--dump-stats")) should_dump_stats = true;
+        if (std.mem.eql(u8, arg, "--dump-user-stats")) should_dump_user_stats = true;
         if (std.mem.eql(u8, arg, "--dump-time")) should_dump_time = true;
         if (std.mem.eql(u8, arg, "--omit-escape-codes")) use_escape_codes = false;
         if (std.mem.eql(u8, arg, "--no-stdlib")) std_lib_enabled = false;
@@ -110,8 +112,8 @@ pub fn main(init: std.process.Init) !void {
     generics.dropTemplates(&ir_program, alloc);
     try gpu.rewrite(&ir_program, alloc);
     try print.rewrite(&ir_program, alloc);
-    try closure.rewrite(&ir_program, alloc);
     try func.rewrite(&ir_program, alloc);
+    try closure.rewrite(&ir_program, alloc);
     try lazy.rewrite(&ir_program, alloc);
     try list.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);
@@ -263,10 +265,10 @@ pub fn main(init: std.process.Init) !void {
     defer artifacts.deinit(alloc);
     timer.finish(.backend_codegen, io);
 
-    if (should_dump_stats) {
+    if (should_dump_stats or should_dump_user_stats) {
         const stats = metrics.get(artifacts.host_asm, spill_rounds, target);
         stats.user.print(use_escape_codes);
-        if (std_lib_enabled) stats.runtime.print(use_escape_codes);
+        if (std_lib_enabled and !should_dump_user_stats) stats.runtime.print(use_escape_codes);
     }
 
     timer.begin(.backend_write_asm, io);
