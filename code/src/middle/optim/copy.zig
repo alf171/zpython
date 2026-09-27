@@ -95,10 +95,6 @@ fn rewriteUses(instruction: *Instruction, copyMap: *HashMap(Operand, ValueRef)) 
                     bop.lhs.operand = try resolveOperand(bop.lhs.operand, copyMap);
                     bop.rhs.operand = try resolveOperand(bop.rhs.operand, copyMap);
                 },
-                .compare => |*c| {
-                    c.lhs.operand = try resolveOperand(c.lhs.operand, copyMap);
-                    c.rhs.operand = try resolveOperand(c.rhs.operand, copyMap);
-                },
                 .move => |*m| {
                     m.src = try resolve(m.src, copyMap);
                 },

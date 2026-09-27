@@ -105,7 +105,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         } } });
                         try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                             .dst = scaled,
-                            .op = .mul,
+                            .op = .{ .bop = .mul },
                             .lhs = try s.index.clone(alloc),
                             .rhs = element_size,
                         } } });
@@ -118,7 +118,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     } } });
                     try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                         .dst = offset,
-                        .op = .add,
+                        .op = .{ .bop = .add },
                         .lhs = scaled,
                         .rhs = eight,
                     } } });
@@ -206,7 +206,7 @@ fn rewriteListStore(
         } } });
         try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
             .dst = scaled,
-            .op = .mul,
+            .op = .{ .bop = .mul },
             .lhs = ss.index,
             .rhs = element_size,
         } } });
@@ -219,7 +219,7 @@ fn rewriteListStore(
     } } });
     try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
         .dst = offset,
-        .op = .add,
+        .op = .{ .bop = .add },
         .lhs = scaled,
         .rhs = eight,
     } } });

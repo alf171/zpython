@@ -60,7 +60,7 @@ fn rewriteFunction(function: *Function, producers: *HashMap(LazyKey, LazyProduce
                             try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                                 .dst = s.dst,
                                 .lhs = try range.start.clone(alloc),
-                                .op = .add,
+                                .op = .{ .bop = .add },
                                 .rhs = s.index,
                             } } });
                         },
@@ -77,7 +77,7 @@ fn rewriteFunction(function: *Function, producers: *HashMap(LazyKey, LazyProduce
                             try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                                 .dst = l.dst,
                                 .lhs = try range.end.clone(alloc),
-                                .op = .sub,
+                                .op = .{ .bop = .sub },
                                 .rhs = try range.start.clone(alloc),
                             } } });
                         },

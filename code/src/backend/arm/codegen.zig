@@ -263,46 +263,62 @@ fn emitFunction(
                             const rhs = try abi.regFor(binop.rhs.operand);
 
                             switch (binop.op) {
-                                .add => {
-                                    switch (binop.dst.type) {
-                                        .f64, .f32 => try out.print(alloc, "\tfadd ", .{}),
-                                        else => try out.print(alloc, "\tadd ", .{}),
+                                .bop => |bop| {
+                                    switch (bop) {
+                                        .add => {
+                                            switch (binop.dst.type) {
+                                                .f64, .f32 => try out.print(alloc, "\tfadd ", .{}),
+                                                else => try out.print(alloc, "\tadd ", .{}),
+                                            }
+                                            try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
+                                        },
+                                        .sub => {
+                                            switch (binop.dst.type) {
+                                                .f64, .f32 => try out.print(alloc, "\tfsub ", .{}),
+                                                else => try out.print(alloc, "\tsub ", .{}),
+                                            }
+                                            try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
+                                        },
+                                        .mul => {
+                                            switch (binop.dst.type) {
+                                                .f64, .f32 => try out.print(alloc, "\tfmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                                else => try out.print(alloc, "\tmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                            }
+                                        },
+                                        .div => {
+                                            switch (binop.dst.type) {
+                                                .f64, .f32 => try out.print(alloc, "\tfdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                                else => try out.print(alloc, "\tsdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
+                                            }
+                                        },
+                                        .mod => {
+                                            const scratch_reg = try abi.scratchReg(0, .gp);
+                                            try out.print(alloc, "\tsdiv {s}, {s}, {s}\n", .{ scratch_reg, lhs, rhs });
+                                            try out.print(alloc, "\tmsub {s}, {s}, {s}, {s}\n", .{ dst, scratch_reg, rhs, lhs });
+                                        },
+                                        .lshift => {
+                                            try out.print(alloc, "\tlsl {s}, {s}, {s}\n", .{ dst, lhs, rhs });
+                                        },
+                                        .rshift => {
+                                            try out.print(alloc, "\tlsr {s}, {s}, {s}\n", .{ dst, lhs, rhs });
+                                        },
+                                        else => |op| {
+                                            std.debug.print("op is not supported {s}\n", .{@tagName(op)});
+                                            return error.NotSupported;
+                                        },
                                     }
-                                    try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
                                 },
-                                .sub => {
-                                    switch (binop.dst.type) {
-                                        .f64, .f32 => try out.print(alloc, "\tfsub ", .{}),
-                                        else => try out.print(alloc, "\tsub ", .{}),
+                                .cmp => |cmp| {
+                                    switch (binop.lhs.type) {
+                                        .f64, .f32 => {
+                                            try out.print(alloc, "\tfcmp {s}, {s}\n", .{ lhs, rhs });
+                                            try out.print(alloc, "\tcset {s}, {s}\n", .{ dst, cmp.condForCmp() });
+                                        },
+                                        else => {
+                                            try out.print(alloc, "\tcmp {s}, {s}\n", .{ lhs, rhs });
+                                            try out.print(alloc, "\tcset {s}, {s}\n", .{ dst, cmp.condForCmp() });
+                                        },
                                     }
-                                    try out.print(alloc, "{s}, {s}, {s}\n", .{ dst, lhs, rhs });
-                                },
-                                .mul => {
-                                    switch (binop.dst.type) {
-                                        .f64, .f32 => try out.print(alloc, "\tfmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
-                                        else => try out.print(alloc, "\tmul {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
-                                    }
-                                },
-                                .div => {
-                                    switch (binop.dst.type) {
-                                        .f64, .f32 => try out.print(alloc, "\tfdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
-                                        else => try out.print(alloc, "\tsdiv {s}, {s}, {s}\n", .{ dst, lhs, rhs }),
-                                    }
-                                },
-                                .mod => {
-                                    const scratch_reg = try abi.scratchReg(0, .gp);
-                                    try out.print(alloc, "\tsdiv {s}, {s}, {s}\n", .{ scratch_reg, lhs, rhs });
-                                    try out.print(alloc, "\tmsub {s}, {s}, {s}, {s}\n", .{ dst, scratch_reg, rhs, lhs });
-                                },
-                                .lshift => {
-                                    try out.print(alloc, "\tlsl {s}, {s}, {s}\n", .{ dst, lhs, rhs });
-                                },
-                                .rshift => {
-                                    try out.print(alloc, "\tlsr {s}, {s}, {s}\n", .{ dst, lhs, rhs });
-                                },
-                                else => |op| {
-                                    std.debug.print("op is not supported {s}\n", .{@tagName(op)});
-                                    return error.NotSupported;
                                 },
                             }
                         },
@@ -314,23 +330,6 @@ fn emitFunction(
                         },
                         .jump => |j| {
                             try out.print(alloc, "\tb _{s}_L{d}\n", .{ function.label, j.target });
-                        },
-                        .compare => |c| {
-                            const dst = try abi.regFor(c.dst.operand);
-                            switch (c.lhs.type) {
-                                .f64, .f32 => {
-                                    const lhs = try abi.regFor(c.lhs.operand);
-                                    const rhs = try abi.regFor(c.rhs.operand);
-                                    try out.print(alloc, "\tfcmp {s}, {s}\n", .{ lhs, rhs });
-                                    try out.print(alloc, "\tcset {s}, {s}\n", .{ dst, c.op.condForCmp() });
-                                },
-                                else => {
-                                    const lhs = try abi.regFor(c.lhs.operand);
-                                    const rhs = try abi.regFor(c.rhs.operand);
-                                    try out.print(alloc, "\tcmp {s}, {s}\n", .{ lhs, rhs });
-                                    try out.print(alloc, "\tcset {s}, {s}\n", .{ dst, c.op.condForCmp() });
-                                },
-                            }
                         },
                         .select => |s| {
                             const dst = try abi.regFor(s.dst.operand);

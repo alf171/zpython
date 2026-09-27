@@ -125,7 +125,7 @@ fn rewriteFunction(
                                     try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                                         .dst = data_bytes,
                                         .lhs = try elem_size_value.clone(alloc),
-                                        .op = .mul,
+                                        .op = .{ .bop = .mul },
                                         .rhs = try elem_count.clone(alloc),
                                     } } });
                                     const byte_count: TypedOperand = .{
@@ -143,7 +143,7 @@ fn rewriteFunction(
                                     try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                                         .dst = byte_count,
                                         .lhs = try data_bytes.clone(alloc),
-                                        .op = .add,
+                                        .op = .{ .bop = .add },
                                         .rhs = eight,
                                     } } });
                                     try elements.append(alloc, .{ .top = try byte_count.clone(alloc) });

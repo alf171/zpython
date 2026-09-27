@@ -1,4 +1,10 @@
 from indexing import index_2d
+from kernels import gt as _gt_gpu
+from kernels import ge as _ge_gpu
+from kernels import lt as _lt_gpu
+from kernels import le as _le_gpu
+from kernels import eq as _eq_gpu
+from kernels import ne as _ne_gpu
 from kernels import add as _add_gpu
 from kernels import sub as _sub_gpu
 from kernels import mul as _mul_gpu
@@ -46,6 +52,36 @@ class TensorData[T]:
         col = idxs[1]
         index = index_2d(row, col, self.row_stride, self.col_stride)
         self.data[index] = value
+
+    def __gt__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _gt_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __ge__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _ge_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __lt__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _lt_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __le__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _le_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __eq__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _eq_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
+
+    def __ne__(self, other: TensorData[T]) -> TensorData[bool]:
+        res = TensorData.fill((self.rows, self.cols), False)
+        _ne_gpu(res, self, other, (self.rows, self.cols, 1))
+        return res
 
     @staticmethod
     def fill[U](shape: tuple[i32, i32], value: U) -> TensorData[U]:

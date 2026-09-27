@@ -171,7 +171,7 @@ fn walkAugAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.All
     try ir_builder.emit(.{ .lir = .{ .binop = .{
         .dst = result,
         .lhs = lhs_value,
-        .op = try getBinOp(stmt),
+        .op = .{ .bop = try getBinOp(stmt) },
         .rhs = rhs_value,
     } } }, alloc);
     try storeAssignmentTarget(lhs, try result.clone(alloc), ir_builder, alloc);
@@ -433,7 +433,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const result_type: TypeInfo = switch (lhs.type) {
                 .instance => |instance| blk: {
                     const class = ir_builder.getClass(instance.class_id);
-                    const func = try op.toClassBuiltin();
+                    const func = op.toClassBuiltin();
                     const method = class.findMethod(func) orelse {
                         std.debug.print("cant find method {s}\n", .{func});
                         return error.CantFindMethod;
@@ -458,7 +458,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             };
             try ir_builder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
-                .op = op,
+                .op = .{ .bop = op },
                 .lhs = lhs,
                 .rhs = rhs,
             } } }, alloc);
@@ -802,14 +802,38 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             std.debug.assert(right_obj != null);
 
             const lhs = try walkExpr(left_obj, ir_builder, null, alloc);
+            errdefer lhs.deinit(alloc);
             const rhs = try walkExpr(right_obj, ir_builder, null, alloc);
-            const dst: TypedOperand = .{ .operand = ir_builder.nextTemp(), .type = .bool };
+            errdefer rhs.deinit(alloc);
             const op = try getCompareOp(stmt);
+            // handle overrides of compare operators
+            const result_type: TypeInfo = switch (lhs.type) {
+                .instance => |instance| blk: {
+                    const class = ir_builder.getClass(instance.class_id);
+                    const func = op.toClassBuiltin();
+                    const method = class.findMethod(func) orelse {
+                        std.debug.print("cant find method {s}\n", .{func});
+                        return error.CantFindMethod;
+                    };
+                    const function = ir_builder.getFunction(method.function_id) orelse {
+                        return error.CantFindFunction;
+                    };
+                    var bindings: TypeBindings = .init(alloc);
+                    defer bindings.deinit(alloc);
+                    const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
+                    break :blk return_type;
+                },
+                else => .bool,
+            };
+            const dst: TypedOperand = .{
+                .operand = ir_builder.nextTemp(),
+                .type = result_type,
+            };
 
-            try ir_builder.emit(.{ .lir = .{ .compare = .{
+            try ir_builder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
                 .lhs = lhs,
-                .op = op,
+                .op = .{ .cmp = op },
                 .rhs = rhs,
             } } }, alloc);
 
@@ -1192,7 +1216,7 @@ fn walkNamedCall(
                         try ir_builder.emit(.{ .lir = .{ .binop = .{
                             .dst = data,
                             .lhs = buf,
-                            .op = .add,
+                            .op = .{ .bop = .add },
                             .rhs = eight,
                         } } }, alloc);
                         const write_args = try alloc.alloc(TypedOperand, 3);
@@ -1365,10 +1389,10 @@ fn walkNamedCall(
                     .type = .bool,
                 };
 
-                try ir_builder.emit(.{ .lir = .{ .compare = .{
+                try ir_builder.emit(.{ .lir = .{ .binop = .{
                     .dst = compare,
                     .lhs = lhs,
-                    .op = .gt,
+                    .op = .{ .cmp = .gt },
                     .rhs = rhs,
                 } } }, alloc);
 
@@ -2085,7 +2109,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
             try ir_builder_.emit(.{ .lir = .{ .binop = .{
                 .dst = index_next,
                 .lhs = index,
-                .op = .add,
+                .op = .{ .bop = .add },
                 .rhs = try one.clone(alloc_),
             } } }, alloc_);
             carries[0].next = index_next;

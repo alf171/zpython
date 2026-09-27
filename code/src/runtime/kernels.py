@@ -2,6 +2,66 @@ from data import TensorData
 from indexing import index_2d
 
 @gpu
+def gt[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] > b.data[b_i]
+
+@gpu
+def ge[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] >= b.data[b_i]
+
+@gpu
+def lt[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] < b.data[b_i]
+
+@gpu
+def le[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] <= b.data[b_i]
+
+@gpu
+def eq[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] == b.data[b_i]
+
+@gpu
+def ne[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+
+    out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    a_i = index_2d(row, col, a.row_stride, a.col_stride)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+    out.data[out_i] = a.data[a_i] != b.data[b_i]
+
+@gpu
 def add[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)

@@ -77,14 +77,14 @@ pub const BinOp = enum {
     matmul,
     unknown,
 
-    pub fn toClassBuiltin(self: @This()) ![]const u8 {
+    pub fn toClassBuiltin(self: @This()) []const u8 {
         return switch (self) {
             .add => "__add__",
             .sub => "__sub__",
             .mul => "__mul__",
             .matmul => "__matmul__",
             .div => "__truediv__",
-            else => return error.CantFindBuiltin,
+            else => unreachable,
         };
     }
 
@@ -248,6 +248,17 @@ pub const CmpOp = enum {
             .lte => "le",
             .gt => "gt",
             .gte => "ge",
+        };
+    }
+
+    pub fn toClassBuiltin(self: @This()) []const u8 {
+        return switch (self) {
+            .eq => "__eq__",
+            .neq => "__ne__",
+            .lt => "__lt__",
+            .lte => "__le__",
+            .gt => "__gt__",
+            .gte => "__ge__",
         };
     }
 };

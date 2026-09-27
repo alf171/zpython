@@ -141,7 +141,10 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
                             },
                         };
                         const class = &program.classes.items[instance.class_id];
-                        const method_name = try bop.op.toClassBuiltin();
+                        const method_name = switch (bop.op) {
+                            .bop => |b| b.toClassBuiltin(),
+                            .cmp => |cmp| cmp.toClassBuiltin(),
+                        };
                         const method = class.findMethod(method_name) orelse {
                             return error.CantFindBuiltin;
                         };

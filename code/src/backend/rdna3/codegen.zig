@@ -137,73 +137,87 @@ pub fn emit(
                                 },
                             }
                         },
-                        .binop => |bop| {
-                            const dst = try abi.regFor(bop.dst.operand);
+                        .binop => |binop| {
+                            const dst = try abi.regFor(binop.dst.operand);
                             std.debug.assert(dst.reg_type == .vgpr);
-                            const lhs = try abi.regFor(bop.lhs.operand);
-                            const rhs = try abi.regFor(bop.rhs.operand);
-                            var src0 = lhs;
-                            var src1 = rhs;
-                            if (bop.op.isCommutative() and src0.reg_type == .vgpr and src1.reg_type == .sgpr) {
-                                std.mem.swap(@TypeOf(src0), &src0, &src1);
-                            }
-                            if (dst.reg_type != .vgpr or src1.reg_type != .vgpr) {
-                                return error.InvalidGpuVop2Operand;
-                            }
-                            const dst_reg = try dst.toString(alloc);
-                            defer alloc.free(dst_reg);
-                            const src0_reg = try src0.toString(alloc);
-                            defer alloc.free(src0_reg);
-                            const src1_reg = try src1.toString(alloc);
-                            defer alloc.free(src1_reg);
-                            switch (bop.op) {
-                                .add => {
-                                    switch (bop.dst.type) {
-                                        .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                        else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                    }
-                                    if (dst.count == 2)
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                            const lhs = try abi.regFor(binop.lhs.operand);
+                            const rhs = try abi.regFor(binop.rhs.operand);
+                            switch (binop.op) {
+                                .cmp => |cmp| {
+                                    std.debug.assert(dst.reg_type == .vgpr);
+                                    std.debug.assert(lhs.reg_type == .vgpr);
+                                    std.debug.assert(rhs.reg_type == .vgpr);
+                                    std.debug.assert(lhs.count == 1);
+                                    std.debug.assert(rhs.count == 1);
+                                    // NOTE: rhs can technically be vector or scalar!
+                                    try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ cmp.condForCmp(), "i32", lhs.base, rhs.base });
+                                    try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
                                 },
-                                .mul => {
-                                    switch (bop.dst.type) {
-                                        .f32 => {
-                                            try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                .bop => |bop| blk: {
+                                    var src0 = lhs;
+                                    var src1 = rhs;
+                                    if (bop.isCommutative() and src0.reg_type == .vgpr and src1.reg_type == .sgpr) {
+                                        std.mem.swap(@TypeOf(src0), &src0, &src1);
+                                    }
+                                    if (dst.reg_type != .vgpr or src1.reg_type != .vgpr) {
+                                        return error.InvalidGpuVop2Operand;
+                                    }
+                                    const dst_reg = try dst.toString(alloc);
+                                    defer alloc.free(dst_reg);
+                                    const src0_reg = try src0.toString(alloc);
+                                    defer alloc.free(src0_reg);
+                                    const src1_reg = try src1.toString(alloc);
+                                    defer alloc.free(src1_reg);
+                                    break :blk switch (bop) {
+                                        .add => {
+                                            switch (binop.dst.type) {
+                                                .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                                else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                            }
+                                            if (dst.count == 2)
+                                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                         },
-                                        else => {
-                                            try out.print(alloc, "\tv_mul_lo_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                        .mul => {
+                                            switch (binop.dst.type) {
+                                                .f32 => {
+                                                    try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                                },
+                                                else => {
+                                                    try out.print(alloc, "\tv_mul_lo_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                                },
+                                            }
+                                            // 0 out bits [32..64]
+                                            if (dst.count == 2)
+                                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
                                         },
-                                    }
-                                    // 0 out bits [32..64]
-                                    if (dst.count == 2)
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
-                                },
-                                .sub => {
-                                    // sub is not communitiive
-                                    std.debug.assert(src1.reg_type == .vgpr);
-                                    switch (bop.dst.type) {
-                                        .f32 => try out.print(alloc, "\tv_sub_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                        else => try out.print(alloc, "\tv_sub_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                    }
-                                },
-                                .div => {
-                                    // div is not communitiive
-                                    std.debug.assert(src1.reg_type == .vgpr);
-                                    switch (bop.dst.type) {
-                                        .f32 => {
-                                            const reciprocal = try abi.scratchReg(0, 1, .vgpr);
-                                            const reciprocal_reg = try reciprocal.toString(alloc);
-                                            defer alloc.free(reciprocal_reg);
-                                            // x/y => x * 1/y
-                                            try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
-                                            try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
+                                        .sub => {
+                                            // sub is not communitiive
+                                            std.debug.assert(src1.reg_type == .vgpr);
+                                            switch (binop.dst.type) {
+                                                .f32 => try out.print(alloc, "\tv_sub_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                                else => try out.print(alloc, "\tv_sub_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                            }
                                         },
-                                        else => return error.NotImpl,
-                                    }
-                                },
-                                else => |e| {
-                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                    return error.NotImpl;
+                                        .div => {
+                                            // div is not communitiive
+                                            std.debug.assert(src1.reg_type == .vgpr);
+                                            switch (binop.dst.type) {
+                                                .f32 => {
+                                                    const reciprocal = try abi.scratchReg(0, 1, .vgpr);
+                                                    const reciprocal_reg = try reciprocal.toString(alloc);
+                                                    defer alloc.free(reciprocal_reg);
+                                                    // x/y => x * 1/y
+                                                    try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
+                                                    try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
+                                                },
+                                                else => return error.NotImpl,
+                                            }
+                                        },
+                                        else => |e| {
+                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                            return error.NotImpl;
+                                        },
+                                    };
                                 },
                             }
                         },
@@ -259,13 +273,6 @@ pub fn emit(
                                     });
                                     // address = src
                                     switch (so.src.type) {
-                                        .i32, .f32 => {
-                                            try out.print(alloc, "\tglobal_store_b32 v[{d}:{d}], v{d}, off\n", .{
-                                                address.base,
-                                                address.base + 1,
-                                                src.base,
-                                            });
-                                        },
                                         .i64 => {
                                             std.debug.assert(src.count == 2);
                                             try out.print(alloc, "\tglobal_store_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{
@@ -273,6 +280,20 @@ pub fn emit(
                                                 address.base + 1,
                                                 src.base,
                                                 src.base + 1,
+                                            });
+                                        },
+                                        .i32, .f32 => {
+                                            try out.print(alloc, "\tglobal_store_b32 v[{d}:{d}], v{d}, off\n", .{
+                                                address.base,
+                                                address.base + 1,
+                                                src.base,
+                                            });
+                                        },
+                                        .bool => {
+                                            try out.print(alloc, "\tglobal_store_b8 v[{d}:{d}], v{d}, off\n", .{
+                                                address.base,
+                                                address.base + 1,
+                                                src.base,
                                             });
                                         },
                                         else => |e| {
@@ -376,19 +397,6 @@ pub fn emit(
                             try out.print(alloc, "\ts_cmp_lg_u32 s{d}, 0\n", .{scalar_scratch.base});
                             try out.print(alloc, "\ts_cbranch_scc1 {s}_L{d}\n", .{ function.label, b.then_block });
                             try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, b.else_block });
-                        },
-                        .compare => |c| {
-                            const dst = try abi.regFor(c.dst.operand);
-                            const lhs = try abi.regFor(c.lhs.operand);
-                            const rhs = try abi.regFor(c.rhs.operand);
-                            std.debug.assert(dst.reg_type == .vgpr);
-                            std.debug.assert(lhs.reg_type == .vgpr);
-                            std.debug.assert(rhs.reg_type == .vgpr);
-                            std.debug.assert(lhs.count == 1);
-                            std.debug.assert(rhs.count == 1);
-                            // NOTE: rhs can technically be vector or scalar!
-                            try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ c.op.condForCmp(), "i32", lhs.base, rhs.base });
-                            try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
                         },
                         .select => |s| {
                             const dst = try abi.regFor(s.dst.operand);

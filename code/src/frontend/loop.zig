@@ -14,11 +14,19 @@ const LoopPhi = @import("common").mir.LoopPhi;
 const walkExpr = @import("walk.zig").walkExpr;
 const walkStmtList = @import("walk.zig").walkStmtList;
 
-pub const LoopCondition = union(enum) { expr: *PyObject, compare: struct { local: LocalId, cmp: CmpOp, rhs_local: LocalId }, operand_compare: struct {
-    carry_index: usize,
-    cmp: CmpOp,
-    rhs: TypedOperand,
-} };
+pub const LoopCondition = union(enum) {
+    expr: *PyObject,
+    compare: struct {
+        local: LocalId,
+        cmp: CmpOp,
+        rhs_local: LocalId,
+    },
+    operand_compare: struct {
+        carry_index: usize,
+        cmp: CmpOp,
+        rhs: TypedOperand,
+    },
+};
 
 pub const LoopBody = union(enum) {
     stmt_list: *PyObject,
@@ -129,10 +137,10 @@ pub fn walkLoop(
             };
             const lhs = irBuilder.currentScope().local_values.map.get(comp.local) orelse return error.LocalNotFound;
             const rhs = irBuilder.currentScope().local_values.map.get(comp.rhs_local) orelse return error.LocalNotFound;
-            try irBuilder.emit(.{ .lir = .{ .compare = .{
+            try irBuilder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
                 .lhs = lhs,
-                .op = comp.cmp,
+                .op = .{ .cmp = comp.cmp },
                 .rhs = rhs,
             } } }, alloc);
             break :blk dst;
@@ -143,10 +151,10 @@ pub fn walkLoop(
                 .type = .bool,
             };
             const lhs = carries[comp.carry_index].current;
-            try irBuilder.emit(Instruction{ .lir = .{ .compare = .{
+            try irBuilder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
                 .lhs = lhs,
-                .op = comp.cmp,
+                .op = .{ .cmp = comp.cmp },
                 .rhs = comp.rhs,
             } } }, alloc);
             break :blk dst;

@@ -188,125 +188,124 @@ fn emitFunction(
                                 },
                             }
                         },
-                        .binop => |bop| {
-                            const dst = try abi.regFor(bop.dst.operand);
-                            const lhs = try abi.regFor(bop.lhs.operand);
-                            const rhs = try abi.regFor(bop.rhs.operand);
+                        .binop => |binop| {
+                            const dst = try abi.regFor(binop.dst.operand);
+                            const lhs = try abi.regFor(binop.lhs.operand);
+                            const rhs = try abi.regFor(binop.rhs.operand);
 
-                            switch (bop.op) {
-                                .add => {
-                                    const add_inst = switch (bop.dst.type) {
-                                        .f64 => "addsd",
-                                        .f32 => "addss",
-                                        else => "addq",
-                                    };
-                                    const mov_inst = switch (bop.dst.type) {
-                                        .f64 => "movsd",
-                                        .f32 => "movss",
-                                        else => "movq",
-                                    };
-                                    if (std.mem.eql(u8, dst, rhs)) {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, lhs, dst });
-                                    } else if (!std.mem.eql(u8, dst, lhs)) {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
-                                    } else {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
-                                    }
+                            switch (binop.op) {
+                                .bop => |bop| switch (bop) {
+                                    .add => {
+                                        const add_inst = switch (binop.dst.type) {
+                                            .f64 => "addsd",
+                                            .f32 => "addss",
+                                            else => "addq",
+                                        };
+                                        const mov_inst = switch (binop.dst.type) {
+                                            .f64 => "movsd",
+                                            .f32 => "movss",
+                                            else => "movq",
+                                        };
+                                        if (std.mem.eql(u8, dst, rhs)) {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, lhs, dst });
+                                        } else if (!std.mem.eql(u8, dst, lhs)) {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
+                                        } else {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ add_inst, rhs, dst });
+                                        }
+                                    },
+                                    .sub => {
+                                        const sub_inst = if (binop.dst.type == .f64) "subsd" else "subq";
+                                        const mov_inst = if (binop.dst.type == .f64) "movsd" else "movq";
+                                        if (std.mem.eql(u8, dst, rhs)) {
+                                            const scratch_reg = try abi.scratchReg(0, binop.dst.type.toRegisterType(function.kind));
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, rhs, scratch_reg });
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, scratch_reg, dst });
+                                        } else if (!std.mem.eql(u8, dst, lhs)) {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, rhs, dst });
+                                        } else {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, rhs, dst });
+                                        }
+                                    },
+                                    .mul => {
+                                        const mult_inst = if (binop.dst.type == .f64) "mulsd" else "imulq";
+                                        if (std.mem.eql(u8, dst, lhs)) {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
+                                        } else if (std.mem.eql(u8, dst, rhs)) {
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, lhs, dst });
+                                        } else {
+                                            try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ lhs, dst });
+                                            try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
+                                        }
+                                    },
+                                    // FIXME: floor_div is wrong for neg values
+                                    .div, .floor_div => {
+                                        try out.print(alloc, "\tpushq %rax\n", .{});
+                                        try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
+                                        try out.print(alloc, "\tcqto\n", .{});
+                                        try out.print(alloc, "\tidivq %{s}\n", .{rhs});
+                                        // x86 magic :)
+                                        try out.print(alloc, "\tmovq %rax, %{s}\n", .{dst});
+                                        try out.print(alloc, "\tpopq %rax\n", .{});
+                                    },
+                                    .mod => {
+                                        const scratch = try abi.scratchReg(0, .gp);
+                                        // idiv clobbers rax, rdx
+                                        try out.print(alloc, "\tpushq %rax\n", .{});
+                                        try out.print(alloc, "\tpushq %rdx\n", .{});
+                                        // save rhs in case its one of two regs above
+                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ rhs, scratch });
+                                        try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
+                                        try out.print(alloc, "\tcqto\n", .{});
+                                        try out.print(alloc, "\tidivq %{s}\n", .{scratch});
+                                        try out.print(alloc, "\tmovq %rdx, %{s}\n", .{scratch});
+                                        // restore
+                                        try out.print(alloc, "\tpopq %rdx\n", .{});
+                                        try out.print(alloc, "\tpopq %rax\n", .{});
+                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ scratch, dst });
+                                    },
+                                    .lshift, .rshift => {
+                                        if (binop.lhs.type == .f64) {
+                                            return error.InvalidFloat;
+                                        }
+                                        const shift_inst = switch (bop) {
+                                            .lshift => "shlq",
+                                            .rshift => "sarq",
+                                            else => unreachable,
+                                        };
+                                        const scratch = try abi.scratchReg(0, .gp);
+                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ lhs, scratch });
+                                        try out.print(alloc, "\tpushq %rcx\n", .{});
+                                        try out.print(alloc, "\tmovq %{s}, %rcx\n", .{rhs});
+                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ shift_inst, reg8("rcx"), scratch });
+                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ scratch, dst });
+                                        try out.print(alloc, "\tpopq %rcx\n", .{});
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
                                 },
-                                .sub => {
-                                    const sub_inst = if (bop.dst.type == .f64) "subsd" else "subq";
-                                    const mov_inst = if (bop.dst.type == .f64) "movsd" else "movq";
-                                    if (std.mem.eql(u8, dst, rhs)) {
-                                        const scratch_reg = try abi.scratchReg(0, bop.dst.type.toRegisterType(function.kind));
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, rhs, scratch_reg });
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, scratch_reg, dst });
-                                    } else if (!std.mem.eql(u8, dst, lhs)) {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mov_inst, lhs, dst });
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, rhs, dst });
-                                    } else {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ sub_inst, rhs, dst });
-                                    }
-                                },
-                                .mul => {
-                                    const mult_inst = if (bop.dst.type == .f64) "mulsd" else "imulq";
-                                    if (std.mem.eql(u8, dst, lhs)) {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
-                                    } else if (std.mem.eql(u8, dst, rhs)) {
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, lhs, dst });
-                                    } else {
-                                        try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ lhs, dst });
-                                        try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
-                                    }
-                                },
-                                // FIXME: floor_div is wrong for neg values
-                                .div, .floor_div => {
-                                    try out.print(alloc, "\tpushq %rax\n", .{});
-                                    try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
-                                    try out.print(alloc, "\tcqto\n", .{});
-                                    try out.print(alloc, "\tidivq %{s}\n", .{rhs});
-                                    // x86 magic :)
-                                    try out.print(alloc, "\tmovq %rax, %{s}\n", .{dst});
-                                    try out.print(alloc, "\tpopq %rax\n", .{});
-                                },
-                                .mod => {
+                                .cmp => |cmp| {
+                                    const reg_type = binop.lhs.type.toRegisterType(function.kind);
                                     const scratch = try abi.scratchReg(0, .gp);
-                                    // idiv clobbers rax, rdx
-                                    try out.print(alloc, "\tpushq %rax\n", .{});
-                                    try out.print(alloc, "\tpushq %rdx\n", .{});
-                                    // save rhs in case its one of two regs above
-                                    try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ rhs, scratch });
-                                    try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
-                                    try out.print(alloc, "\tcqto\n", .{});
-                                    try out.print(alloc, "\tidivq %{s}\n", .{scratch});
-                                    try out.print(alloc, "\tmovq %rdx, %{s}\n", .{scratch});
-                                    // restore
-                                    try out.print(alloc, "\tpopq %rdx\n", .{});
-                                    try out.print(alloc, "\tpopq %rax\n", .{});
-                                    try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ scratch, dst });
-                                },
-                                .lshift, .rshift => {
-                                    if (bop.lhs.type == .f64) {
-                                        return error.InvalidFloat;
-                                    }
-                                    const shift_inst = switch (bop.op) {
-                                        .lshift => "shlq",
-                                        .rshift => "sarq",
+                                    const scratch8 = reg8(scratch);
+                                    switch (reg_type) {
+                                        .gp => {
+                                            try out.print(alloc, "\tcmpq %{s}, %{s}\n", .{ rhs, lhs });
+                                        },
+                                        .f => {
+                                            try out.print(alloc, "\tucomisd %{s}, %{s}\n", .{ rhs, lhs });
+                                        },
                                         else => unreachable,
-                                    };
-                                    const scratch = try abi.scratchReg(0, .gp);
-                                    try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ lhs, scratch });
-                                    try out.print(alloc, "\tpushq %rcx\n", .{});
-                                    try out.print(alloc, "\tmovq %{s}, %rcx\n", .{rhs});
-                                    try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ shift_inst, reg8("rcx"), scratch });
-                                    try out.print(alloc, "\tmovq %{s}, %{s}\n", .{ scratch, dst });
-                                    try out.print(alloc, "\tpopq %rcx\n", .{});
-                                },
-                                else => |e| {
-                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                    return error.NotImpl;
+                                    }
+                                    try out.print(alloc, "\t{s} %{s}\n", .{ condForCmp(cmp, reg_type), scratch8 });
+                                    try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ scratch8, dst });
                                 },
                             }
-                        },
-                        .compare => |c| {
-                            const reg_type = c.lhs.type.toRegisterType(function.kind);
-                            const dst = try abi.regFor(c.dst.operand);
-                            const lhs = try abi.regFor(c.lhs.operand);
-                            const rhs = try abi.regFor(c.rhs.operand);
-                            const scratch = try abi.scratchReg(0, .gp);
-                            const scratch8 = reg8(scratch);
-                            switch (reg_type) {
-                                .gp => {
-                                    try out.print(alloc, "\tcmpq %{s}, %{s}\n", .{ rhs, lhs });
-                                },
-                                .f => {
-                                    try out.print(alloc, "\tucomisd %{s}, %{s}\n", .{ rhs, lhs });
-                                },
-                                else => unreachable,
-                            }
-                            try out.print(alloc, "\t{s} %{s}\n", .{ condForCmp(c.op, reg_type), scratch8 });
-                            try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ scratch8, dst });
                         },
                         .jump => |j| {
                             try out.print(alloc, "\tjmp {s}_L{d}\n", .{ function.label, j.target });

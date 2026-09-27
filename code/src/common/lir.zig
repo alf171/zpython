@@ -25,7 +25,10 @@ pub const Instruction = union(enum) {
     },
     binop: struct {
         dst: TypedOperand,
-        op: BinOp,
+        op: union(enum) {
+            bop: BinOp,
+            cmp: CmpOp,
+        },
         lhs: TypedOperand,
         rhs: TypedOperand,
     },
@@ -37,12 +40,6 @@ pub const Instruction = union(enum) {
         dst: TypedOperand,
         op: UnaryOp,
         src: TypedOperand,
-    },
-    compare: struct {
-        dst: TypedOperand,
-        lhs: TypedOperand,
-        op: CmpOp,
-        rhs: TypedOperand,
     },
     jump: struct {
         target: BlockId,
@@ -133,14 +130,6 @@ pub const Instruction = union(enum) {
                 m.src.print();
                 debugPrint("\n", .{});
             },
-            .compare => |c| {
-                c.dst.operand.print();
-                debugPrint(" <- ", .{});
-                c.lhs.operand.print();
-                debugPrint(" {s} ", .{c.op.symbol()});
-                c.rhs.operand.print();
-                debugPrint("\n", .{});
-            },
             .jump => |j| {
                 debugPrint("jump block{d}\n", .{j.target});
             },
@@ -211,10 +200,6 @@ pub const Instruction = union(enum) {
                     .constant => {},
                 }
             },
-            .compare => |*c| {
-                if (c.lhs.operand.equal(old)) c.lhs.operand = new;
-                if (c.rhs.operand.equal(old)) c.rhs.operand = new;
-            },
             .select => |*s| {
                 if (s.condition.operand.equal(old)) s.condition.operand = new;
                 switch (s.if_value) {
@@ -255,9 +240,6 @@ pub const Instruction = union(enum) {
             .move => |*mov| {
                 if (mov.dst.operand.equal(old)) mov.dst.operand = new;
             },
-            .compare => |*c| {
-                if (c.dst.operand.equal(old)) c.dst.operand = new;
-            },
             .load_offset => |*lo| {
                 if (lo.dst.operand.equal(old)) lo.dst.operand = new;
             },
@@ -290,7 +272,6 @@ pub const Instruction = union(enum) {
             .binop => |*bop| .{ .top = &bop.dst },
             .move => |*m| .{ .top = &m.dst },
             .unaryop => |*uop| .{ .top = &uop.dst },
-            .compare => |*c| .{ .top = &c.dst },
             .store_offset => null,
             .load_offset => |*lo| .{ .top = &lo.dst },
             .stack_alloc => |*so| .{ .top = &so.dst },
@@ -365,10 +346,6 @@ pub const Instruction = union(enum) {
             .unaryop => |*uop| {
                 try res.append(alloc, .{ .top = &uop.src });
             },
-            .compare => |*c| {
-                try res.append(alloc, .{ .top = &c.lhs });
-                try res.append(alloc, .{ .top = &c.rhs });
-            },
             .branch => |*b| {
                 try res.append(alloc, .{ .top = &b.condition });
             },
@@ -405,11 +382,6 @@ pub const Instruction = union(enum) {
                 bop.dst.deinit(alloc);
                 bop.lhs.deinit(alloc);
                 bop.rhs.deinit(alloc);
-            },
-            .compare => |c| {
-                c.dst.deinit(alloc);
-                c.lhs.deinit(alloc);
-                c.rhs.deinit(alloc);
             },
             .unaryop => |u| {
                 u.dst.deinit(alloc);
@@ -491,12 +463,6 @@ pub const Instruction = union(enum) {
             } },
             .jump => |j| .{ .jump = .{
                 .target = j.target,
-            } },
-            .compare => |c| .{ .compare = .{
-                .dst = try c.dst.clone(alloc),
-                .lhs = try c.lhs.clone(alloc),
-                .op = c.op,
-                .rhs = try c.rhs.clone(alloc),
             } },
             .branch => |b| .{ .branch = .{
                 .condition = try b.condition.clone(alloc),

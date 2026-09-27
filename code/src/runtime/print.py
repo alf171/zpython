@@ -20,10 +20,12 @@ def print_int(d: int, end: str = "\n") -> None:
         write(1, end, len(end) - 1)
 
 # print(b: bool) delegates to this method
-def print_bool(b: bool) -> None:
-    s = "True\n" if b else "False\n"
-    len = 5 if b else 6
+def print_bool(b: bool, end: str = "\n") -> None:
+    s = "True" if b else "False"
+    len = 4 if b else 5
     write(1, s, len)
+    if len(end) > 1:
+        write(1, end, len(end) - 1)
 
 # print(b: str) delegates to this method
 def print_string(s: str, end: str = "\n") -> None:

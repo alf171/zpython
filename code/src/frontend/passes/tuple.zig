@@ -50,7 +50,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
                         .dst = scaled,
                         .lhs = s.index,
-                        .op = .mul,
+                        .op = .{ .bop = .mul },
                         .rhs = eight,
                     } } });
                     try new_instructions.append(alloc, .{ .lir = .{

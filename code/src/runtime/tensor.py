@@ -1,6 +1,7 @@
 from backward import add as backwards_add
 from backward import sub as backwards_sub
 from backward import mul as backwards_mul
+from backward import broadcast_to as backwards_broadcast_to
 from data import TensorData
 
 class Tensor[T]:
@@ -23,7 +24,9 @@ class Tensor[T]:
         return Tensor._init(TensorData.fill(shape, value))
 
     def broadcast_to(self, shape: tuple[i32, i32]) -> Tensor[T]:
-        return Tensor._init(self.view.broadcast_to(shape))
+        res = Tensor._init(self.view.broadcast_to(shape))
+        res.backward: Callable[[], None] = lambda: backwards_broadcast_to(res, self)
+        return res
 
     def transpose(self) -> Tensor[T]:
         return Tensor._init(self.view.transpose())
@@ -33,6 +36,24 @@ class Tensor[T]:
 
     def __setitem__(self, idxs: tuple[i32, i32], value: T) -> None:
         self.view[idxs] = value
+
+    def __gt__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view > other.view)
+
+    def __ge__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view >= other.view)
+
+    def __lt__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view < other.view)
+
+    def __le__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view <= other.view)
+
+    def __eq__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view == other.view)
+
+    def __ne__(self, other: Tensor[T]) -> Tensor[bool]:
+        return Tensor._init(self.view != other.view)
 
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
         res = Tensor._init(self.view + other.view)

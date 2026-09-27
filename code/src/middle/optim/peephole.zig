@@ -84,50 +84,53 @@ const SimplificationValue = union(enum) {
 };
 
 /// return an Operand iff there is a valid rewrite
-fn rewriteIntoMove(bop: BinOpInstruction, copyMap: *const HashMap(Operand, ConstValue)) ?SimplificationValue {
-    const lhs = copyMap.get(bop.lhs.operand);
-    const rhs = copyMap.get(bop.rhs.operand);
+fn rewriteIntoMove(binop: BinOpInstruction, copyMap: *const HashMap(Operand, ConstValue)) ?SimplificationValue {
+    const lhs = copyMap.get(binop.lhs.operand);
+    const rhs = copyMap.get(binop.rhs.operand);
     if (lhs) |lhs_value| {
         if (rhs) |rhs_value| {
-            if (foldConstants(bop.op, lhs_value, rhs_value)) |constant| {
+            if (foldConstants(binop.op, lhs_value, rhs_value)) |constant| {
                 return .{ .constant = constant };
             }
         }
     }
 
-    switch (bop.op) {
-        .add => {
-            if (rhs) |value| {
-                if (value.isZero()) return .lhs;
-            }
-            if (lhs) |value| {
-                if (value.isZero()) return .rhs;
-            }
-        },
-        .sub => {
-            if (rhs) |value| {
-                if (value.isZero()) return .lhs;
-            }
-        },
-        .mul => {
-            if (rhs) |value| {
-                if (value.isZero()) return .{ .constant = value };
-                if (value.isOne()) return .lhs;
-            }
-            if (lhs) |value| {
-                if (value.isZero()) return .{ .constant = value };
-                if (value.isOne()) return .rhs;
-            }
-        },
-        .div => {
-            if (rhs) |value| {
-                if (value.isOne()) return .lhs;
-            }
-        },
-        .lshift, .rshift => {
-            if (rhs) |value| {
-                if (value.isZero()) return .lhs;
-            }
+    switch (binop.op) {
+        .bop => |bop| switch (bop) {
+            .add => {
+                if (rhs) |value| {
+                    if (value.isZero()) return .lhs;
+                }
+                if (lhs) |value| {
+                    if (value.isZero()) return .rhs;
+                }
+            },
+            .sub => {
+                if (rhs) |value| {
+                    if (value.isZero()) return .lhs;
+                }
+            },
+            .mul => {
+                if (rhs) |value| {
+                    if (value.isZero()) return .{ .constant = value };
+                    if (value.isOne()) return .lhs;
+                }
+                if (lhs) |value| {
+                    if (value.isZero()) return .{ .constant = value };
+                    if (value.isOne()) return .rhs;
+                }
+            },
+            .div => {
+                if (rhs) |value| {
+                    if (value.isOne()) return .lhs;
+                }
+            },
+            .lshift, .rshift => {
+                if (rhs) |value| {
+                    if (value.isZero()) return .lhs;
+                }
+            },
+            else => return null,
         },
         else => return null,
     }
@@ -138,18 +141,24 @@ fn foldConstants(op: BinOp, lhs: ConstValue, rhs: ConstValue) ?ConstValue {
     switch (lhs) {
         .i64 => |lhs_i| switch (rhs) {
             .i64 => |rhs_i| switch (op) {
-                .add => return .{ .i64 = lhs_i + rhs_i },
-                .sub => return .{ .i64 = lhs_i - rhs_i },
-                .mul => return .{ .i64 = lhs_i * rhs_i },
+                .bop => |bop| switch (bop) {
+                    .add => return .{ .i64 = lhs_i + rhs_i },
+                    .sub => return .{ .i64 = lhs_i - rhs_i },
+                    .mul => return .{ .i64 = lhs_i * rhs_i },
+                    else => return null,
+                },
                 else => return null,
             },
             else => return null,
         },
         .i32 => |lhs_i| switch (rhs) {
             .i32 => |rhs_i| switch (op) {
-                .add => return .{ .i64 = lhs_i + rhs_i },
-                .sub => return .{ .i64 = lhs_i - rhs_i },
-                .mul => return .{ .i64 = lhs_i * rhs_i },
+                .bop => |bop| switch (bop) {
+                    .add => return .{ .i64 = lhs_i + rhs_i },
+                    .sub => return .{ .i64 = lhs_i - rhs_i },
+                    .mul => return .{ .i64 = lhs_i * rhs_i },
+                    else => return null,
+                },
                 else => return null,
             },
             else => return null,

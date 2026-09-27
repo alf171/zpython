@@ -48,7 +48,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         .binop = .{
                             .dst = repeat_list_count,
                             .lhs = list_length_temp,
-                            .op = .mul,
+                            .op = .{ .bop = .mul },
                             .rhs = try lr.count.clone(alloc),
                         },
                     } });
@@ -72,7 +72,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         .binop = .{
                             .dst = repeat_list_byte_count,
                             .lhs = repeat_list_count,
-                            .op = .mul,
+                            .op = .{ .bop = .mul },
                             .rhs = elem_size,
                         },
                     } });
@@ -96,7 +96,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         .binop = .{
                             .dst = byte_count,
                             .lhs = repeat_list_byte_count,
-                            .op = .add,
+                            .op = .{ .bop = .add },
                             .rhs = eight,
                         },
                     } });
