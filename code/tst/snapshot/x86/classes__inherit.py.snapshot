@@ -21,8 +21,8 @@ dog = Dog("remy")
 dog.speak()
 
 performance report: (ORIGIN=user)
-number of asm lines: 234
-mov count: 131
+number of asm lines: 236
+mov count: 133
 memory load count: 0
 memory store count: 0
 branch count: 14

@@ -23,4 +23,4 @@ spill count: 0
 actual output:
 10.00000 20.00000 10.00000 20.00000 10.00000 20.00000 
 10.00000 10.00000 10.00000 20.00000 20.00000 20.00000 
-[!!memory report!!]: allocs=51 frees=51 allocated_bytes=774 freed_bytes=774
+[!!memory report!!]: allocs=53 frees=53 allocated_bytes=822 freed_bytes=822

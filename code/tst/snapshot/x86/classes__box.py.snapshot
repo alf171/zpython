@@ -11,8 +11,8 @@ box = Box([1, 2, 3])
 print(consume(box))
 
 performance report: (ORIGIN=user)
-number of asm lines: 99
-mov count: 39
+number of asm lines: 97
+mov count: 37
 memory load count: 0
 memory store count: 0
 branch count: 8

@@ -65,6 +65,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const input_file = args[1];
+    const output_file = args[2];
     var should_run = false;
     var should_optim = false;
     var should_dump_ir = false;
@@ -78,7 +79,7 @@ pub fn main(init: std.process.Init) !void {
         .host = .X86,
         .device = .gfx1103,
     };
-    for (args[2..]) |arg| {
+    for (args[3..]) |arg| {
         if (std.mem.eql(u8, arg, "--run")) should_run = true;
         if (std.mem.eql(u8, arg, "--optim")) should_optim = true;
         if (std.mem.eql(u8, arg, "--dump-ir")) should_dump_ir = true;
@@ -272,7 +273,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     timer.begin(.backend_write_asm, io);
-    const output_file = "/tmp/host.s";
+    // const output_file = std.fmt.allocPrint(alloc, &.{ "/tmp", }, args: anytype)
     try writeArtifact(output_file, artifacts.host_asm, io);
     if (artifacts.device_asm) |device_asm|
         try writeArtifact("/tmp/device.s", device_asm, io);

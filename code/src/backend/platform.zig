@@ -15,12 +15,12 @@ pub const Host = union(enum) {
     RDNA3,
     UNKNOWN,
 
-    pub fn toString(self: @This()) ![]const u8 {
+    pub fn toString(self: @This()) []const u8 {
         return switch (self) {
             .ARM => "arm",
             .X86 => "x86",
             .RDNA3 => "rdna3",
-            else => return error.InvalidTarget,
+            else => unreachable,
         };
     }
 
