@@ -9,11 +9,11 @@ x = f(5)
 print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 57
+number of asm lines: 56
 mov count: 17
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 4
 call count: 3
 spill count: 0
 

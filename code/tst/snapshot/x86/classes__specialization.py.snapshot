@@ -31,11 +31,11 @@ def run() -> None:
 run()
 
 performance report: (ORIGIN=user)
-number of asm lines: 533
+number of asm lines: 526
 mov count: 352
 memory load count: 0
 memory store count: 0
-branch count: 23
+branch count: 16
 call count: 37
 spill count: 4
 

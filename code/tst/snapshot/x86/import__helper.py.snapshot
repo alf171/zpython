@@ -4,11 +4,11 @@ def two() -> int:
     return 2
 
 performance report: (ORIGIN=user)
-number of asm lines: 41
+number of asm lines: 40
 mov count: 4
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 4
 call count: 1
 spill count: 0
 

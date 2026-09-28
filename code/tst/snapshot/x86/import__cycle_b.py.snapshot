@@ -10,11 +10,11 @@ def b(x: int) -> None:
     print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 163
+number of asm lines: 161
 mov count: 97
 memory load count: 0
 memory store count: 0
-branch count: 8
+branch count: 6
 call count: 13
 spill count: 0
 

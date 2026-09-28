@@ -235,14 +235,14 @@ _concat__string_concat_L0:
 	movq $8, %rdi
 	movq $0, %rsi
 	movb %sil, (%rbx,%rdi)
-	movq (%r12), %rdi
+	movslq 0(%r12), %rdi
 	movq -8(%rbp), %rsi
-	movq (%rsi), %rsi
+	movslq 0(%rsi), %rsi
 	addq %rdi, %rsi
 	movq $1, %rdi
 	movq %rsi, %r15
 	subq %rdi, %r15
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq %rdi, %r14
 	imulq %r15, %r14
 	movq $8, %rdi
@@ -254,7 +254,7 @@ _concat__string_concat_L0:
 	movq %rbx, %rsi
 	movq %r15, %rdx
 	callq _repeat__list_repeat__char
-	movq (%r12), %rsi
+	movslq 0(%r12), %rsi
 	movq $1, %rdi
 	movq %rsi, %r10
 	subq %rdi, %r10
@@ -284,7 +284,7 @@ _concat__string_concat_L2:
 	addq %rdi, %rsi
 	jmp _concat__string_concat_L1
 _concat__string_concat_L3:
-	movq (%r9), %rbx
+	movslq 0(%r9), %rbx
 	movq $0, %rdi
 	movq $0, %r10
 	jmp _concat__string_concat_L4
@@ -301,7 +301,7 @@ _concat__string_concat_L5:
 	movq $8, %rsi
 	addq %r8, %rsi
 	movzbq (%rsi,%r9), %rax
-	movq (%rdx), %rsi
+	movslq 0(%rdx), %rsi
 	addq %r8, %rsi
 	movq $1, %r8
 	subq %r8, %rsi
@@ -313,7 +313,6 @@ _concat__string_concat_L5:
 	jmp _concat__string_concat_L4
 _concat__string_concat_L6:
 	movq %rcx, %rax
-	jmp _concat__string_concat_epilogue
 	jmp _concat__string_concat_epilogue
 _concat__string_concat_epilogue:
 	popq %r15
@@ -378,7 +377,6 @@ _print___print_int_helper_L3:
 	movq $1, %rdx
 	callq write
 	jmp _print___print_int_helper_epilogue
-	jmp _print___print_int_helper_epilogue
 _print___print_int_helper_epilogue:
 	popq %r15
 	popq %r14
@@ -435,7 +433,7 @@ _print__print_int_L2:
 _print__print_int_L3:
 	movq %r12, %rdi
 	callq _print___print_int_helper
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -444,7 +442,7 @@ _print__print_int_L3:
 	jne _print__print_int_L4
 	jmp _print__print_int_L5
 _print__print_int_L4:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -457,7 +455,6 @@ _print__print_int_L4:
 _print__print_int_L5:
 	jmp _print__print_int_L6
 _print__print_int_L6:
-	jmp _print__print_int_epilogue
 	jmp _print__print_int_epilogue
 _print__print_int_epilogue:
 	popq %r15
@@ -536,7 +533,7 @@ movq $5, %rdx
 	addq %rdi, %rsi
 	movq $1, %rdi
 	callq write
-	movq (%r13), %rsi
+	movslq 0(%r13), %rsi
 	movq $1, %rdi
 	cmpq %rdi, %rsi
 	setg %r11b
@@ -545,7 +542,7 @@ movq $5, %rdx
 	jne _print__print_bool_L1
 	jmp _print__print_bool_L2
 _print__print_bool_L1:
-	movq (%r13), %rdi
+	movslq 0(%r13), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -558,7 +555,6 @@ _print__print_bool_L1:
 _print__print_bool_L2:
 	jmp _print__print_bool_L3
 _print__print_bool_L3:
-	jmp _print__print_bool_epilogue
 	jmp _print__print_bool_epilogue
 _print__print_bool_epilogue:
 	popq %r15
@@ -582,7 +578,7 @@ _print__print_string:
 _print__print_string_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rbx
-	movq (%rdx), %rdi
+	movslq 0(%rdx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rcx
 	subq %rsi, %rcx
@@ -592,7 +588,7 @@ _print__print_string_L0:
 	movq $1, %rdi
 	movq %rcx, %rdx
 	callq write
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -601,7 +597,7 @@ _print__print_string_L0:
 	jne _print__print_string_L1
 	jmp _print__print_string_L2
 _print__print_string_L1:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -614,7 +610,6 @@ _print__print_string_L1:
 _print__print_string_L2:
 	jmp _print__print_string_L3
 _print__print_string_L3:
-	jmp _print__print_string_epilogue
 	jmp _print__print_string_epilogue
 _print__print_string_epilogue:
 	popq %r15
@@ -661,7 +656,7 @@ _print__print_int_list_L0:
 	movq %r13, %rdi
 	movq %rdx, %rsi
 	callq _print__print_string
-	movq (%r12), %rdi
+	movslq 0(%r12), %rdi
 	movq $0, %rsi
 	movq %rsi, -16(%rbp)
 	movq %rdi, %r13
@@ -695,7 +690,7 @@ _print__print_int_list_L2:
 	movb %dl, (%rsi,%rdi)
 	movq %r15, %rdi
 	callq _print__print_int
-	movq (%r12), %rsi
+	movslq 0(%r12), %rsi
 	movq $1, %rdi
 	movq %rdi, %r11
 	movq %rsi, %rdi
@@ -720,7 +715,6 @@ _print__print_int_list_L3:
 	movb %dl, (%rdi,%rsi)
 	movq -8(%rbp), %rsi
 	callq _print__print_string
-	jmp _print__print_int_list_epilogue
 	jmp _print__print_int_list_epilogue
 _print__print_int_list_L4:
 	movq $11, %rdi
@@ -872,7 +866,7 @@ _print__print_float_L5:
 	addq %rdi, %r13
 	jmp _print__print_float_L4
 _print__print_float_L6:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -881,7 +875,7 @@ _print__print_float_L6:
 	jne _print__print_float_L7
 	jmp _print__print_float_L8
 _print__print_float_L7:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -894,7 +888,6 @@ _print__print_float_L7:
 _print__print_float_L8:
 	jmp _print__print_float_L9
 _print__print_float_L9:
-	jmp _print__print_float_epilogue
 	jmp _print__print_float_epilogue
 _print__print_float_epilogue:
 	popq %r15
@@ -925,7 +918,6 @@ _indexing__index_2d_L0:
 	imulq %rdx, %rsi
 	addq %rsi, %rdi
 	movq %rdi, %rax
-	jmp _indexing__index_2d_epilogue
 	jmp _indexing__index_2d_epilogue
 _indexing__index_2d_epilogue:
 	popq %r15
@@ -961,7 +953,6 @@ _backward__add_L0:
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
 	jmp _backward__add_epilogue
-	jmp _backward__add_epilogue
 _backward__add_epilogue:
 	popq %r15
 	popq %r14
@@ -995,7 +986,6 @@ _backward__sub_L0:
 	callq _data__TensorData____sub____f32
 	movq %rax, %rdi
 	movq %rdi, 8(%rbx)
-	jmp _backward__sub_epilogue
 	jmp _backward__sub_epilogue
 _backward__sub_epilogue:
 	popq %r15
@@ -1039,7 +1029,6 @@ _backward__mul_L0:
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
 	jmp _backward__mul_epilogue
-	jmp _backward__mul_epilogue
 _backward__mul_epilogue:
 	popq %r15
 	popq %r14
@@ -1081,7 +1070,6 @@ _backward__matmul_L0:
 	callq _data__TensorData____add____f32
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
-	jmp _backward__matmul_epilogue
 	jmp _backward__matmul_epilogue
 _backward__matmul_epilogue:
 	popq %r15
@@ -1167,7 +1155,6 @@ _backward__broadcast_to_L6:
 	movq %rax, %rdi
 	movq %rdi, 8(%rbx)
 	jmp _backward__broadcast_to_epilogue
-	jmp _backward__broadcast_to_epilogue
 _backward__broadcast_to_epilogue:
 	popq %r15
 	popq %r14
@@ -1189,7 +1176,6 @@ _module__Module____init__:
 	pushq %r15
 _module__Module____init___L0:
 	jmp _module__Module____init___epilogue
-	jmp _module__Module____init___epilogue
 _module__Module____init___epilogue:
 	popq %r15
 	popq %r14
@@ -1210,7 +1196,6 @@ _tensor____lambda_87:
 	pushq %r14
 	pushq %r15
 _tensor____lambda_87_L0:
-	jmp _tensor____lambda_87_epilogue
 	jmp _tensor____lambda_87_epilogue
 _tensor____lambda_87_epilogue:
 	popq %r15
@@ -1237,7 +1222,6 @@ _tensor____lambda_88_L0:
 	movq %rdx, %rdi
 	callq _backward__broadcast_to
 	jmp _tensor____lambda_88_epilogue
-	jmp _tensor____lambda_88_epilogue
 _tensor____lambda_88_epilogue:
 	popq %r15
 	popq %r14
@@ -1263,7 +1247,6 @@ _tensor____lambda_89_L0:
 	movq 24(%rdi), %rdx
 	movq %rcx, %rdi
 	callq _backward__add
-	jmp _tensor____lambda_89_epilogue
 	jmp _tensor____lambda_89_epilogue
 _tensor____lambda_89_epilogue:
 	popq %r15
@@ -1292,7 +1275,6 @@ _tensor____lambda_90_L0:
 	movq %rcx, %rsi
 	callq _backward__sub
 	jmp _tensor____lambda_90_epilogue
-	jmp _tensor____lambda_90_epilogue
 _tensor____lambda_90_epilogue:
 	popq %r15
 	popq %r14
@@ -1318,7 +1300,6 @@ _tensor____lambda_91_L0:
 	movq 24(%rdi), %rdx
 	movq %rcx, %rdi
 	callq _backward__mul
-	jmp _tensor____lambda_91_epilogue
 	jmp _tensor____lambda_91_epilogue
 _tensor____lambda_91_epilogue:
 	popq %r15
@@ -1356,7 +1337,6 @@ _generics___print__i64_L0:
 	movq %rdx, %rsi
 	callq _print__print_int
 	jmp _generics___print__i64_epilogue
-	jmp _generics___print__i64_epilogue
 _generics___print__i64_epilogue:
 	popq %r15
 	popq %r14
@@ -1391,7 +1371,6 @@ _generics___print__list_char_L0:
 	movb %dl, (%rsi,%rdi)
 	movq %rbx, %rdi
 	callq _print__print_string
-	jmp _generics___print__list_char_epilogue
 	jmp _generics___print__list_char_epilogue
 _generics___print__list_char_epilogue:
 	popq %r15
@@ -1428,7 +1407,6 @@ _generics___print__bool_L0:
 	movq %rbx, %rdi
 	callq _print__print_bool
 	jmp _generics___print__bool_epilogue
-	jmp _generics___print__bool_epilogue
 _generics___print__bool_epilogue:
 	popq %r15
 	popq %r14
@@ -1449,7 +1427,7 @@ _generics__print_len__i64:
 	pushq %r14
 	pushq %r15
 _generics__print_len__i64_L0:
-	movq (%rdi), %rdi
+	movslq 0(%rdi), %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
 	callq arena_malloc
@@ -1464,7 +1442,6 @@ _generics__print_len__i64_L0:
 	movb %dil, (%rsi,%rdx)
 	movq %rbx, %rdi
 	callq _print__print_int
-	jmp _generics__print_len__i64_epilogue
 	jmp _generics__print_len__i64_epilogue
 _generics__print_len__i64_epilogue:
 	popq %r15
@@ -1486,7 +1463,7 @@ _generics__print_len__list_char:
 	pushq %r14
 	pushq %r15
 _generics__print_len__list_char_L0:
-	movq (%rdi), %rdi
+	movslq 0(%rdi), %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
 	callq arena_malloc
@@ -1502,7 +1479,6 @@ _generics__print_len__list_char_L0:
 	movq %rbx, %rdi
 	movq %rdx, %rsi
 	callq _print__print_int
-	jmp _generics__print_len__list_char_epilogue
 	jmp _generics__print_len__list_char_epilogue
 _generics__print_len__list_char_epilogue:
 	popq %r15
@@ -1524,7 +1500,7 @@ _generics__print_len__bool:
 	pushq %r14
 	pushq %r15
 _generics__print_len__bool_L0:
-	movq (%rdi), %rdi
+	movslq 0(%rdi), %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
 	callq arena_malloc
@@ -1539,7 +1515,6 @@ _generics__print_len__bool_L0:
 	movb %dl, (%rsi,%rdi)
 	movq %rbx, %rdi
 	callq _print__print_int
-	jmp _generics__print_len__bool_epilogue
 	jmp _generics__print_len__bool_epilogue
 _generics__print_len__bool_epilogue:
 	popq %r15
@@ -1562,7 +1537,7 @@ _generics__get_last_item__i64:
 	pushq %r15
 _generics__get_last_item__i64_L0:
 	movq %rdi, %rsi
-	movq (%rsi), %rdi
+	movslq 0(%rsi), %rdi
 	movq $1, %rdx
 	subq %rdx, %rdi
 	movq $8, %rdx
@@ -1571,7 +1546,6 @@ _generics__get_last_item__i64_L0:
 	addq %rdx, %rdi
 	movq (%rdi,%rsi), %rdi
 	movq %rdi, %rax
-	jmp _generics__get_last_item__i64_epilogue
 	jmp _generics__get_last_item__i64_epilogue
 _generics__get_last_item__i64_epilogue:
 	popq %r15
@@ -1593,7 +1567,7 @@ _generics__get_last_item__list_char:
 	pushq %r14
 	pushq %r15
 _generics__get_last_item__list_char_L0:
-	movq (%rdi), %rdx
+	movslq 0(%rdi), %rdx
 	movq $1, %rsi
 	subq %rsi, %rdx
 	movq $8, %rsi
@@ -1602,7 +1576,6 @@ _generics__get_last_item__list_char_L0:
 	addq %rdx, %rsi
 	movq (%rsi,%rdi), %rdi
 	movq %rdi, %rax
-	jmp _generics__get_last_item__list_char_epilogue
 	jmp _generics__get_last_item__list_char_epilogue
 _generics__get_last_item__list_char_epilogue:
 	popq %r15
@@ -1625,7 +1598,7 @@ _generics__get_last_item__bool:
 	pushq %r15
 _generics__get_last_item__bool_L0:
 	movq %rdi, %rsi
-	movq (%rsi), %rdx
+	movslq 0(%rsi), %rdx
 	movq $1, %rdi
 	movq %rdi, %r11
 	movq %rdx, %rdi
@@ -1634,7 +1607,6 @@ _generics__get_last_item__bool_L0:
 	addq %rdx, %rdi
 	movzbq (%rdi,%rsi), %rdi
 	movq %rdi, %rax
-	jmp _generics__get_last_item__bool_epilogue
 	jmp _generics__get_last_item__bool_epilogue
 _generics__get_last_item__bool_epilogue:
 	popq %r15
@@ -1659,7 +1631,6 @@ _generics__outer__i64_L0:
 	callq _generics__inner__i64
 	movq %rax, %rdi
 	movq %rdi, %rax
-	jmp _generics__outer__i64_epilogue
 	jmp _generics__outer__i64_epilogue
 _generics__outer__i64_epilogue:
 	popq %r15
@@ -1792,7 +1763,6 @@ _data__TensorData____add____f32_L0:
 	callq gpu_launch
 	movq %r12, %rax
 	jmp _data__TensorData____add____f32_epilogue
-	jmp _data__TensorData____add____f32_epilogue
 _data__TensorData____add____f32_epilogue:
 	popq %r15
 	popq %r14
@@ -1923,7 +1893,6 @@ _data__TensorData____sub____f32_L0:
 	movq $3, %rsi
 	callq gpu_launch
 	movq %r13, %rax
-	jmp _data__TensorData____sub____f32_epilogue
 	jmp _data__TensorData____sub____f32_epilogue
 _data__TensorData____sub____f32_epilogue:
 	popq %r15
@@ -2057,7 +2026,6 @@ _data__TensorData____mul____f32_L0:
 	callq gpu_launch
 	movq %rbx, %rax
 	jmp _data__TensorData____mul____f32_epilogue
-	jmp _data__TensorData____mul____f32_epilogue
 _data__TensorData____mul____f32_epilogue:
 	popq %r15
 	popq %r14
@@ -2110,7 +2078,7 @@ _data__TensorData__sum__f32_L1:
 	movq %r8, 8(%rdx)
 	movq %rsi, 16(%rdx)
 	movq $4, %rsi
-	movq (%rcx), %rdi
+	movq 0(%rcx), %rdi
 	imulq %rdi, %rsi
 	movq $8, %rdi
 	movq %rsi, %r9
@@ -2208,7 +2176,7 @@ _data__TensorData__sum__f32_L2:
 	movq %rcx, 8(%rdx)
 	movq %rsi, 16(%rdx)
 	movq $4, %rdi
-	movq (%r9), %rsi
+	movq 0(%r9), %rsi
 	imulq %rsi, %rdi
 	movq $8, %rsi
 	movq %rdi, %rcx
@@ -2290,7 +2258,6 @@ _data__TensorData__sum__f32_L2:
 _data__TensorData__sum__f32_L3:
 	movq %rdi, %rax
 	jmp _data__TensorData__sum__f32_epilogue
-	jmp _data__TensorData__sum__f32_epilogue
 _data__TensorData__sum__f32_epilogue:
 	popq %r15
 	popq %r14
@@ -2313,7 +2280,6 @@ _generics__inner__i64:
 	pushq %r15
 _generics__inner__i64_L0:
 	movq %rdi, %rax
-	jmp _generics__inner__i64_epilogue
 	jmp _generics__inner__i64_epilogue
 _generics__inner__i64_epilogue:
 	popq %r15
@@ -2353,7 +2319,7 @@ _data__TensorData__fill__f32_L0:
 	movq -8(%rbp), %xmm0
 	movq $8, %rdi
 	movss %xmm0, (%rbx,%rdi)
-	movq (%rbx), %rdi
+	movq 0(%rbx), %rdi
 	movq %rdi, %r14
 	imulq %r13, %r14
 	movq $4, %rdi
@@ -2375,7 +2341,6 @@ _data__TensorData__fill__f32_L0:
 	movq %r12, %rdx
 	callq _data__TensorData____init____f32
 	movq %rbx, %rax
-	jmp _data__TensorData__fill__f32_epilogue
 	jmp _data__TensorData__fill__f32_epilogue
 _data__TensorData__fill__f32_epilogue:
 	popq %r15
@@ -2414,7 +2379,6 @@ _data__TensorData____init____f32_L0:
 	movq $1, %rdi
 	movl %edi, 20(%rcx)
 	jmp _data__TensorData____init____f32_epilogue
-	jmp _data__TensorData____init____f32_epilogue
 _data__TensorData____init____f32_epilogue:
 	popq %r15
 	popq %r14
@@ -2438,7 +2402,7 @@ _repeat__list_repeat__char_L0:
 	movq %rdi, %rax
 	movq %rsi, %rcx
 	movq %rdx, %rdi
-	movq (%rcx), %rdx
+	movslq 0(%rcx), %rdx
 	movq %rdx, %rbx
 	imulq %rdi, %rbx
 	movq $0, %rdi
@@ -2475,7 +2439,6 @@ _repeat__list_repeat__char_L2:
 	jmp _repeat__list_repeat__char_L1
 _repeat__list_repeat__char_L3:
 	jmp _repeat__list_repeat__char_epilogue
-	jmp _repeat__list_repeat__char_epilogue
 _repeat__list_repeat__char_epilogue:
 	popq %r15
 	popq %r14
@@ -2499,7 +2462,7 @@ _repeat__list_repeat__f32_L0:
 	movq %rdi, %r8
 	movq %rsi, %rcx
 	movq %rdx, %rdi
-	movq (%rcx), %rax
+	movslq 0(%rcx), %rax
 	movq %rax, %r9
 	imulq %rdi, %r9
 	movq $0, %r10
@@ -2539,7 +2502,6 @@ _repeat__list_repeat__f32_L2:
 	addq %rdi, %rbx
 	jmp _repeat__list_repeat__f32_L1
 _repeat__list_repeat__f32_L3:
-	jmp _repeat__list_repeat__f32_epilogue
 	jmp _repeat__list_repeat__f32_epilogue
 _repeat__list_repeat__f32_epilogue:
 	popq %r15

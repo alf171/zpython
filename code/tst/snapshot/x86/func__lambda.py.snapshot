@@ -5,11 +5,11 @@ add: Callable[[i32, i32], i32] = lambda x, y: x + y
 print(add(2, 3))
 
 performance report: (ORIGIN=user)
-number of asm lines: 61
+number of asm lines: 60
 mov count: 20
 memory load count: 0
 memory store count: 0
-branch count: 5
+branch count: 4
 call count: 4
 spill count: 0
 

@@ -263,14 +263,14 @@ _concat__string_concat_L0:
 	movq $8, %rdi
 	movq $0, %rsi
 	movb %sil, (%rbx,%rdi)
-	movq (%r13), %rdi
+	movslq 0(%r13), %rdi
 	movq -8(%rbp), %rsi
-	movq (%rsi), %rsi
+	movslq 0(%rsi), %rsi
 	addq %rdi, %rsi
 	movq $1, %rdi
 	movq %rsi, %r12
 	subq %rdi, %r12
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq %rdi, %r14
 	imulq %r12, %r14
 	movq $8, %rdi
@@ -282,7 +282,7 @@ _concat__string_concat_L0:
 	movq %rbx, %rsi
 	movq %r12, %rdx
 	callq _repeat__list_repeat__char
-	movq (%r13), %rsi
+	movslq 0(%r13), %rsi
 	movq $1, %rdi
 	movq %rsi, %rax
 	subq %rdi, %rax
@@ -312,7 +312,7 @@ _concat__string_concat_L2:
 	addq %rdi, %rsi
 	jmp _concat__string_concat_L1
 _concat__string_concat_L3:
-	movq (%r8), %rbx
+	movslq 0(%r8), %rbx
 	movq $0, %rax
 	movq $0, %rcx
 	jmp _concat__string_concat_L4
@@ -329,7 +329,7 @@ _concat__string_concat_L5:
 	movq $8, %rdi
 	addq %rsi, %rdi
 	movzbq (%rdi,%r8), %rdi
-	movq (%r9), %r10
+	movslq 0(%r9), %r10
 	addq %r10, %rsi
 	movq $1, %r10
 	movq %r10, %r11
@@ -462,7 +462,7 @@ _print__print_int_L2:
 _print__print_int_L3:
 	movq %r12, %rdi
 	callq _print___print_int_helper
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -471,7 +471,7 @@ _print__print_int_L3:
 	jne _print__print_int_L4
 	jmp _print__print_int_L5
 _print__print_int_L4:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -562,7 +562,7 @@ movq $5, %rdx
 	addq %rdi, %rsi
 	movq $1, %rdi
 	callq write
-	movq (%r12), %rsi
+	movslq 0(%r12), %rsi
 	movq $1, %rdi
 	cmpq %rdi, %rsi
 	setg %r11b
@@ -571,7 +571,7 @@ movq $5, %rdx
 	jne _print__print_bool_L1
 	jmp _print__print_bool_L2
 _print__print_bool_L1:
-	movq (%r12), %rdi
+	movslq 0(%r12), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -607,7 +607,7 @@ _print__print_string:
 _print__print_string_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rbx
-	movq (%rdx), %rdi
+	movslq 0(%rdx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rcx
 	subq %rsi, %rcx
@@ -617,7 +617,7 @@ _print__print_string_L0:
 	movq $1, %rdi
 	movq %rcx, %rdx
 	callq write
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -626,7 +626,7 @@ _print__print_string_L0:
 	jne _print__print_string_L1
 	jmp _print__print_string_L2
 _print__print_string_L1:
-	movq (%rbx), %rsi
+	movslq 0(%rbx), %rsi
 	movq $1, %rdi
 	movq %rsi, %rdx
 	subq %rdi, %rdx
@@ -684,7 +684,7 @@ _print__print_int_list_L0:
 	movb %dil, (%rsi,%rdx)
 	movq %r13, %rdi
 	callq _print__print_string
-	movq (%r12), %rsi
+	movslq 0(%r12), %rsi
 	movq $0, %rdi
 	movq %rdi, -16(%rbp)
 	movq %rsi, %r13
@@ -719,7 +719,7 @@ _print__print_int_list_L2:
 	movq %r15, %rdi
 	movq %rdx, %rsi
 	callq _print__print_int
-	movq (%r12), %rsi
+	movslq 0(%r12), %rsi
 	movq $1, %rdi
 	movq %rdi, %r11
 	movq %rsi, %rdi
@@ -897,7 +897,7 @@ _print__print_float_L5:
 	addq %rdi, %r12
 	jmp _print__print_float_L4
 _print__print_float_L6:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	cmpq %rsi, %rdi
 	setg %r11b
@@ -906,7 +906,7 @@ _print__print_float_L6:
 	jne _print__print_float_L7
 	jmp _print__print_float_L8
 _print__print_float_L7:
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq $1, %rsi
 	movq %rdi, %rdx
 	subq %rsi, %rdx
@@ -1380,7 +1380,7 @@ _tensor__Tensor____init____i32_L0:
 	movslq (%rsi,%r12), %rsi
 	movq %rdi, %r15
 	imulq %rsi, %r15
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq %rdi, %r13
 	imulq %r15, %r13
 	movq $4, %rdi
@@ -1605,7 +1605,7 @@ _tensor__Tensor____init____f32_L0:
 	movslq (%rdi,%r12), %rdi
 	movq %rsi, %r14
 	imulq %rdi, %r14
-	movq (%rbx), %rdi
+	movslq 0(%rbx), %rdi
 	movq %rdi, %r15
 	imulq %r14, %r15
 	movq $4, %rdi
@@ -2127,7 +2127,7 @@ _data__TensorData__sum__f32_L1:
 	movq %r8, 8(%rdx)
 	movq %rsi, 16(%rdx)
 	movq $4, %rsi
-	movq (%rdi), %rcx
+	movq 0(%rdi), %rcx
 	imulq %rcx, %rsi
 	movq $8, %rcx
 	movq %rsi, %r9
@@ -2224,7 +2224,7 @@ _data__TensorData__sum__f32_L2:
 	movq %rsi, 8(%rdx)
 	movq %rdi, 16(%rdx)
 	movq $4, %rdi
-	movq (%rcx), %rsi
+	movq 0(%rcx), %rsi
 	imulq %rsi, %rdi
 	movq $8, %rsi
 	movq %rdi, %r9
@@ -2986,7 +2986,7 @@ _data__TensorData__fill__f32_L0:
 	movq -8(%rbp), %xmm0
 	movq $8, %rdi
 	movss %xmm0, (%rbx,%rdi)
-	movq (%rbx), %rdi
+	movq 0(%rbx), %rdi
 	movq %rdi, %r14
 	imulq %r12, %r14
 	movq $4, %rdi
@@ -3045,7 +3045,7 @@ _data__TensorData__fill__i32_L0:
 	movq %rdi, 0(%r13)
 	movq $8, %rdi
 	movl %r14d, (%r13,%rdi)
-	movq (%r13), %rdi
+	movq 0(%r13), %rdi
 	movq %rdi, %r15
 	imulq %rbx, %r15
 	movq $4, %rdi
@@ -3169,7 +3169,7 @@ _repeat__list_repeat__char_L0:
 	movq %rdi, %rax
 	movq %rsi, %r10
 	movq %rdx, %rdi
-	movq (%r10), %rdx
+	movslq 0(%r10), %rdx
 	movq %rdx, %r9
 	imulq %rdi, %r9
 	movq $0, %rsi
@@ -3229,7 +3229,7 @@ _repeat__list_repeat__f32_L0:
 	movq %rdi, %rcx
 	movq %rsi, %r9
 	movq %rdx, %rdi
-	movq (%r9), %r8
+	movslq 0(%r9), %r8
 	movq %r8, %r10
 	imulq %rdi, %r10
 	movq $0, %rax
@@ -3294,7 +3294,7 @@ _repeat__list_repeat__i32_L0:
 	movq %rdi, %r8
 	movq %rsi, %r9
 	movq %rdx, %rdi
-	movq (%r9), %rcx
+	movslq 0(%r9), %rcx
 	movq %rcx, %rdx
 	imulq %rdi, %rdx
 	movq $0, %r10
