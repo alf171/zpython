@@ -440,19 +440,6 @@ fn emitFunction(
                         },
                     }
                 },
-                .len => |l| {
-                    const dst = try abi.regFor(l.dst.operand);
-                    const src = try abi.regFor(l.value.operand);
-                    switch (l.value.type) {
-                        .list => {
-                            try out.print(alloc, "\tldr {s}, [{s}]\n", .{ dst, src });
-                        },
-                        else => |e| {
-                            std.debug.print("len called on {s} unexpectedly\n", .{@tagName(e)});
-                            return error.InvalidLenCall;
-                        },
-                    }
-                },
                 // abi specific component are handled in pre_color
                 .function_call => |fc| {
                     switch (fc.callee) {

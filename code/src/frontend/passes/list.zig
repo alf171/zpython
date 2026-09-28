@@ -131,6 +131,18 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     } });
                     instruction.deinit(alloc);
                 },
+                .len => |l| {
+                    if (l.value.type != .list) {
+                        try new_instructions.append(alloc, instruction.*);
+                        continue;
+                    }
+                    try new_instructions.append(alloc, .{ .lir = .{ .load_offset = .{
+                        .dst = try l.dst.clone(alloc),
+                        .src = try l.value.clone(alloc),
+                        .offset = .{ .constant = .{ .i64 = 0 } },
+                    } } });
+                    instruction.deinit(alloc);
+                },
                 else => try new_instructions.append(alloc, instruction.*),
             }
         }

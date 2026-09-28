@@ -142,7 +142,7 @@ pub fn run(
     // perform snapshotting
     if (update) {
         // NOTE: should check if asm_code changed also
-        if (stats_diff_detected and asm_diff_deteched) {
+        if (!stats_diff_detected and !asm_diff_deteched) {
             std.debug.print(" [[EQUAL]]\n", .{});
             return;
         }
@@ -178,11 +178,11 @@ pub fn run(
         return;
     } else {
         std.debug.print(" [[NOT EQUAL]]\n", .{});
-        if (stats_diff_detected) {
-            std.debug.print("{s}", .{stats_diff.stdout});
-        }
         if (asm_diff_deteched) {
             std.debug.print("{s}", .{asm_diff.stdout});
+        }
+        if (stats_diff_detected) {
+            std.debug.print("{s}", .{stats_diff.stdout});
         }
         return error.SnapshotMismatch;
     }

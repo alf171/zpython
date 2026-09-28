@@ -74,19 +74,6 @@ fn emitFunction(
                 .function_return => {
                     try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.label});
                 },
-                .len => |l| {
-                    const dst = try abi.regFor(l.dst.operand);
-                    const src = try abi.regFor(l.value.operand);
-                    switch (l.value.type) {
-                        .list => {
-                            try out.print(alloc, "\tmovq (%{s}), %{s}\n", .{ src, dst });
-                        },
-                        else => |e| {
-                            std.debug.print("len called on {s} unexpectedly\n", .{@tagName(e)});
-                            return error.InvalidLenCall;
-                        },
-                    }
-                },
                 .lir => |l| {
                     switch (l) {
                         .move => |m| {
