@@ -480,7 +480,7 @@ fn emitFunction(
                 },
             }
         }
-        if (block.successors.items.len == 0) {
+        if (is_main and block.successors.items.len == 0) {
             try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
         }
     }

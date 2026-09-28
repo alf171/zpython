@@ -181,7 +181,6 @@ _concat__string_concat_L5:
 _concat__string_concat_L6:
 	movq %rcx, %rax
 	jmp _concat__string_concat_epilogue
-	jmp _concat__string_concat_epilogue
 _concat__string_concat_epilogue:
 	popq %r15
 	popq %r14
@@ -244,7 +243,6 @@ _print___print_int_helper_L3:
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
-	jmp _print___print_int_helper_epilogue
 	jmp _print___print_int_helper_epilogue
 _print___print_int_helper_epilogue:
 	popq %r15
@@ -324,7 +322,6 @@ _print__print_int_L4:
 _print__print_int_L5:
 	jmp _print__print_int_L6
 _print__print_int_L6:
-	jmp _print__print_int_epilogue
 	jmp _print__print_int_epilogue
 _print__print_int_epilogue:
 	popq %r15
@@ -426,7 +423,6 @@ _print__print_bool_L2:
 	jmp _print__print_bool_L3
 _print__print_bool_L3:
 	jmp _print__print_bool_epilogue
-	jmp _print__print_bool_epilogue
 _print__print_bool_epilogue:
 	popq %r15
 	popq %r14
@@ -481,7 +477,6 @@ _print__print_string_L1:
 _print__print_string_L2:
 	jmp _print__print_string_L3
 _print__print_string_L3:
-	jmp _print__print_string_epilogue
 	jmp _print__print_string_epilogue
 _print__print_string_epilogue:
 	popq %r15
@@ -587,7 +582,6 @@ _print__print_int_list_L3:
 	movb %dl, (%rdi,%rsi)
 	movq -8(%rbp), %rsi
 	callq _print__print_string
-	jmp _print__print_int_list_epilogue
 	jmp _print__print_int_list_epilogue
 _print__print_int_list_L4:
 	movq $11, %rdi
@@ -762,7 +756,6 @@ _print__print_float_L8:
 	jmp _print__print_float_L9
 _print__print_float_L9:
 	jmp _print__print_float_epilogue
-	jmp _print__print_float_epilogue
 _print__print_float_epilogue:
 	popq %r15
 	popq %r14
@@ -792,7 +785,6 @@ _indexing__index_2d_L0:
 	imulq %rdx, %rsi
 	addq %rsi, %rdi
 	movq %rdi, %rax
-	jmp _indexing__index_2d_epilogue
 	jmp _indexing__index_2d_epilogue
 _indexing__index_2d_epilogue:
 	popq %r15
@@ -828,7 +820,6 @@ _backward__add_L0:
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
 	jmp _backward__add_epilogue
-	jmp _backward__add_epilogue
 _backward__add_epilogue:
 	popq %r15
 	popq %r14
@@ -862,7 +853,6 @@ _backward__sub_L0:
 	callq _data__TensorData____sub____f32
 	movq %rax, %rdi
 	movq %rdi, 8(%rbx)
-	jmp _backward__sub_epilogue
 	jmp _backward__sub_epilogue
 _backward__sub_epilogue:
 	popq %r15
@@ -906,7 +896,6 @@ _backward__mul_L0:
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
 	jmp _backward__mul_epilogue
-	jmp _backward__mul_epilogue
 _backward__mul_epilogue:
 	popq %r15
 	popq %r14
@@ -948,7 +937,6 @@ _backward__matmul_L0:
 	callq _data__TensorData____add____f32
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
-	jmp _backward__matmul_epilogue
 	jmp _backward__matmul_epilogue
 _backward__matmul_epilogue:
 	popq %r15
@@ -1034,7 +1022,6 @@ _backward__broadcast_to_L6:
 	movq %rax, %rdi
 	movq %rdi, 8(%r12)
 	jmp _backward__broadcast_to_epilogue
-	jmp _backward__broadcast_to_epilogue
 _backward__broadcast_to_epilogue:
 	popq %r15
 	popq %r14
@@ -1056,7 +1043,6 @@ _module__Module____init__:
 	pushq %r15
 _module__Module____init___L0:
 	jmp _module__Module____init___epilogue
-	jmp _module__Module____init___epilogue
 _module__Module____init___epilogue:
 	popq %r15
 	popq %r14
@@ -1077,7 +1063,6 @@ _tensor____lambda_82:
 	pushq %r14
 	pushq %r15
 _tensor____lambda_82_L0:
-	jmp _tensor____lambda_82_epilogue
 	jmp _tensor____lambda_82_epilogue
 _tensor____lambda_82_epilogue:
 	popq %r15
@@ -1103,7 +1088,6 @@ _tensor____lambda_83_L0:
 	movq 8(%rsi), %rdi
 	movq 16(%rsi), %rsi
 	callq _backward__broadcast_to
-	jmp _tensor____lambda_83_epilogue
 	jmp _tensor____lambda_83_epilogue
 _tensor____lambda_83_epilogue:
 	popq %r15
@@ -1131,7 +1115,6 @@ _tensor____lambda_84_L0:
 	movq 24(%rdx), %rdx
 	callq _backward__add
 	jmp _tensor____lambda_84_epilogue
-	jmp _tensor____lambda_84_epilogue
 _tensor____lambda_84_epilogue:
 	popq %r15
 	popq %r14
@@ -1158,7 +1141,6 @@ _tensor____lambda_85_L0:
 	movq %rcx, %rdi
 	callq _backward__sub
 	jmp _tensor____lambda_85_epilogue
-	jmp _tensor____lambda_85_epilogue
 _tensor____lambda_85_epilogue:
 	popq %r15
 	popq %r14
@@ -1184,7 +1166,6 @@ _tensor____lambda_86_L0:
 	movq 16(%rdx), %rsi
 	movq 24(%rdx), %rdx
 	callq _backward__mul
-	jmp _tensor____lambda_86_epilogue
 	jmp _tensor____lambda_86_epilogue
 _tensor____lambda_86_epilogue:
 	popq %r15
@@ -1318,7 +1299,6 @@ _data__TensorData____add____f32_L0:
 	callq gpu_launch
 	movq %r12, %rax
 	jmp _data__TensorData____add____f32_epilogue
-	jmp _data__TensorData____add____f32_epilogue
 _data__TensorData____add____f32_epilogue:
 	popq %r15
 	popq %r14
@@ -1448,7 +1428,6 @@ _data__TensorData____sub____f32_L0:
 	movq $3, %rsi
 	callq gpu_launch
 	movq %rbx, %rax
-	jmp _data__TensorData____sub____f32_epilogue
 	jmp _data__TensorData____sub____f32_epilogue
 _data__TensorData____sub____f32_epilogue:
 	popq %r15
@@ -1580,7 +1559,6 @@ _data__TensorData____mul____f32_L0:
 	movq $3, %rsi
 	callq gpu_launch
 	movq %rbx, %rax
-	jmp _data__TensorData____mul____f32_epilogue
 	jmp _data__TensorData____mul____f32_epilogue
 _data__TensorData____mul____f32_epilogue:
 	popq %r15
@@ -1815,7 +1793,6 @@ _data__TensorData__sum__f32_L2:
 _data__TensorData__sum__f32_L3:
 	movq %rdi, %rax
 	jmp _data__TensorData__sum__f32_epilogue
-	jmp _data__TensorData__sum__f32_epilogue
 _data__TensorData__sum__f32_epilogue:
 	popq %r15
 	popq %r14
@@ -1879,7 +1856,6 @@ _data__TensorData__fill__f32_L0:
 	callq _data__TensorData____init____f32
 	movq %r12, %rax
 	jmp _data__TensorData__fill__f32_epilogue
-	jmp _data__TensorData__fill__f32_epilogue
 _data__TensorData__fill__f32_epilogue:
 	popq %r15
 	popq %r14
@@ -1916,7 +1892,6 @@ _data__TensorData____init____f32_L0:
 	movl %edi, 16(%rcx)
 	movq $1, %rdi
 	movl %edi, 20(%rcx)
-	jmp _data__TensorData____init____f32_epilogue
 	jmp _data__TensorData____init____f32_epilogue
 _data__TensorData____init____f32_epilogue:
 	popq %r15
@@ -1977,7 +1952,6 @@ _repeat__list_repeat__char_L2:
 	addq %rdi, %rdx
 	jmp _repeat__list_repeat__char_L1
 _repeat__list_repeat__char_L3:
-	jmp _repeat__list_repeat__char_epilogue
 	jmp _repeat__list_repeat__char_epilogue
 _repeat__list_repeat__char_epilogue:
 	popq %r15
@@ -2041,7 +2015,6 @@ _repeat__list_repeat__f32_L2:
 	addq %rsi, %rax
 	jmp _repeat__list_repeat__f32_L1
 _repeat__list_repeat__f32_L3:
-	jmp _repeat__list_repeat__f32_epilogue
 	jmp _repeat__list_repeat__f32_epilogue
 _repeat__list_repeat__f32_epilogue:
 	popq %r15

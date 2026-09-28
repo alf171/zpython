@@ -132,7 +132,7 @@ pub fn run(
     // verify asm
     const asm_file_path = try std.fmt.allocPrint(alloc, "tst/snapshot/{s}/asm/{s}.s", .{ target.host.toString(), std.fs.path.stem(snapshot_name) });
     defer alloc.free(asm_file_path);
-    const asm_diff = try calculateDiff(asm_temp_path, asm_file_path, io, alloc);
+    const asm_diff = try calculateDiff(asm_file_path, asm_temp_path, io, alloc);
     defer alloc.free(asm_diff.stdout);
     defer alloc.free(asm_diff.stderr);
 
