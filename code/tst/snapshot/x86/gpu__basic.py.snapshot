@@ -10,13 +10,16 @@ kernel(out, (len(out), 1, 1))
 print(out)
 
 performance report: (ORIGIN=user)
-number of asm lines: 108
+number of asm lines: 105
 mov count: 77
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 8
+memory store count: 36
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 5
-spill count: 0
+spill rounds: 0
 
 actual output:
 [42, 42, 42, 42, 42]

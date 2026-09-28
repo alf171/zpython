@@ -8,13 +8,16 @@ print(z)
 print(f"fstring print: {x} {y}")
 
 performance report: (ORIGIN=user)
-number of asm lines: 161
+number of asm lines: 158
 mov count: 129
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 6
+memory store count: 42
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 13
-spill count: 0
+spill rounds: 0
 
 actual output:
 foobar

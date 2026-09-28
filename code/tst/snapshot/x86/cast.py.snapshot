@@ -9,13 +9,16 @@ print(int(-5.9))
 
 
 performance report: (ORIGIN=user)
-number of asm lines: 96
+number of asm lines: 93
 mov count: 58
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 8
+memory store count: 20
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 9
-spill count: 2
+spill rounds: 2
 
 actual output:
 0.00000

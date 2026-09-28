@@ -19,13 +19,16 @@ C = A @ B
 C.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 239
+number of asm lines: 236
 mov count: 188
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 10
+memory store count: 54
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 18
-spill count: 4
+spill rounds: 4
 
 actual output:
 (2, 4)

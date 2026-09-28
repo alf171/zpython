@@ -7,13 +7,16 @@ z: int = x + y
 print(z)
 
 performance report: (ORIGIN=user)
-number of asm lines: 36
+number of asm lines: 33
 mov count: 14
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 6
+memory store count: 9
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 3
-spill count: 0
+spill rounds: 0
 
 actual output:
 5

@@ -10,13 +10,16 @@ y.print()
 y.sum(1).print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 85
+number of asm lines: 82
 mov count: 49
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 8
+memory store count: 15
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 10
-spill count: 2
+spill rounds: 2
 
 actual output:
 0.52497 0.47502 0.73105 0.26894 

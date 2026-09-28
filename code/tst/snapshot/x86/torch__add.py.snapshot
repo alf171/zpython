@@ -17,13 +17,16 @@ print(A.grad[0, 0])
 print(B.grad[0, 0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 177
+number of asm lines: 174
 mov count: 123
-memory load count: 0
-memory store count: 0
-branch count: 2
+memory load count: 17
+memory store count: 41
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
 call count: 21
-spill count: 4
+spill rounds: 4
 
 actual output:
 5
