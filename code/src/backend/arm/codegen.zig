@@ -707,6 +707,10 @@ fn valueToReg(
                     try out.print(alloc, "mov {s}, #{d}\n", .{ cur_scratch_reg, i });
                     return cur_scratch_reg;
                 },
+                .bool => |b| {
+                    try out.print(alloc, "mov {s}, #{d}\n", .{ cur_scratch_reg, @intFromBool(b) });
+                    return cur_scratch_reg;
+                },
                 else => |e| {
                     std.debug.print("cant handle {s}\n", .{@tagName(e)});
                     return error.NotImpl;
