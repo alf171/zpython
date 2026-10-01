@@ -103,6 +103,7 @@ pub fn main(init: std.process.Init) !void {
     var timer = TimerMetrics.init();
     timer.begin(.frontend_total, io);
     try class.lowerCalls(&ir_program, alloc);
+    try closure.rewrite(&ir_program, alloc);
     // classes can contain generics
     try generics.rewrite(&ir_program, alloc);
     // storage depends on generics
@@ -114,7 +115,6 @@ pub fn main(init: std.process.Init) !void {
     try gpu.rewrite(&ir_program, alloc);
     try print.rewrite(&ir_program, alloc);
     try func.rewrite(&ir_program, alloc);
-    try closure.rewrite(&ir_program, alloc);
     try lazy.rewrite(&ir_program, alloc);
     try list.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);

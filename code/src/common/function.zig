@@ -110,6 +110,8 @@ pub const Capture = struct {
     }
 };
 
+// TODO: add a FunctionId
+
 pub const Function = struct {
     // function name
     name: []const u8,
@@ -123,8 +125,9 @@ pub const Function = struct {
     params: []Param,
     type_params: []TypeParam,
     return_type: TypeInfo,
-    // locals captured
+    // closures
     captures: ArrayList(Capture),
+    parent_function_id: ?usize = null,
     // machinary
     blocks: ArrayList(BasicBlock),
     entry_block: BlockId,
@@ -282,6 +285,15 @@ pub const Function = struct {
                 try block.instructions.append(alloc, instruct);
             }
             try cloned.blocks.append(alloc, block);
+        }
+
+        for (function.captures.items) |capture| {
+            try cloned.captures.append(alloc, .{
+                .name = try alloc.dupe(u8, capture.name),
+                .scope = capture.scope,
+                .source = capture.source,
+                .type = try capture.type.substitute(bindings, alloc),
+            });
         }
 
         cloned.entry_block = function.entry_block;

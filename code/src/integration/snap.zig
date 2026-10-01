@@ -178,12 +178,12 @@ pub fn run(
         return;
     } else {
         std.debug.print(" [[NOT EQUAL]]\n", .{});
-        if (asm_diff_deteched) {
-            std.debug.print("{s}", .{asm_diff.stdout});
-        }
         if (stats_diff_detected) {
             std.debug.print("{s}", .{stats_diff.stdout});
         }
+        // if (asm_diff_deteched) {
+        //     std.debug.print("{s}", .{asm_diff.stdout});
+        // }
         return error.SnapshotMismatch;
     }
     return error.CommandFailed;

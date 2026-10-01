@@ -17,7 +17,10 @@ const TypeInfo = @import("common").types.TypeInfo;
 
 pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
     var pending: ArrayList(Function) = .empty;
-    defer pending.deinit(alloc);
+    defer {
+        for (pending.items) |*function| function.deinit(alloc);
+        pending.deinit(alloc);
+    }
 
     try rewriteFunction(program, &program.main, &pending, alloc);
     try program.functions.appendSlice(alloc, pending.items);
@@ -139,12 +142,23 @@ fn specializeCall(
         try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
     }
 
+    return try specializeWithBindings(callee, program, pending, &bindings, alloc);
+}
+
+fn specializeWithBindings(
+    callee: *const Function,
+    program: *Program,
+    pending: *ArrayList(Function),
+    bindings: *TypeBindings,
+    alloc: std.mem.Allocator,
+) anyerror!?SpecializeCall {
+    if (callee.type_params.len == 0) return null;
     // skip specialization for generic templates
     for (callee.type_params) |type_param| {
         const bound_type = bindings.get(type_param.id) orelse {
             return null;
         };
-        if (bound_type == .type_variable) {
+        if (bound_type.containsGenericVariable(null)) {
             return null;
         }
     }
@@ -152,32 +166,75 @@ fn specializeCall(
     const specialized_func_name = try specializeName(
         callee.name,
         callee.type_params,
-        &bindings,
+        bindings,
         alloc,
     );
     defer alloc.free(specialized_func_name);
 
-    var return_type = try callee.return_type.substitute(&bindings, alloc);
+    var return_type = try callee.return_type.substitute(bindings, alloc);
     errdefer return_type.deinit(alloc);
     // return type can be a generic class also
     _ = try specializeClassInstance(&return_type, program, alloc);
 
     const specialized_function: *const Function = program.findFunctionInModule(specialized_func_name, callee.module_id) orelse findFunctionIn(pending.items, specialized_func_name, callee.module_id) orelse blk: {
+        // create new specialization!
+        const index = pending.items.len;
         var specialized = try callee.specialize(
             specialized_func_name,
-            program.functions.items.len + pending.items.len + 1,
-            &bindings,
+            program.functions.items.len + index + 1,
+            bindings,
             alloc,
         );
         errdefer specialized.deinit(alloc);
+
         try pending.append(alloc, specialized);
-        break :blk &pending.items[pending.items.len - 1];
+        try specializeOwnedFunctions(callee, index, program, pending, bindings, alloc);
+        break :blk &pending.items[index];
     };
 
     return .{
         .label = try alloc.dupe(u8, specialized_function.label),
         .return_type = return_type,
     };
+}
+
+fn specializeOwnedFunctions(template: *const Function, parent_index: usize, program: *Program, pending: *ArrayList(Function), bindings: *TypeBindings, alloc: std.mem.Allocator) anyerror!void {
+    var labels: std.StringHashMap([]const u8) = .init(alloc);
+    defer {
+        var values = labels.valueIterator();
+        while (values.next()) |value| alloc.free(value.*);
+        labels.deinit();
+    }
+    for (program.functions.items) |*child| {
+        const parent_id = child.parent_function_id orelse continue;
+        if (parent_id != template.id) continue;
+        if (child.type_params.len == 0) continue;
+
+        var specialized = (try specializeWithBindings(child, program, pending, bindings, alloc)) orelse return error.BadClosure;
+        defer specialized.deinit(alloc);
+        try labels.put(child.label, specialized.takeLabel());
+    }
+
+    try remapFunctionLabel(&pending.items[parent_index], &labels, alloc);
+}
+
+fn remapFunctionLabel(
+    function: *Function,
+    labels: *std.StringHashMap([]const u8),
+    alloc: std.mem.Allocator,
+) !void {
+    for (function.blocks.items) |*block| {
+        for (block.instructions.items) |*instruction| {
+            switch (instruction.*) {
+                .function_ref => |*fr| {
+                    const new_label = labels.get(fr.label) orelse continue;
+                    alloc.free(fr.label);
+                    fr.label = try alloc.dupe(u8, new_label);
+                },
+                else => {},
+            }
+        }
+    }
 }
 
 fn specializeClassInstance(

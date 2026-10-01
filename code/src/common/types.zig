@@ -257,7 +257,14 @@ pub const TypeInfo = union(enum) {
         switch (self) {
             .type_variable => |tv| {
                 if (bindings.get(tv)) |resolves| {
-                    if (!resolves.equal(expected)) return error.TypeMismatch;
+                    if (!resolves.equal(expected)) {
+                        const lhs = try self.toString(alloc);
+                        defer alloc.free(lhs);
+                        const rhs = try expected.toString(alloc);
+                        defer alloc.free(rhs);
+                        std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
+                        return error.TypeMismatch;
+                    }
                     return;
                 }
                 try bindings.put(tv, try expected.clone(alloc));
@@ -378,26 +385,26 @@ pub const TypeInfo = union(enum) {
         }
     }
 
-    pub fn containsGenericVariable(self: @This()) bool {
+    pub fn containsGenericVariable(self: @This(), wanted: ?TypeVarId) bool {
         return switch (self) {
-            .type_variable => true,
-            .list => |x| x.element.containsGenericVariable(),
+            .type_variable => |found| if (wanted) |w| found == w else true,
+            .list => |x| x.element.containsGenericVariable(wanted),
             .tuple => |t| {
                 for (t.elements) |elem| {
-                    if (elem.containsGenericVariable()) return true;
+                    if (elem.containsGenericVariable(wanted)) return true;
                 }
                 return false;
             },
             .i64, .i32, .f64, .f32, .char, .bool => false,
             .callable => |c| {
                 for (c.params) |param| {
-                    if (param.containsGenericVariable()) return true;
+                    if (param.containsGenericVariable(wanted)) return true;
                 }
-                return c.returns.*.containsGenericVariable();
+                return c.returns.*.containsGenericVariable(wanted);
             },
             .instance => |i| {
                 for (i.args) |arg| {
-                    if (arg.containsGenericVariable()) return true;
+                    if (arg.containsGenericVariable(wanted)) return true;
                 }
                 return false;
             },

@@ -74,6 +74,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [x] inheritence && `class Module`
   - [x] stable softmax
   - [ ] backwards pass
+  - mnist model: `Input (784) -> Linear (784->128) -> ReLU -> Linear (128->10) -> Softmax`
 3. [Optional] read/write weights to a file
 4. build some models (ideas under)
   - 1k param: linear classifier of sorts?

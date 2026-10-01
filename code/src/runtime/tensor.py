@@ -1,6 +1,7 @@
 from backward import add as backwards_add
 from backward import sub as backwards_sub
 from backward import mul as backwards_mul
+from backward import sum as backwards_sum
 from backward import broadcast_to as backwards_broadcast_to
 from data import TensorData
 
@@ -9,7 +10,7 @@ class Tensor[T]:
         self.view: TensorData[T] = TensorData(data, shape)
         # info for backwards pass
         zero: f32 = 0
-        self.grad: TensorData[f32] = TensorData([zero] * (shape[0] * shape[1]), shape)
+        self.grad: TensorData[T] = TensorData([zero] * (shape[0] * shape[1]), shape)
         self.backward: Callable[[], None] = lambda: None
 
     @staticmethod
@@ -88,6 +89,7 @@ class Tensor[T]:
 
     def sum(self, axis: i32) -> Tensor[T]:
         res = Tensor._init(self.view.sum(axis))
+        res.backward: Callable[[], None] = lambda: backwards_sum(res, self)
         return res
 
     def max(self, axis: i32) -> Tensor[T]:

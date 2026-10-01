@@ -1110,6 +1110,23 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             };
 
             const lambda_function = ir_builder.getFunction(id).?;
+            lambda_function.parent_function_id = ir_builder.currentFunction().id;
+            var lambda_type_params: ArrayList(TypeParam) = .empty;
+
+            // propogate env type_params
+            for (ir_builder.currentFunction().type_params) |*type_param| {
+                for (lambda_function.captures.items) |capture| {
+                    if (!capture.type.containsGenericVariable(type_param.id)) continue;
+                    try lambda_type_params.append(alloc, try type_param.clone(alloc));
+                    // append a generic variable once hopefully
+                    break;
+                }
+            }
+            if (lambda_type_params.items.len != 0) {
+                alloc.free(lambda_function.type_params);
+                lambda_function.type_params = try lambda_type_params.toOwnedSlice(alloc);
+            }
+
             const captures = try alloc.alloc(TypedOperand, lambda_function.captures.items.len);
             for (lambda_function.captures.items, 0..) |capture, i| {
                 const scope = &ir_builder.scopes.items[capture.scope];
@@ -1522,7 +1539,7 @@ fn walkNamedCall(
             null;
         // dont infer type from generic args
         const expected_arg_type = if (param_type) |t|
-            if (!t.containsGenericVariable()) t else null
+            if (!t.containsGenericVariable(null)) t else null
         else
             null;
         const arg = try walkExpr(arg_obj, ir_builder, expected_arg_type, alloc);

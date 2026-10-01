@@ -127,6 +127,9 @@ fn rewriteFunction(
                         .operand = function.nextTemp(),
                         .type = try cc.dst.type.clone(alloc),
                     };
+                    const closure_type = try closure_fn.type.toString(alloc);
+                    defer alloc.free(closure_type);
+                    // std.debug.print("closure type for {s}: {s}\n", .{ cc.label, closure_type });
                     try new_instructions.append(alloc, .{ .function_ref = .{
                         .dst = closure_fn,
                         .label = try alloc.dupe(u8, cc.label),

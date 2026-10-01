@@ -169,7 +169,7 @@ pub const ConstValue = union(enum) {
 
     pub fn coherce(self: @This(), expected_type: ?TypeInfo) !@This() {
         const t = expected_type orelse return self;
-        if (t.containsGenericVariable()) return self;
+        if (t.containsGenericVariable(null)) return self;
         return switch (self) {
             .i64 => |value| switch (t) {
                 .i64 => self,
