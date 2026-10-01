@@ -319,7 +319,7 @@ fn takeNodeWithCheapestSpill(
 fn takeAny(s: *std.AutoHashMap(Operand, void)) !Operand {
     var best: ?Operand = null;
     var it = s.keyIterator();
-    if (it.next()) |candidate| {
+    while (it.next()) |candidate| {
         if (best == null or candidate.*.lessThan(best.?)) {
             best = candidate.*;
         }
