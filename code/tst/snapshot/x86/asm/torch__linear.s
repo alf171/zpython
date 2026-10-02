@@ -4,7 +4,7 @@
 main:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $16, %rsp
+	subq $64, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -12,55 +12,133 @@ main:
 	pushq %r14
 	pushq %r15
 main_L0:
+	movq $20, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq $3, %rdi
+	movq %rdi, 0(%r13)
+	movq $8, %rdi
+	movl $1065353216, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r13,%rdi)
+	movq $12, %rdi
+	movl $1073741824, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r13,%rdi)
+	movq $16, %rdi
+	movl $1077936128, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r13,%rdi)
+	movq $32, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movq $6, %rdi
+	movq %rdi, 0(%r12)
+	movq $8, %rdi
+	movl $1065353216, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
+	movq $12, %rdi
+	movl $0, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
+	movq $16, %rdi
+	movl $0, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
+	movq $20, %rdi
+	movl $0, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
 	movq $24, %rdi
+	movl $1065353216, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
+	movq $28, %rdi
+	movl $0, %r11d
+	movd %r11d, %xmm0
+	movss %xmm0, (%r12,%rdi)
+	movq $16, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
-	movq $4, %rdi
+	movq $2, %rdi
 	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movl $1092616192, %r11d
+	movl $1056964608, %r11d
 	movd %r11d, %xmm0
 	movss %xmm0, (%rbx,%rdi)
 	movq $12, %rdi
-	movl $1101004800, %r11d
+	movl $1065353216, %r11d
 	movd %r11d, %xmm0
 	movss %xmm0, (%rbx,%rdi)
-	movq $16, %rdi
-	movl $1106247680, %r11d
-	movd %r11d, %xmm0
-	movss %xmm0, (%rbx,%rdi)
-	movq $20, %rdi
-	movl $1109393408, %r11d
-	movd %r11d, %xmm0
-	movss %xmm0, (%rbx,%rdi)
+	movq $1, %rsi
+	movq $3, %rdi
+	leaq -16(%rbp), %r15
+	movl %esi, 0(%r15)
+	movl %edi, 8(%r15)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %r13, %rsi
+	movq %r15, %rdx
+	callq _tensor__Tensor____init____f32
 	movq $2, %rsi
+	movq $3, %rdi
+	leaq -32(%rbp), %r15
+	movl %esi, 0(%r15)
+	movl %edi, 8(%r15)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq %r13, %rdi
+	movq %r12, %rsi
+	movq %r15, %rdx
+	callq _tensor__Tensor____init____f32
+	movq $1, %rsi
 	movq $2, %rdi
-	leaq -16(%rbp), %r13
-	movl %esi, 0(%r13)
-	movl %edi, 8(%r13)
+	leaq -48(%rbp), %r15
+	movl %esi, 0(%r15)
+	movl %edi, 8(%r15)
 	movq $24, %rdi
 	callq arena_malloc
 	movq %rax, %r12
 	movq %r12, %rdi
 	movq %rbx, %rsi
-	movq %r13, %rdx
+	movq %r15, %rdx
 	callq _tensor__Tensor____init____f32
-	movq %r12, %rdi
-	movq $0, %rsi
-	callq _tensor__Tensor__sum__f32
+	movq $16, %rdi
+	callq arena_malloc
 	movq %rax, %rbx
 	movq %rbx, %rdi
-	callq _tensor__Tensor__print_shape__f32
+	movq %r13, %rsi
+	movq %r12, %rdx
+	callq _linear__Linear____init____f32
 	movq %rbx, %rdi
-	callq _tensor__Tensor__print__f32
-	movq %r12, %rdi
-	movq $1, %rsi
-	callq _tensor__Tensor__sum__f32
+	movq %r14, %rsi
+	callq _linear__Linear__forward__f32
 	movq %rax, %rbx
 	movq %rbx, %rdi
-	callq _tensor__Tensor__print_shape__f32
-	movq %rbx, %rdi
 	callq _tensor__Tensor__print__f32
+	movq $1, %rdx
+	movq $2, %rsi
+	leaq -64(%rbp), %rdi
+	movq %rdx, 0(%rdi)
+	movq %rsi, 8(%rdi)
+	movl $1065353216, %r11d
+	movd %r11d, %xmm1
+	callq _tensor__Tensor__fill__f32
+	movq %rax, %rsi
+	movq 16(%rbx), %rdi
+	movq 0(%rsi), %rsi
+	movq 0(%rdi), %rdx
+	callq *%rdx
+	movq 8(%r14), %rdi
+	callq _data__TensorData__print__f32
+	movq 8(%r13), %rdi
+	callq _data__TensorData__print__f32
+	movq 8(%r12), %rdi
+	callq _data__TensorData__print__f32
 	callq arena_free
 	jmp main_epilogue
 main_epilogue:
@@ -71,7 +149,7 @@ main_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $16, %rsp
+	addq $64, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -913,7 +991,7 @@ _tensor__Tensor____init____f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_tensor__Tensor__sum__f32:
+_linear__Linear____init____f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -922,156 +1000,66 @@ _tensor__Tensor__sum__f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_tensor__Tensor__sum__f32_L0:
+_linear__Linear____init____f32_L0:
+	movq %rdi, %rcx
+	movq %rdx, %rdi
+	movq %rsi, 0(%rcx)
+	movq %rdi, 8(%rcx)
+	jmp _linear__Linear____init____f32_epilogue
+_linear__Linear____init____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_linear__Linear__forward__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_linear__Linear__forward__f32_L0:
 	movq %rdi, %r12
+	movq %rsi, %r13
 	movq 0(%r12), %rdi
-	callq _data__TensorData__sum__f32
-	movq %rax, %rdi
-	callq _tensor__Tensor___init__f32
-	movq %rax, %rbx
-	movq $24, %rdi
-	callq arena_malloc
+	callq _tensor__Tensor__transpose__f32
 	movq %rax, %rsi
-	leaq _tensor____lambda_90__f32(%rip), %rdi
-	movq %rdi, 0(%rsi)
-	movq %rbx, 8(%rsi)
-	movq %r12, 16(%rsi)
-	movq %rsi, 16(%rbx)
-	movq %rbx, %rax
-	jmp _tensor__Tensor__sum__f32_epilogue
-_tensor__Tensor__sum__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_tensor____lambda_90__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_90__f32_L0:
-	movq %rdi, %rsi
-	movq 8(%rsi), %rdi
-	movq 16(%rsi), %rsi
-	callq _backward__sum__f32
-	jmp _tensor____lambda_90__f32_epilogue
-_tensor____lambda_90__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_tensor__Tensor__print_shape__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor__Tensor__print_shape__f32_L0:
-	movq %rdi, %r12
-	movq $10, %rdi
-	callq arena_malloc
+	movq %r13, %rdi
+	callq _tensor__Tensor____matmul____f32
 	movq %rax, %rbx
-	movq $2, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $40, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $1, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
+	movq 8(%r12), %rcx
+	movq 0(%r13), %rdi
+	movslq 8(%rdi), %rdx
+	movq 8(%r12), %rdi
+	movq 0(%rdi), %rdi
+	movslq 12(%rdi), %rdi
+	leaq -16(%rbp), %rsi
+	movl %edx, 0(%rsi)
+	movl %edi, 8(%rsi)
+	movq %rcx, %rdi
+	callq _tensor__Tensor__broadcast_to__f32
+	movq %rax, %rsi
 	movq %rbx, %rdi
-	movq %rdx, %rsi
-	callq _print__print_string
-	movq 0(%r12), %rdi
-	movslq 8(%rdi), %rbx
-	movq $11, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $3, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $44, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $32, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $10, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movslq %ebx, %rdi
-	movq %rdx, %rsi
-	callq _print__print_int
-	movq 0(%r12), %rdi
-	movslq 12(%rdi), %rbx
-	movq $9, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $1, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movslq %ebx, %rdi
-	movq %rdx, %rsi
-	callq _print__print_int
-	movq $10, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $2, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $41, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $10, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $2, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $10, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq %rbx, %rdi
-	movq %rdx, %rsi
-	callq _print__print_string
-	jmp _tensor__Tensor__print_shape__f32_epilogue
-_tensor__Tensor__print_shape__f32_epilogue:
+	callq _tensor__Tensor____add____f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _linear__Linear__forward__f32_epilogue
+_linear__Linear__forward__f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
+	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -1095,6 +1083,142 @@ _tensor__Tensor__print__f32_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor__fill__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor__fill__f32_L0:
+	movq %xmm1, %xmm0
+	movq %xmm0, %xmm1
+	callq _data__TensorData__fill__f32
+	movq %rax, %rdi
+	callq _tensor__Tensor___init__f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _tensor__Tensor__fill__f32_epilogue
+_tensor__Tensor__fill__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData__print__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $48, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData__print__f32_L0:
+	movq %rdi, %r15
+	movslq 8(%r15), %rsi
+	movq $0, %rdi
+	movq %rdi, -24(%rbp)
+	movq %rsi, -32(%rbp)
+	movq $0, %r14
+	jmp _data__TensorData__print__f32_L1
+_data__TensorData__print__f32_L1:
+	movq -32(%rbp), %rdi
+	cmpq %rdi, %r14
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _data__TensorData__print__f32_L2
+	jmp _data__TensorData__print__f32_L3
+_data__TensorData__print__f32_L2:
+	movq -24(%rbp), %rdi
+	movq %rdi, %r13
+	addq %r14, %r13
+	movslq 12(%r15), %r12
+	movq $0, %rdi
+	movq %rdi, -40(%rbp)
+	movq $0, %rbx
+	jmp _data__TensorData__print__f32_L4
+_data__TensorData__print__f32_L3:
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq $2, %rdi
+	movq %rdi, 0(%rbx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $9, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $1, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _print__print_string
+	jmp _data__TensorData__print__f32_epilogue
+_data__TensorData__print__f32_L4:
+	cmpq %r12, %rbx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _data__TensorData__print__f32_L5
+	jmp _data__TensorData__print__f32_L6
+_data__TensorData__print__f32_L5:
+	movq -40(%rbp), %rdi
+	addq %rbx, %rdi
+	leaq -16(%rbp), %rsi
+	movl %r13d, 0(%rsi)
+	movl %edi, 8(%rsi)
+	movq %r15, %rdi
+	callq _data__TensorData____getitem____f32
+	movq %xmm0, -48(%rbp)
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $32, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq -48(%rbp), %xmm0
+	cvtss2sd %xmm0, %xmm0
+	movq %rdx, %rsi
+	callq _print__print_float
+	movq $1, %rdi
+	addq %rdi, %rbx
+	jmp _data__TensorData__print__f32_L4
+_data__TensorData__print__f32_L6:
+	movq $1, %rdi
+	addq %rdi, %r14
+	jmp _data__TensorData__print__f32_L1
+_data__TensorData__print__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $48, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -1131,6 +1255,848 @@ _data__TensorData____init____f32_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor__transpose__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor__transpose__f32_L0:
+	movq 0(%rdi), %rdi
+	callq _data__TensorData__transpose__f32
+	movq %rax, %rdi
+	callq _tensor__Tensor___init__f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _tensor__Tensor__transpose__f32_epilogue
+_tensor__Tensor__transpose__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor____matmul____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor____matmul____f32_L0:
+	movq 0(%rdi), %rdi
+	movq 0(%rsi), %rsi
+	callq _data__TensorData____matmul____f32
+	movq %rax, %rdi
+	callq _tensor__Tensor___init__f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _tensor__Tensor____matmul____f32_epilogue
+_tensor__Tensor____matmul____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor__broadcast_to__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor__broadcast_to__f32_L0:
+	movq %rdi, %r12
+	movq 0(%r12), %rdi
+	callq _data__TensorData__broadcast_to__f32
+	movq %rax, %rdi
+	callq _tensor__Tensor___init__f32
+	movq %rax, %rbx
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	leaq _tensor____lambda_86__f32(%rip), %rdi
+	movq %rdi, 0(%rsi)
+	movq %rbx, 8(%rsi)
+	movq %r12, 16(%rsi)
+	movq %rsi, 16(%rbx)
+	movq %rbx, %rax
+	jmp _tensor__Tensor__broadcast_to__f32_epilogue
+_tensor__Tensor__broadcast_to__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor____lambda_86__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor____lambda_86__f32_L0:
+	movq %rdi, %rsi
+	movq 8(%rsi), %rdi
+	movq 16(%rsi), %rsi
+	callq _backward__broadcast_to__f32
+	jmp _tensor____lambda_86__f32_epilogue
+_tensor____lambda_86__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor____add____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor____add____f32_L0:
+	movq %rdi, %r13
+	movq %rsi, %r12
+	movq 0(%r13), %rdi
+	movq 0(%r12), %rsi
+	callq _data__TensorData____add____f32
+	movq %rax, %rdi
+	callq _tensor__Tensor___init__f32
+	movq %rax, %rbx
+	movq $32, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	leaq _tensor____lambda_87__f32(%rip), %rdi
+	movq %rdi, 0(%rsi)
+	movq %rbx, 8(%rsi)
+	movq %r13, 16(%rsi)
+	movq %r12, 24(%rsi)
+	movq %rsi, 16(%rbx)
+	movq %rbx, %rax
+	jmp _tensor__Tensor____add____f32_epilogue
+_tensor__Tensor____add____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor____lambda_87__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor____lambda_87__f32_L0:
+	movq %rdi, %rdx
+	movq 8(%rdx), %rdi
+	movq 16(%rdx), %rsi
+	movq 24(%rdx), %rdx
+	callq _backward__add__f32
+	jmp _tensor____lambda_87__f32_epilogue
+_tensor____lambda_87__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData__fill__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData__fill__f32_L0:
+	movq %rdi, %rbx
+	movq %xmm1, %xmm0
+	movq %xmm0, -8(%rbp)
+	movq $0, %rdi
+	movslq (%rdi,%rbx), %rsi
+	movq $8, %rdi
+	movslq (%rdi,%rbx), %rdi
+	movq %rsi, %r13
+	imulq %rdi, %r13
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movq $1, %rdi
+	movq %rdi, 0(%r12)
+	movq -8(%rbp), %xmm0
+	movq $8, %rdi
+	movss %xmm0, (%r12,%rdi)
+	movq 0(%r12), %rdi
+	movq %rdi, %r14
+	imulq %r13, %r14
+	movq $4, %rdi
+	movq %r14, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq %r14, 0(%r15)
+	movq %r15, %rdi
+	movq %r12, %rsi
+	movq %r13, %rdx
+	callq _repeat__list_repeat__f32
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movq %r12, %rdi
+	movq %r15, %rsi
+	movq %rbx, %rdx
+	callq _data__TensorData____init____f32
+	movq %r12, %rax
+	jmp _data__TensorData__fill__f32_epilogue
+_data__TensorData__fill__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_tensor__Tensor___init__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_tensor__Tensor___init__f32_L0:
+	movq %rdi, %r14
+	movq 0(%r14), %r13
+	movslq 8(%r14), %rsi
+	movslq 12(%r14), %rdi
+	leaq -16(%rbp), %r12
+	movl %esi, 0(%r12)
+	movl %edi, 8(%r12)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq %rbx, %rdi
+	movq %r13, %rsi
+	movq %r12, %rdx
+	callq _tensor__Tensor____init____f32
+	movq %r14, 0(%rbx)
+	movq %rbx, %rax
+	jmp _tensor__Tensor___init__f32_epilogue
+_tensor__Tensor___init__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData____getitem____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData____getitem____f32_L0:
+	movq %rdi, %r8
+	movq $0, %rdi
+	movslq (%rdi,%rsi), %rcx
+	movq $8, %rdi
+	movslq (%rdi,%rsi), %rdx
+	movslq 16(%r8), %rsi
+	movslq 20(%r8), %rdi
+	imulq %rcx, %rsi
+	imulq %rdx, %rdi
+	addq %rdi, %rsi
+	movq 0(%r8), %rdx
+	movq $4, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movss (%rdi,%rdx), %xmm0
+	jmp _data__TensorData____getitem____f32_epilogue
+_data__TensorData____getitem____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData__transpose__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData__transpose__f32_L0:
+	movq %rdi, %r8
+	movq 0(%r8), %rdi
+	movslq 12(%r8), %rsi
+	movslq 8(%r8), %rdx
+	movslq 20(%r8), %rcx
+	movslq 16(%r8), %r8
+	callq _data__TensorData___view__f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _data__TensorData__transpose__f32_epilogue
+_data__TensorData__transpose__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData____matmul____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $416, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData____matmul____f32_L0:
+	movq %rdi, %r13
+	movq %rsi, %r12
+	movslq 8(%r13), %rdx
+	movslq 12(%r12), %rsi
+	leaq -16(%rbp), %rdi
+	movl %edx, 0(%rdi)
+	movl %esi, 8(%rdi)
+	movl $0, %r11d
+	movd %r11d, %xmm1
+	callq _data__TensorData__fill__f32
+	movq %rax, %rbx
+	movslq 8(%r13), %rcx
+	movslq 12(%r12), %rsi
+	movq $1, %rdi
+	leaq -40(%rbp), %rdx
+	movl %ecx, 0(%rdx)
+	movl %esi, 8(%rdx)
+	movq %rdi, 16(%rdx)
+	leaq -56(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -80(%rbp), %r8
+	movq $24, %rdi
+	movq %rdi, 0(%r8)
+	movq $1, %rdi
+	movq %rdi, 8(%r8)
+	movq %rsi, 16(%r8)
+	leaq -96(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -120(%rbp), %rcx
+	movq $24, %rdi
+	movq %rdi, 0(%rcx)
+	movq $1, %rdi
+	movq %rdi, 8(%rcx)
+	movq %rsi, 16(%rcx)
+	leaq -136(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -160(%rbp), %r9
+	movq $24, %rdi
+	movq %rdi, 0(%r9)
+	movq $1, %rdi
+	movq %rdi, 8(%r9)
+	movq %rsi, 16(%r9)
+	leaq -232(%rbp), %rsi
+	movq %rbx, 0(%rsi)
+	movq $24, %rdi
+	movq %rdi, 8(%rsi)
+	movq %r8, 16(%rsi)
+	movq %r13, 24(%rsi)
+	movq $24, %rdi
+	movq %rdi, 32(%rsi)
+	movq %rcx, 40(%rsi)
+	movq %r12, 48(%rsi)
+	movq $24, %rdi
+	movq %rdi, 56(%rsi)
+	movq %r9, 64(%rsi)
+	leaq -408(%rbp), %rcx
+	movq $95, %rdi
+	movb %dil, 0(%rcx)
+	movq $107, %rdi
+	movb %dil, 8(%rcx)
+	movq $101, %rdi
+	movb %dil, 16(%rcx)
+	movq $114, %rdi
+	movb %dil, 24(%rcx)
+	movq $110, %rdi
+	movb %dil, 32(%rcx)
+	movq $101, %rdi
+	movb %dil, 40(%rcx)
+	movq $108, %rdi
+	movb %dil, 48(%rcx)
+	movq $115, %rdi
+	movb %dil, 56(%rcx)
+	movq $95, %rdi
+	movb %dil, 64(%rcx)
+	movq $95, %rdi
+	movb %dil, 72(%rcx)
+	movq $109, %rdi
+	movb %dil, 80(%rcx)
+	movq $97, %rdi
+	movb %dil, 88(%rcx)
+	movq $116, %rdi
+	movb %dil, 96(%rcx)
+	movq $109, %rdi
+	movb %dil, 104(%rcx)
+	movq $117, %rdi
+	movb %dil, 112(%rcx)
+	movq $108, %rdi
+	movb %dil, 120(%rcx)
+	movq $95, %rdi
+	movb %dil, 128(%rcx)
+	movq $95, %rdi
+	movb %dil, 136(%rcx)
+	movq $102, %rdi
+	movb %dil, 144(%rcx)
+	movq $51, %rdi
+	movb %dil, 152(%rcx)
+	movq $50, %rdi
+	movb %dil, 160(%rcx)
+	movq $0, %rdi
+	movb %dil, 168(%rcx)
+	movq %rsi, %rdi
+	movq $3, %rsi
+	callq gpu_launch
+	movq %rbx, %rax
+	jmp _data__TensorData____matmul____f32_epilogue
+_data__TensorData____matmul____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $416, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData__broadcast_to__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData__broadcast_to__f32_L0:
+	movq %rdi, %r10
+	movq $0, %rdi
+	movslq (%rdi,%rsi), %r9
+	movq $8, %rdi
+	movslq (%rdi,%rsi), %rdx
+	movslq 8(%r10), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rsi
+	movq $1, %rdi
+	cmpq %rdi, %r9
+	setne %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rsi
+	movq %rdi, %r11
+movq $0, %rsi
+	cmovne %r11, %rsi
+	movslq 16(%r10), %rdi
+	cmpq $0, %rsi
+movq $0, %r11
+	movq %rdi, %rcx
+	cmovne %r11, %rcx
+	movslq 12(%r10), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rdx
+	setne %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rsi
+	movq %rdi, %r11
+movq $0, %rsi
+	cmovne %r11, %rsi
+	movslq 20(%r10), %rdi
+	cmpq $0, %rsi
+movq $0, %r11
+	movq %rdi, %r8
+	cmovne %r11, %r8
+	movq 0(%r10), %rdi
+	movq %r9, %rsi
+	callq _data__TensorData___view__f32
+	movq %rax, %rdi
+	movq %rdi, %rax
+	jmp _data__TensorData__broadcast_to__f32_epilogue
+_data__TensorData__broadcast_to__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_backward__broadcast_to__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_backward__broadcast_to__f32_L0:
+	movq %rdi, %r12
+	movq %rsi, %rbx
+	movq 8(%r12), %rcx
+	movq 0(%rbx), %rdi
+	movslq 8(%rdi), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rdx
+	movq 0(%r12), %rdi
+	movslq 8(%rdi), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	setne %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdx
+	movq %rdi, %r11
+movq $0, %rdi
+	cmovne %r11, %rdi
+	cmpq $0, %rdi
+	jne _backward__broadcast_to__f32_L1
+	jmp _backward__broadcast_to__f32_L2
+_backward__broadcast_to__f32_L1:
+	movq 8(%r12), %rdi
+	movq $0, %rsi
+	callq _data__TensorData__sum__f32
+	movq %rax, %rcx
+	jmp _backward__broadcast_to__f32_L3
+_backward__broadcast_to__f32_L2:
+	jmp _backward__broadcast_to__f32_L3
+_backward__broadcast_to__f32_L3:
+	movq 0(%rbx), %rdi
+	movslq 12(%rdi), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rdx
+	movq 0(%r12), %rdi
+	movslq 12(%rdi), %rsi
+	movq $1, %rdi
+	cmpq %rdi, %rsi
+	setne %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdx
+	movq %rdi, %r11
+movq $0, %rdi
+	cmovne %r11, %rdi
+	cmpq $0, %rdi
+	jne _backward__broadcast_to__f32_L4
+	jmp _backward__broadcast_to__f32_L5
+_backward__broadcast_to__f32_L4:
+	movq 8(%r12), %rdi
+	movq $1, %rsi
+	callq _data__TensorData__sum__f32
+	movq %rax, %rcx
+	jmp _backward__broadcast_to__f32_L6
+_backward__broadcast_to__f32_L5:
+	jmp _backward__broadcast_to__f32_L6
+_backward__broadcast_to__f32_L6:
+	movq 8(%rbx), %rdi
+	movq %rcx, %rsi
+	callq _data__TensorData____add____f32
+	movq %rax, %rdi
+	movq %rdi, 8(%rbx)
+	jmp _backward__broadcast_to__f32_epilogue
+_backward__broadcast_to__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData____add____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $384, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData____add____f32_L0:
+	movq %rdi, %r13
+	movq %rsi, %r12
+	movslq 8(%r13), %rdx
+	movslq 12(%r13), %rsi
+	leaq -16(%rbp), %rdi
+	movl %edx, 0(%rdi)
+	movl %esi, 8(%rdi)
+	movl $0, %r11d
+	movd %r11d, %xmm1
+	callq _data__TensorData__fill__f32
+	movq %rax, %rbx
+	movslq 8(%r13), %rcx
+	movslq 12(%r13), %rsi
+	movq $1, %rdi
+	leaq -40(%rbp), %rdx
+	movl %ecx, 0(%rdx)
+	movl %esi, 8(%rdx)
+	movq %rdi, 16(%rdx)
+	leaq -56(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -80(%rbp), %r8
+	movq $24, %rdi
+	movq %rdi, 0(%r8)
+	movq $1, %rdi
+	movq %rdi, 8(%r8)
+	movq %rsi, 16(%r8)
+	leaq -96(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -120(%rbp), %rcx
+	movq $24, %rdi
+	movq %rdi, 0(%rcx)
+	movq $1, %rdi
+	movq %rdi, 8(%rcx)
+	movq %rsi, 16(%rcx)
+	leaq -136(%rbp), %rsi
+	movq $0, %rdi
+	movq %rdi, 0(%rsi)
+	movq $4, %rdi
+	movq %rdi, 8(%rsi)
+	leaq -160(%rbp), %r9
+	movq $24, %rdi
+	movq %rdi, 0(%r9)
+	movq $1, %rdi
+	movq %rdi, 8(%r9)
+	movq %rsi, 16(%r9)
+	leaq -232(%rbp), %rsi
+	movq %rbx, 0(%rsi)
+	movq $24, %rdi
+	movq %rdi, 8(%rsi)
+	movq %r8, 16(%rsi)
+	movq %r13, 24(%rsi)
+	movq $24, %rdi
+	movq %rdi, 32(%rsi)
+	movq %rcx, 40(%rsi)
+	movq %r12, 48(%rsi)
+	movq $24, %rdi
+	movq %rdi, 56(%rsi)
+	movq %r9, 64(%rsi)
+	leaq -384(%rbp), %rcx
+	movq $95, %rdi
+	movb %dil, 0(%rcx)
+	movq $107, %rdi
+	movb %dil, 8(%rcx)
+	movq $101, %rdi
+	movb %dil, 16(%rcx)
+	movq $114, %rdi
+	movb %dil, 24(%rcx)
+	movq $110, %rdi
+	movb %dil, 32(%rcx)
+	movq $101, %rdi
+	movb %dil, 40(%rcx)
+	movq $108, %rdi
+	movb %dil, 48(%rcx)
+	movq $115, %rdi
+	movb %dil, 56(%rcx)
+	movq $95, %rdi
+	movb %dil, 64(%rcx)
+	movq $95, %rdi
+	movb %dil, 72(%rcx)
+	movq $97, %rdi
+	movb %dil, 80(%rcx)
+	movq $100, %rdi
+	movb %dil, 88(%rcx)
+	movq $100, %rdi
+	movb %dil, 96(%rcx)
+	movq $95, %rdi
+	movb %dil, 104(%rcx)
+	movq $95, %rdi
+	movb %dil, 112(%rcx)
+	movq $102, %rdi
+	movb %dil, 120(%rcx)
+	movq $51, %rdi
+	movb %dil, 128(%rcx)
+	movq $50, %rdi
+	movb %dil, 136(%rcx)
+	movq $0, %rdi
+	movb %dil, 144(%rcx)
+	movq %rsi, %rdi
+	movq $3, %rsi
+	callq gpu_launch
+	movq %rbx, %rax
+	jmp _data__TensorData____add____f32_epilogue
+_data__TensorData____add____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $384, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_backward__add__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_backward__add__f32_L0:
+	movq %rdi, %r12
+	movq %rsi, %r13
+	movq %rdx, %rbx
+	movq 8(%r13), %rdi
+	movq 8(%r12), %rsi
+	callq _data__TensorData____add____f32
+	movq %rax, %rdi
+	movq %rdi, 8(%r13)
+	movq 8(%rbx), %rdi
+	movq 8(%r12), %rsi
+	callq _data__TensorData____add____f32
+	movq %rax, %rdi
+	movq %rdi, 8(%rbx)
+	jmp _backward__add__f32_epilogue
+_backward__add__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_data__TensorData___view__f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_data__TensorData___view__f32_L0:
+	movq %rdi, %r15
+	movq %rdx, %rdi
+	movq %rcx, %r14
+	movq %r8, %r13
+	leaq -16(%rbp), %r12
+	movl %esi, 0(%r12)
+	movl %edi, 8(%r12)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq %rbx, %rdi
+	movq %r15, %rsi
+	movq %r12, %rdx
+	callq _data__TensorData____init____f32
+	movl %r14d, 16(%rbx)
+	movl %r13d, 20(%rbx)
+	movq %rbx, %rax
+	jmp _data__TensorData___view__f32_epilogue
+_data__TensorData___view__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -1360,396 +2326,6 @@ _data__TensorData__sum__f32_epilogue:
 	popq %rbx
 	addq $8, %rsp
 	addq $640, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_tensor__Tensor___init__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $16, %rsp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor__Tensor___init__f32_L0:
-	movq %rdi, %r14
-	movq 0(%r14), %r13
-	movslq 8(%r14), %rsi
-	movslq 12(%r14), %rdi
-	leaq -16(%rbp), %r12
-	movl %esi, 0(%r12)
-	movl %edi, 8(%r12)
-	movq $24, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq %rbx, %rdi
-	movq %r13, %rsi
-	movq %r12, %rdx
-	callq _tensor__Tensor____init____f32
-	movq %r14, 0(%rbx)
-	movq %rbx, %rax
-	jmp _tensor__Tensor___init__f32_epilogue
-_tensor__Tensor___init__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	addq $16, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_backward__sum__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $16, %rsp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_backward__sum__f32_L0:
-	movq %rsi, %rbx
-	movq 8(%rdi), %rcx
-	movq 0(%rbx), %rdi
-	movslq 8(%rdi), %rdx
-	movq 0(%rbx), %rdi
-	movslq 12(%rdi), %rdi
-	leaq -16(%rbp), %rsi
-	movl %edx, 0(%rsi)
-	movl %edi, 8(%rsi)
-	movq %rcx, %rdi
-	callq _data__TensorData__broadcast_to__f32
-	movq %rax, %rdi
-	movq %rdi, 8(%rbx)
-	jmp _backward__sum__f32_epilogue
-_backward__sum__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	addq $16, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_data__TensorData__print__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $48, %rsp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_data__TensorData__print__f32_L0:
-	movq %rdi, %r15
-	movslq 8(%r15), %rsi
-	movq $0, %rdi
-	movq %rdi, -24(%rbp)
-	movq %rsi, -32(%rbp)
-	movq $0, %r14
-	jmp _data__TensorData__print__f32_L1
-_data__TensorData__print__f32_L1:
-	movq -32(%rbp), %rdi
-	cmpq %rdi, %r14
-	setl %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rdi
-	jne _data__TensorData__print__f32_L2
-	jmp _data__TensorData__print__f32_L3
-_data__TensorData__print__f32_L2:
-	movq -24(%rbp), %rdi
-	movq %rdi, %r13
-	addq %r14, %r13
-	movslq 12(%r15), %r12
-	movq $0, %rdi
-	movq %rdi, -40(%rbp)
-	movq $0, %rbx
-	jmp _data__TensorData__print__f32_L4
-_data__TensorData__print__f32_L3:
-	movq $10, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $2, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $10, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $1, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq %rbx, %rdi
-	movq %rdx, %rsi
-	callq _print__print_string
-	jmp _data__TensorData__print__f32_epilogue
-_data__TensorData__print__f32_L4:
-	cmpq %r12, %rbx
-	setl %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rdi
-	jne _data__TensorData__print__f32_L5
-	jmp _data__TensorData__print__f32_L6
-_data__TensorData__print__f32_L5:
-	movq -40(%rbp), %rdi
-	addq %rbx, %rdi
-	leaq -16(%rbp), %rsi
-	movl %r13d, 0(%rsi)
-	movl %edi, 8(%rsi)
-	movq %r15, %rdi
-	callq _data__TensorData____getitem____f32
-	movq %xmm0, -48(%rbp)
-	movq $10, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $2, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $32, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq -48(%rbp), %xmm0
-	cvtss2sd %xmm0, %xmm0
-	movq %rdx, %rsi
-	callq _print__print_float
-	movq $1, %rdi
-	addq %rdi, %rbx
-	jmp _data__TensorData__print__f32_L4
-_data__TensorData__print__f32_L6:
-	movq $1, %rdi
-	addq %rdi, %r14
-	jmp _data__TensorData__print__f32_L1
-_data__TensorData__print__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	addq $48, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_data__TensorData__fill__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $16, %rsp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_data__TensorData__fill__f32_L0:
-	movq %rdi, %rbx
-	movq %xmm1, %xmm0
-	movq %xmm0, -8(%rbp)
-	movq $0, %rdi
-	movslq (%rdi,%rbx), %rsi
-	movq $8, %rdi
-	movslq (%rdi,%rbx), %rdi
-	movq %rsi, %r13
-	imulq %rdi, %r13
-	movq $12, %rdi
-	callq arena_malloc
-	movq %rax, %r12
-	movq $1, %rdi
-	movq %rdi, 0(%r12)
-	movq -8(%rbp), %xmm0
-	movq $8, %rdi
-	movss %xmm0, (%r12,%rdi)
-	movq 0(%r12), %rdi
-	movq %rdi, %r14
-	imulq %r13, %r14
-	movq $4, %rdi
-	movq %r14, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	callq arena_malloc
-	movq %rax, %r15
-	movq %r14, 0(%r15)
-	movq %r15, %rdi
-	movq %r12, %rsi
-	movq %r13, %rdx
-	callq _repeat__list_repeat__f32
-	movq $24, %rdi
-	callq arena_malloc
-	movq %rax, %r12
-	movq %r12, %rdi
-	movq %r15, %rsi
-	movq %rbx, %rdx
-	callq _data__TensorData____init____f32
-	movq %r12, %rax
-	jmp _data__TensorData__fill__f32_epilogue
-_data__TensorData__fill__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	addq $16, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_data__TensorData__broadcast_to__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_data__TensorData__broadcast_to__f32_L0:
-	movq %rdi, %r10
-	movq $0, %rdi
-	movslq (%rdi,%rsi), %r9
-	movq $8, %rdi
-	movslq (%rdi,%rsi), %rdx
-	movslq 8(%r10), %rsi
-	movq $1, %rdi
-	cmpq %rdi, %rsi
-	sete %r11b
-	movzbq %r11b, %rsi
-	movq $1, %rdi
-	cmpq %rdi, %r9
-	setne %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rsi
-	movq %rdi, %r11
-movq $0, %rsi
-	cmovne %r11, %rsi
-	movslq 16(%r10), %rdi
-	cmpq $0, %rsi
-movq $0, %r11
-	movq %rdi, %rcx
-	cmovne %r11, %rcx
-	movslq 12(%r10), %rsi
-	movq $1, %rdi
-	cmpq %rdi, %rsi
-	sete %r11b
-	movzbq %r11b, %rsi
-	movq $1, %rdi
-	cmpq %rdi, %rdx
-	setne %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rsi
-	movq %rdi, %r11
-movq $0, %rsi
-	cmovne %r11, %rsi
-	movslq 20(%r10), %rdi
-	cmpq $0, %rsi
-movq $0, %r11
-	movq %rdi, %r8
-	cmovne %r11, %r8
-	movq 0(%r10), %rdi
-	movq %r9, %rsi
-	callq _data__TensorData___view__f32
-	movq %rax, %rdi
-	movq %rdi, %rax
-	jmp _data__TensorData__broadcast_to__f32_epilogue
-_data__TensorData__broadcast_to__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_data__TensorData____getitem____f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_data__TensorData____getitem____f32_L0:
-	movq %rdi, %r8
-	movq $0, %rdi
-	movslq (%rdi,%rsi), %rcx
-	movq $8, %rdi
-	movslq (%rdi,%rsi), %rdx
-	movslq 16(%r8), %rsi
-	movslq 20(%r8), %rdi
-	imulq %rcx, %rsi
-	imulq %rdx, %rdi
-	addq %rdi, %rsi
-	movq 0(%r8), %rdx
-	movq $4, %rdi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	movss (%rdi,%rdx), %xmm0
-	jmp _data__TensorData____getitem____f32_epilogue
-_data__TensorData____getitem____f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_data__TensorData___view__f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $16, %rsp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_data__TensorData___view__f32_L0:
-	movq %rdi, %r15
-	movq %rdx, %rdi
-	movq %rcx, %r14
-	movq %r8, %r13
-	leaq -16(%rbp), %r12
-	movl %esi, 0(%r12)
-	movl %edi, 8(%r12)
-	movq $24, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq %rbx, %rdi
-	movq %r15, %rsi
-	movq %r12, %rdx
-	callq _data__TensorData____init____f32
-	movl %r14d, 16(%rbx)
-	movl %r13d, 20(%rbx)
-	movq %rbx, %rax
-	jmp _data__TensorData___view__f32_epilogue
-_data__TensorData___view__f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime

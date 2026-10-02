@@ -13,8 +13,8 @@ counter.inc()
 print(counter.value)
 
 performance report: (ORIGIN=user)
-number of asm lines: 85
-mov count: 29
+number of asm lines: 86
+mov count: 30
 memory load count: 20
 memory store count: 23
 conditional jumps: 0

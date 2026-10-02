@@ -7,8 +7,8 @@ y = (1, 2, 3, 4)
 print(len(y))
 
 performance report: (ORIGIN=user)
-number of asm lines: 61
-mov count: 37
+number of asm lines: 62
+mov count: 38
 memory load count: 6
 memory store count: 16
 conditional jumps: 0

@@ -8,8 +8,8 @@ def factorial(n: int) -> int:
 print(factorial(15))
 
 performance report: (ORIGIN=user)
-number of asm lines: 72
-mov count: 25
+number of asm lines: 73
+mov count: 26
 memory load count: 12
 memory store count: 15
 conditional jumps: 1

@@ -9,8 +9,8 @@ while x < 3:
 print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 58
-mov count: 29
+number of asm lines: 59
+mov count: 30
 memory load count: 6
 memory store count: 12
 conditional jumps: 1

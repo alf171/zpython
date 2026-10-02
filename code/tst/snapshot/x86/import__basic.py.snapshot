@@ -15,8 +15,8 @@ print(helper.two())
 print(two(1, 2.0))
 
 performance report: (ORIGIN=user)
-number of asm lines: 264
-mov count: 197
+number of asm lines: 268
+mov count: 201
 memory load count: 18
 memory store count: 74
 conditional jumps: 0

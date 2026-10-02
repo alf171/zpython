@@ -22,8 +22,8 @@ print(len(t1))
 print(len(t1))
 
 performance report: (ORIGIN=user)
-number of asm lines: 248
-mov count: 203
+number of asm lines: 252
+mov count: 207
 memory load count: 12
 memory store count: 60
 conditional jumps: 0

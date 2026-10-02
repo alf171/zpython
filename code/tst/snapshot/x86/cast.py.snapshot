@@ -9,8 +9,8 @@ print(int(-5.9))
 
 
 performance report: (ORIGIN=user)
-number of asm lines: 93
-mov count: 58
+number of asm lines: 95
+mov count: 60
 memory load count: 8
 memory store count: 20
 conditional jumps: 0

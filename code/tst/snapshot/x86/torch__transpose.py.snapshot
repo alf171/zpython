@@ -9,8 +9,8 @@ A[0, 1] = 99
 print(B[1,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 129
-mov count: 91
+number of asm lines: 127
+mov count: 89
 memory load count: 6
 memory store count: 30
 conditional jumps: 0

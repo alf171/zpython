@@ -10,8 +10,8 @@ print(items[2])
 print(items)
 
 performance report: (ORIGIN=user)
-number of asm lines: 96
-mov count: 70
+number of asm lines: 98
+mov count: 72
 memory load count: 9
 memory store count: 23
 conditional jumps: 0

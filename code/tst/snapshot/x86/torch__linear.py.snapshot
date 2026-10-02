@@ -1,0 +1,39 @@
+running program: (OPTIM=true)
+
+x_data: list[f32] = [1.0, 2.0, 3.0]
+w_data: list[f32] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+b_data: list[f32] = [0.5, 1.0]
+
+x = Tensor(x_data, (1,3))
+w = Tensor(w_data, (2,3))
+b = Tensor(b_data, (1,2))
+
+layer = Linear(w, b)
+y = layer.forward(x)
+y.print()
+
+one: f32 = 1.0
+seed = Tensor.fill((1,2), one)
+y.backward(seed.view)
+x.grad.print()
+w.grad.print()
+b.grad.print()
+
+performance report: (ORIGIN=user)
+number of asm lines: 148
+mov count: 107
+memory load count: 12
+memory store count: 28
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
+call count: 19
+spill rounds: 0
+
+actual output:
+1.50000 3.00000 
+0.00000 0.00000 0.00000 
+0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 
+0.00000 0.00000 
+[!!memory report!!]: allocs=97 frees=97 allocated_bytes=1620 freed_bytes=1620
