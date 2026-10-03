@@ -1,6 +1,6 @@
-two: i32 = 2
+two: f32 = 2.0
 A = Tensor.fill((3,3), two)
-three: i32 = 3
+three: f32 = 3.0
 B = Tensor.fill((3,3), three)
 
 C = A + B

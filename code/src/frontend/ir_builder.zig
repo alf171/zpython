@@ -6,6 +6,7 @@ const LocalId = @import("common").ir.LocalId;
 const ScopeId = @import("common").ir.ScopeId;
 const ClassId = @import("common").class.ClassId;
 const ClassInfo = @import("common").class.ClassInfo;
+const RecordInfo = @import("common").class.RecordInfo;
 const LocalInfo = @import("common").ir.LocalInfo;
 const TempId = @import("common").function.TempId;
 const Function = @import("common").function.Function;
@@ -252,11 +253,26 @@ pub const IrBuilder = struct {
         return &self.program.classes.items[class_id];
     }
 
+    /// get class from index
+    pub fn getClassRecord(self: *@This(), class_id: ClassId) *RecordInfo {
+        return &self.program.classes.items[class_id].kind.record;
+    }
+
     /// O(class) scan looking for matching name
     pub fn findClass(self: *@This(), name: []const u8) ?*ClassInfo {
         for (self.program.classes.items) |*class| {
             if (std.mem.eql(u8, class.name, name)) {
                 return class;
+            }
+        }
+        return null;
+    }
+
+    /// O(class) scan looking for matching name
+    pub fn findClassRecord(self: *@This(), name: []const u8) ?*RecordInfo {
+        for (self.program.classes.items) |*class| {
+            if (std.mem.eql(u8, class.name, name)) {
+                return &class.kind.record;
             }
         }
         return null;

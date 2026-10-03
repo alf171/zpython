@@ -1,8 +1,8 @@
 running program: (OPTIM=true)
 
-two: i32 = 2
+two: f32 = 2.0
 A = Tensor.fill((3,3), two)
-three: i32 = 3
+three: f32 = 3.0
 B = Tensor.fill((3,3), three)
 
 C = A + B
@@ -18,20 +18,20 @@ print(B.grad[0, 0])
 
 performance report: (ORIGIN=user)
 number of asm lines: 174
-mov count: 123
-memory load count: 17
-memory store count: 41
+mov count: 122
+memory load count: 18
+memory store count: 42
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
 call count: 21
-spill rounds: 4
+spill rounds: 5
 
 actual output:
-5
+5.00000
 0.00000
 0.00000
 1.00000
 1.00000
-[!!memory report!!]: allocs=40 frees=40 allocated_bytes=906 freed_bytes=906
+[!!memory report!!]: allocs=41 frees=41 allocated_bytes=916 freed_bytes=916

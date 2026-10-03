@@ -34,9 +34,36 @@ pub const Method = struct {
     }
 };
 
-pub const ClassInfo = struct {
-    id: ClassId,
+pub const EnumMember = struct {
     name: []const u8,
+    value: i64,
+
+    pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
+        alloc.free(self.name);
+    }
+};
+
+pub const EnumInfo = struct {
+    members: ArrayList(EnumMember),
+
+    pub fn findMember(self: @This(), name: []const u8) ?EnumMember {
+        for (self.members.items) |memeber| {
+            if (std.mem.eql(u8, name, memeber.name)) {
+                return memeber;
+            }
+        }
+        return null;
+    }
+
+    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        for (self.members.items) |member| {
+            member.deinit(alloc);
+        }
+        self.members.deinit(alloc);
+    }
+};
+
+pub const RecordInfo = struct {
     type_params: []TypeParam,
     fields: ArrayList(Field),
     methods: ArrayList(Method),
@@ -44,10 +71,8 @@ pub const ClassInfo = struct {
     // if class was derrived from specialization
     template_id: ?ClassId = null,
 
-    pub fn init(id: ClassId, name: []const u8, type_params: []TypeParam, base_class: ?ClassId, alloc: std.mem.Allocator) !@This() {
+    pub fn init(type_params: []TypeParam, base_class: ?ClassId) @This() {
         return .{
-            .id = id,
-            .name = try alloc.dupe(u8, name),
             .type_params = type_params,
             .fields = .empty,
             .methods = .empty,
@@ -56,7 +81,6 @@ pub const ClassInfo = struct {
     }
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
-        alloc.free(self.name);
         for (self.type_params) |*type_param| {
             type_param.deinit(alloc);
         }
@@ -103,21 +127,17 @@ pub const ClassInfo = struct {
 
     pub fn specialize(
         self: *const @This(),
-        specialized_name: []const u8,
-        specialized_id: ClassId,
+        template_id: ClassId,
         bindings: *TypeBindings,
         alloc: std.mem.Allocator,
     ) !@This() {
-        var res = try init(
-            specialized_id,
-            specialized_name,
+        var res = init(
             try alloc.alloc(TypeParam, 0),
             self.base_class,
-            alloc,
         );
         errdefer res.deinit(alloc);
 
-        res.template_id = self.id;
+        res.template_id = template_id;
         for (self.fields.items) |field| {
             const field_type = try field.type.substitute(bindings, alloc);
             errdefer field_type.deinit(alloc);
@@ -166,7 +186,7 @@ pub const ClassInfo = struct {
     ) !usize {
         var offset: usize = 0;
         if (self.base_class) |base_id| {
-            const base = &program.classes.items[base_id];
+            const base = &program.classes.items[base_id].kind.record;
             if (base.type_params.len != 0) {
                 return error.GenericInheritanceNotSupported;
             }
@@ -183,5 +203,24 @@ pub const ClassInfo = struct {
             offset += try field_type.sizeOfType();
         }
         return offset;
+    }
+};
+
+pub const ClassKind = union(enum) {
+    record: RecordInfo,
+    @"enum": EnumInfo,
+};
+
+pub const ClassInfo = struct {
+    id: ClassId,
+    name: []const u8,
+    kind: ClassKind,
+
+    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+        alloc.free(self.name);
+        switch (self.kind) {
+            .record => |*record| record.deinit(alloc),
+            .@"enum" => |*@"enum"| @"enum".deinit(alloc),
+        }
     }
 };

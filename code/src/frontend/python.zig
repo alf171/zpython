@@ -131,7 +131,7 @@ pub fn walkClassInitializerInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: 
             defer ir_builder.current_class = saved_class;
             // type params
             const saved_type_params = ir_builder.active_param_types;
-            ir_builder.active_param_types = class.type_params;
+            ir_builder.active_param_types = class.kind.record.type_params;
             defer ir_builder.active_param_types = saved_type_params;
 
             const init_body = c.PyObject_GetAttrString(member, "body");
@@ -163,7 +163,7 @@ pub fn walkClassInitializerInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: 
                 std.debug.assert(attr != null);
                 const field_name = std.mem.span(c.PyUnicode_AsUTF8(attr));
                 // walk each field once
-                if (class.findField(field_name) != null) continue;
+                if (class.kind.record.findField(field_name) != null) continue;
                 const annotation = c.PyObject_GetAttrString(init_stmt, "annotation");
                 if (annotation == null) {
                     return error.DuplicateFields;
@@ -175,7 +175,7 @@ pub fn walkClassInitializerInAst(ast: *PyObject, ir_builder: *IrBuilder, alloc: 
                     return err;
                 };
 
-                try class.fields.append(alloc, .{
+                try class.kind.record.fields.append(alloc, .{
                     .name = owned_name,
                     .type = field_type,
                 });
@@ -231,6 +231,7 @@ fn declareClass(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
     std.debug.assert(bases_obj != null);
     const base_count = c.PyList_Size(bases_obj);
     if (base_count > 1) return error.MultipleInheritanceNotSupported;
+    var is_enum = false;
     const base_class_id: ?ClassId = if (base_count == 0)
         null
     else blk: {
@@ -242,13 +243,24 @@ fn declareClass(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
         const base_raw_name = c.PyUnicode_AsUTF8(id_obj);
         std.debug.assert(base_raw_name != null);
         const base_name = std.mem.span(base_raw_name);
+        if (std.mem.eql(u8, "Enum", base_name)) {
+            is_enum = true;
+            break :blk null;
+        }
         const base_class = ir_builder.findClass(base_name) orelse {
             std.debug.print("cant find base class {s}\n", .{base_name});
             return error.InvalidBaseClass;
         };
         break :blk base_class.id;
     };
-    const class_info = try ClassInfo.init(id, name, class_type_params, base_class_id, alloc);
+    const class_info: ClassInfo = .{
+        .id = id,
+        .name = try alloc.dupe(u8, name),
+        .kind = if (is_enum)
+            .{ .@"enum" = .{ .members = .empty } }
+        else
+            .{ .record = .init(class_type_params, base_class_id) },
+    };
     try ir_builder.program.classes.append(
         alloc,
         class_info,
@@ -288,7 +300,7 @@ fn declareFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, a
         if (!is_static) {
             const class = ir_builder.getClass(id);
 
-            for (class.type_params) |*type_param| {
+            for (class.kind.record.type_params) |*type_param| {
                 try type_params.append(alloc, try type_param.clone(alloc));
             }
         }
@@ -325,9 +337,9 @@ fn declareFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, a
             try parseTypeAnnotation(annotation, ir_builder, alloc)
         else instance: {
             const class = ir_builder.getClass(class_id.?);
-            const instance_args = try alloc.alloc(TypeInfo, class.type_params.len);
+            const instance_args = try alloc.alloc(TypeInfo, class.kind.record.type_params.len);
 
-            for (class.type_params, 0..) |type_param, type_i| {
+            for (class.kind.record.type_params, 0..) |type_param, type_i| {
                 instance_args[type_i] = .{
                     .type_variable = type_param.id,
                 };
@@ -394,7 +406,7 @@ fn declareFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, a
     ));
     if (class_id) |id| {
         const function = &ir_builder.program.functions.items[ir_builder.program.functions.items.len - 1];
-        try ir_builder.getClass(id).methods.append(alloc, .{
+        try ir_builder.getClassRecord(id).methods.append(alloc, .{
             .name = try alloc.dupe(u8, func_name),
             .function_id = function.id,
             .function_label = try alloc.dupe(u8, function.label),
@@ -493,7 +505,12 @@ pub fn parseTypeAnnotation(
             return .{ .type_variable = param_type.id };
         }
         if (irBuilder.findClass(annotation_name)) |class| {
-            if (class.type_params.len != 0) return error.InvalidTypeArgCount;
+            switch (class.kind) {
+                .record => |record| {
+                    if (record.type_params.len != 0) return error.InvalidTypeArgCount;
+                },
+                .@"enum" => {},
+            }
             return .{ .instance = .{
                 .class_id = class.id,
                 .args = try alloc.alloc(TypeInfo, 0),
@@ -562,7 +579,7 @@ pub fn parseTypeAnnotation(
             },
             .instance => |class_id| {
                 const class = irBuilder.getClass(class_id);
-                const arity = class.type_params.len;
+                const arity = class.kind.record.type_params.len;
 
                 if (arity == 0) return error.InvalidTypeArgCount;
 

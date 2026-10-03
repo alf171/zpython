@@ -129,6 +129,9 @@ fn walkClassDef(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
         const base_raw_name = c.PyUnicode_AsUTF8(id_obj);
         std.debug.assert(base_raw_name != null);
         const base_name = std.mem.span(base_raw_name);
+        if (std.mem.eql(u8, "Enum", base_name)) {
+            break :blk null;
+        }
         const base_class = ir_builder.findClass(base_name) orelse {
             std.debug.print("cant find base class {s}\n", .{base_name});
             return error.InvalidBaseClass;
@@ -137,7 +140,10 @@ fn walkClassDef(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
     };
     // set base class
     const class = ir_builder.getClass(id);
-    class.base_class = base_class_id;
+    switch (class.kind) {
+        .record => |*record| record.base_class = base_class_id,
+        .@"enum" => {},
+    }
 
     const body_objs = c.PyObject_GetAttrString(stmt, "body");
     std.debug.assert(body_objs != null);
@@ -148,6 +154,39 @@ fn walkClassDef(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocato
             .FuncDef => try walkFuncDef(body_obj, ir_builder, id, alloc),
             // """ comment
             .Expr => {},
+            .Assign => switch (class.kind) {
+                // Assign(targets=[Name(id='RED', ctx=Store())], value=Constant(value=0))
+                .@"enum" => |*enum_info| {
+                    // lhs
+                    const targets = c.PyObject_GetAttrString(body_obj, "targets");
+                    std.debug.assert(targets != null);
+                    std.debug.assert(c.PyList_Size(targets) == 1);
+                    const target = c.PyList_GetItem(targets, 0);
+                    std.debug.assert(target != null);
+                    const target_name_obj = c.PyObject_GetAttrString(target, "id");
+                    std.debug.assert(target_name_obj != null);
+                    const raw_target_name = c.PyUnicode_AsUTF8(target_name_obj);
+                    const target_name = std.mem.span(raw_target_name);
+                    // rhs
+                    const value_ast = c.PyObject_GetAttrString(body_obj, "value");
+                    std.debug.assert(value_ast != null);
+                    const value_obj = c.PyObject_GetAttrString(value_ast, "value");
+                    std.debug.assert(value_obj != null);
+                    const value_expr = try parseConstant(value_obj, null, alloc);
+                    const value = switch (value_expr) {
+                        .immediate => |imm| switch (imm) {
+                            .i64 => |int| int,
+                            else => return error.InvalidEnumType,
+                        },
+                        .composite => return error.InvalidEnumType,
+                    };
+                    try enum_info.members.append(alloc, .{
+                        .name = try alloc.dupe(u8, target_name),
+                        .value = value,
+                    });
+                },
+                .record => return error.NotImpl,
+            },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 return error.NotImpl;
@@ -321,7 +360,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
                 .instance => |id| id,
                 else => return error.ExpectedInstance,
             };
-            const class = ir_builder.getClass(instance.class_id);
+            const class = ir_builder.getClassRecord(instance.class_id);
             const field_idx = class.findFieldIdx(std.mem.span(raw_field_name));
             var field: ?*Field = null;
 
@@ -434,7 +473,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 .instance => |instance| blk: {
                     const class = ir_builder.getClass(instance.class_id);
                     const func = op.toClassBuiltin();
-                    const method = class.findMethod(func) orelse {
+                    const method = class.kind.record.findMethod(func) orelse {
                         std.debug.print("cant find method {s}\n", .{func});
                         return error.CantFindMethod;
                     };
@@ -675,7 +714,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 },
                 .instance => |instance| {
                     const class = ir_builder.getClass(instance.class_id);
-                    const getitem_method = class.findMethod("__getitem__") orelse {
+                    const getitem_method = class.kind.record.findMethod("__getitem__") orelse {
                         return error.CantFindGetMethod;
                     };
                     const getitem_function = ir_builder.getFunction(getitem_method.function_id) orelse {
@@ -790,6 +829,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 }, alloc);
                 return try function_dst.clone(alloc);
             }
+            std.debug.print("cant find local {s}\n", .{name});
             return error.CantFindLocal;
         },
         // Compare(left=Constant(1),ops=[Lt()],comparators=[Constant(2)])
@@ -810,18 +850,23 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const result_type: TypeInfo = switch (lhs.type) {
                 .instance => |instance| blk: {
                     const class = ir_builder.getClass(instance.class_id);
-                    const func = op.toClassBuiltin();
-                    const method = class.findMethod(func) orelse {
-                        std.debug.print("cant find method {s}\n", .{func});
-                        return error.CantFindMethod;
-                    };
-                    const function = ir_builder.getFunction(method.function_id) orelse {
-                        return error.CantFindFunction;
-                    };
-                    var bindings: TypeBindings = .init(alloc);
-                    defer bindings.deinit(alloc);
-                    const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
-                    break :blk return_type;
+                    switch (class.kind) {
+                        .record => {
+                            const func = op.toClassBuiltin();
+                            const method = class.kind.record.findMethod(func) orelse {
+                                std.debug.print("cant find method {s}\n", .{func});
+                                return error.CantFindMethod;
+                            };
+                            const function = ir_builder.getFunction(method.function_id) orelse {
+                                return error.CantFindFunction;
+                            };
+                            var bindings: TypeBindings = .init(alloc);
+                            defer bindings.deinit(alloc);
+                            const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
+                            break :blk return_type;
+                        },
+                        .@"enum" => break :blk .bool,
+                    }
                 },
                 else => .bool,
             };
@@ -880,11 +925,42 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
 
             return try dst.clone(alloc);
         },
-        // Attribute(value=Name(id='self', ctx=Load()), attr='name', ctx=Store())
         .Attribute => {
-            const value = c.PyObject_GetAttrString(stmt, "value");
-            std.debug.assert(value != null);
-            const instance_expr = try walkExpr(value, ir_builder, null, alloc);
+            const value_ast = c.PyObject_GetAttrString(stmt, "value");
+            std.debug.assert(value_ast != null);
+            const name_obj = c.PyObject_GetAttrString(stmt, "attr");
+            std.debug.assert(name_obj != null);
+            const raw_name = c.PyUnicode_AsUTF8(name_obj);
+            std.debug.assert(raw_name != null);
+            const name = std.mem.span(raw_name);
+            // Attribute(value=Name(id='Color', ctx=Load()), attr='RED', ctx=Load())
+            if (getExprKind(value_ast) == .Name) {
+                const value_obj = c.PyObject_GetAttrString(value_ast, "id");
+                std.debug.assert(value_obj != null);
+                const value = c.PyUnicode_AsUTF8(value_obj);
+                if (ir_builder.findClass(std.mem.span(value))) |class| {
+                    switch (class.kind) {
+                        .@"enum" => |*info| {
+                            const member = info.findMember(name) orelse return error.CantFindEnumMember;
+
+                            const dst: TypedOperand = .{
+                                .operand = ir_builder.nextTemp(),
+                                .type = .{ .@"enum" = class.id },
+                            };
+
+                            try ir_builder.emit(.{ .lir = .{ .move = .{
+                                .dst = dst,
+                                .src = .{ .constant = .{ .i64 = member.value } },
+                            } } }, alloc);
+
+                            return try dst.clone(alloc);
+                        },
+                        .record => return error.NotImpl,
+                    }
+                }
+            }
+            // Attribute(value=Name(id='self', ctx=Load()), attr='name', ctx=Store())
+            const instance_expr = try walkExpr(value_ast, ir_builder, null, alloc);
             errdefer instance_expr.deinit(alloc);
             const instance = switch (instance_expr.type) {
                 .instance => |id| id,
@@ -896,13 +972,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 },
             };
 
-            const name_obj = c.PyObject_GetAttrString(stmt, "attr");
-            std.debug.assert(name_obj != null);
-            const raw_name = c.PyUnicode_AsUTF8(name_obj);
-            std.debug.assert(raw_name != null);
-
-            const class = ir_builder.getClass(instance.class_id);
-            const name = std.mem.span(raw_name);
+            const class = ir_builder.getClassRecord(instance.class_id);
             const field_index = class.findFieldIdx(name) orelse {
                 std.debug.print("cant find {s}\n", .{name});
                 return error.CantFindField;
@@ -1486,7 +1556,7 @@ fn walkNamedCall(
         }
     }
     // class constructor
-    const constructor_init = if (ir_builder.findClass(std.mem.span(name))) |class| blk: {
+    const constructor_init = if (ir_builder.findClassRecord(std.mem.span(name))) |class| blk: {
         const init_method = class.findMethod("__init__") orelse {
             return error.CantFindInit;
         };
@@ -1585,10 +1655,10 @@ fn walkNamedCall(
             try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
         }
 
-        const instance_args = try alloc.alloc(TypeInfo, class.type_params.len);
+        const instance_args = try alloc.alloc(TypeInfo, class.kind.record.type_params.len);
         errdefer alloc.free(instance_args);
 
-        for (class.type_params, 0..) |type_param, i| {
+        for (class.kind.record.type_params, 0..) |type_param, i| {
             const bound_type = bindings.get(type_param.id) orelse {
                 return error.ExpectedBinding;
             };
@@ -1649,10 +1719,10 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
                     const current_class = ir_builder.current_class orelse {
                         return error.CurrentClassNotSet;
                     };
-                    const base_class_id = ir_builder.getClass(current_class).base_class orelse {
+                    const base_class_id = ir_builder.getClass(current_class).kind.record.base_class orelse {
                         return error.CurrentClassMissingBase;
                     };
-                    const base_class = ir_builder.getClass(base_class_id);
+                    const base_class = ir_builder.getClassRecord(base_class_id);
                     const method_info = base_class.findMethod(method_name) orelse {
                         return error.CantFindMethod;
                     };
@@ -1677,7 +1747,7 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
             const raw_name = c.PyUnicode_AsUTF8(id_obj);
             std.debug.assert(raw_name != null);
             const name = std.mem.span(raw_name);
-            if (ir_builder.findClass(name)) |class| {
+            if (ir_builder.findClassRecord(name)) |class| {
                 const method_info = class.findMethod(method_name) orelse {
                     return error.CantFindMethod;
                 };
@@ -1693,7 +1763,7 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
         // FIXME: cleanup this code now that it handles fields of type callable now too
         const method = switch (receiver_expr.?.type) {
             .instance => |inst| module_blk: {
-                const class = ir_builder.getClass(inst.class_id);
+                const class = ir_builder.getClassRecord(inst.class_id);
                 if (class.findMethod(method_name)) |method_info| {
                     self = receiver_expr.?;
                     receiver_expr = null;
@@ -1815,7 +1885,7 @@ fn walkGenericCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, all
         try parseTypeAnnotation(slice_obj, ir_builder, alloc),
     );
 
-    if (type_args.items.len != class.type_params.len) {
+    if (type_args.items.len != class.kind.record.type_params.len) {
         return error.InvalidTypeArgumentCount;
     }
 

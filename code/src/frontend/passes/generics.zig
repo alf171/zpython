@@ -270,31 +270,35 @@ fn specializeClass(
     defer bindings.deinit(alloc);
 
     // concrete class doesn't need specialization
-    if (template.type_params.len == 0) {
+    if (template.kind.record.type_params.len == 0) {
         return template_id;
     }
 
-    if (template.type_params.len != specialized_args.len) {
+    if (template.kind.record.type_params.len != specialized_args.len) {
         return error.InvalidTypeArgCount;
     }
     // Map[T, U] => T.id -> i32, U.id -> f64
-    for (template.type_params, specialized_args) |param, arg| {
+    for (template.kind.record.type_params, specialized_args) |param, arg| {
         try bindings.put(param.id, try arg.clone(alloc));
     }
 
-    const specialized_name = try specializeName(template.name, template.type_params, &bindings, alloc);
+    const specialized_name = try specializeName(template.name, template.kind.record.type_params, &bindings, alloc);
     defer alloc.free(specialized_name);
     // check if specialization already exists
     for (program.classes.items) |class| {
-        if (class.template_id != null and class.template_id.? == template_id and std.mem.eql(u8, class.name, specialized_name)) {
+        if (class.kind.record.template_id != null and class.kind.record.template_id.? == template_id and std.mem.eql(u8, class.name, specialized_name)) {
             return class.id;
         }
     }
 
     const specialized_id: ClassId = @intCast(program.classes.items.len);
     // std.debug.print("specialized {s} as class_{d}\n", .{ specialized_name, specialized_id });
-    const specialized = try template.specialize(specialized_name, specialized_id, &bindings, alloc);
-    try program.classes.append(alloc, specialized);
+    const specialized = try template.kind.record.specialize(template_id, &bindings, alloc);
+    try program.classes.append(alloc, .{
+        .id = specialized_id,
+        .name = try alloc.dupe(u8, specialized_name),
+        .kind = .{ .record = specialized },
+    });
     return specialized_id;
 }
 

@@ -35,7 +35,7 @@ def index_2d(row: i32, col: i32, row_stride: i32, col_stride: i32) -> i32:
     return row * row_stride + col * col_stride;
 
 @gpu
-# (i, j) @ (j,k) = (i, k)
+# TODO: explain how `Tensor`s are copied to the GPU
 def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     i = global_id(0)
     k = global_id(1)

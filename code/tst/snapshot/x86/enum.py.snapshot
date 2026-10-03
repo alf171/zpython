@@ -1,0 +1,39 @@
+running program: (OPTIM=true)
+
+
+
+class Color(Enum):
+    RED = 0
+    GREEN = 1
+    BLUE = 2
+
+red = Color.RED
+green = Color.GREEN
+blue = Color.BLUE
+
+def identity(color: Color) -> Color:
+    return color
+
+print(red == Color.RED)
+print(identity(green) == Color.GREEN)
+print(Color.GREEN == Color.BLUE)
+print(blue)
+
+performance report: (ORIGIN=user)
+number of asm lines: 110
+mov count: 62
+memory load count: 12
+memory store count: 24
+conditional jumps: 0
+unconditional jumps: 2
+comparisons: 3
+returns: 2
+call count: 10
+spill rounds: 0
+
+actual output:
+True
+True
+False
+2
+[!!memory report!!]: allocs=10 frees=10 allocated_bytes=121 freed_bytes=121

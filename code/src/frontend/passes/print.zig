@@ -89,7 +89,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                                 .args = args,
                             } });
                         },
-                        .i64, .i32 => {
+                        .i64, .i32, .@"enum" => {
                             try new_instructions.append(alloc, .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int") },

@@ -302,7 +302,7 @@ fn buildGpuArgLayout(type_info: TypeInfo, program: *const Program, alloc: std.me
         .instance => |instance| {
             for (program.classes.items) |class| {
                 if (class.id == instance.class_id) {
-                    var fields = try alloc.alloc(GpuArgField, class.fields.items.len);
+                    var fields = try alloc.alloc(GpuArgField, class.kind.record.fields.items.len);
                     var initialized: usize = 0;
                     errdefer {
                         for (fields[0..initialized]) |field| {
@@ -310,17 +310,17 @@ fn buildGpuArgLayout(type_info: TypeInfo, program: *const Program, alloc: std.me
                         }
                         alloc.free(fields);
                     }
-                    for (class.fields.items, 0..) |field, i| {
-                        const field_type = try class.resolveFieldType(&field, instance, alloc);
+                    for (class.kind.record.fields.items, 0..) |field, i| {
+                        const field_type = try class.kind.record.resolveFieldType(&field, instance, alloc);
                         defer field_type.deinit(alloc);
                         fields[i] = .{
-                            .offset = try class.resolveOffset(instance, i, program, alloc),
+                            .offset = try class.kind.record.resolveOffset(instance, i, program, alloc),
                             .layout = try buildGpuArgLayout(field_type, program, alloc),
                         };
                         initialized += 1;
                     }
                     return .{ .instance = .{
-                        .size = try class.resolveOffset(instance, class.fields.items.len, program, alloc),
+                        .size = try class.kind.record.resolveOffset(instance, class.kind.record.fields.items.len, program, alloc),
                         .fields = fields,
                     } };
                 }

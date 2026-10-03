@@ -91,6 +91,7 @@ pub const TypeInfo = union(enum) {
         returns: *const TypeInfo,
     },
     instance: ClassInstance,
+    @"enum": ClassId,
     type_variable: TypeVarId,
     module: ModuleId,
     any,
@@ -187,7 +188,7 @@ pub const TypeInfo = union(enum) {
                     .args = args,
                 } };
             },
-            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr, .module => return self,
+            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr, .module, .@"enum" => return self,
             // else => |e| {
             //     std.debug.print("clone does support {s}\n", .{@tagName(e)});
             //     return error.NotImpl;

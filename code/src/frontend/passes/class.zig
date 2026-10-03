@@ -24,7 +24,7 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
                 // class.__init__(instance, *args)
                 .class_init => |ci| {
                     const class = &program.classes.items[ci.class_id];
-                    const method = class.findMethod("__init__") orelse {
+                    const method = class.kind.record.findMethod("__init__") orelse {
                         return error.CantFindInit;
                     };
                     // after generics, this will become malloc
@@ -61,7 +61,7 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
 
                     const class = &program.classes.items[s.src.type.instance.class_id];
 
-                    const method = class.findMethod("__getitem__") orelse {
+                    const method = class.kind.record.findMethod("__getitem__") orelse {
                         return error.CantFindBuiltin;
                     };
 
@@ -93,7 +93,7 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
 
                     const class = &program.classes.items[ss.target.type.instance.class_id];
 
-                    const method = class.findMethod("__setitem__") orelse {
+                    const method = class.kind.record.findMethod("__setitem__") orelse {
                         return error.CantFindBuiltin;
                     };
 
@@ -141,11 +141,18 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
                             },
                         };
                         const class = &program.classes.items[instance.class_id];
+                        switch (class.kind) {
+                            .@"enum" => {
+                                try new_instructions.append(alloc, instruction.*);
+                                continue;
+                            },
+                            else => {},
+                        }
                         const method_name = switch (bop.op) {
                             .bop => |b| b.toClassBuiltin(),
                             .cmp => |cmp| cmp.toClassBuiltin(),
                         };
-                        const method = class.findMethod(method_name) orelse {
+                        const method = class.kind.record.findMethod(method_name) orelse {
                             return error.CantFindBuiltin;
                         };
                         var arguments: ArrayList(TypedOperand) = .empty;
@@ -203,7 +210,7 @@ fn lowerStorageFunction(program: *Program, function: *Function, alloc: std.mem.A
                     const class = &program.classes.items[instance.class_id];
                     // malloc
                     const size_temp = function.nextTemp();
-                    const size = try class.resolveOffset(instance, class.fields.items.len, program, alloc);
+                    const size = try class.kind.record.resolveOffset(instance, class.kind.record.fields.items.len, program, alloc);
                     try new_instructions.append(alloc, .{ .lir = .{ .move = .{
                         .dst = .{ .operand = size_temp, .type = .i64 },
                         .src = .{ .constant = .{ .i64 = @intCast(size) } },
@@ -227,7 +234,7 @@ fn lowerStorageFunction(program: *Program, function: *Function, alloc: std.mem.A
                     std.debug.assert(fs.instance.type == .instance);
                     const instance = fs.instance.type.instance;
                     const class = &program.classes.items[instance.class_id];
-                    const offset = try class.resolveOffset(instance, fs.field_index, program, alloc);
+                    const offset = try class.kind.record.resolveOffset(instance, fs.field_index, program, alloc);
                     try new_instructions.append(alloc, .{ .lir = .{
                         .store_offset = .{
                             .dst = try fs.instance.clone(alloc),
@@ -242,7 +249,7 @@ fn lowerStorageFunction(program: *Program, function: *Function, alloc: std.mem.A
                     std.debug.assert(fl.instance.type == .instance);
                     const instance = fl.instance.type.instance;
                     const class = &program.classes.items[instance.class_id];
-                    const offset = try class.resolveOffset(instance, fl.field_index, program, alloc);
+                    const offset = try class.kind.record.resolveOffset(instance, fl.field_index, program, alloc);
                     try new_instructions.append(alloc, .{ .lir = .{
                         .load_offset = .{
                             .dst = try fl.dst.clone(alloc),
