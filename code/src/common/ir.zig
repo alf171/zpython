@@ -167,16 +167,24 @@ pub const ConstValue = union(enum) {
         };
     }
 
-    pub fn coherce(self: @This(), expected_type: ?TypeInfo) !@This() {
+    pub fn coherce(self: @This(), expected_type: ?TypeInfo, alloc: std.mem.Allocator) !@This() {
         const t = expected_type orelse return self;
         if (t.containsGenericVariable(null)) return self;
         return switch (self) {
             .i64 => |value| switch (t) {
-                .i64 => self,
+                .i64, .@"enum" => self,
                 .i32 => .{ .i32 = @intCast(value) },
                 .f64 => .{ .f64 = @floatFromInt(value) },
                 .f32 => .{ .f32 = @floatFromInt(value) },
-                else => return error.InvalidConstantCohersion,
+                .bool => .{ .bool = value != 0 },
+                else => {
+                    const lhs = try self.toType().toString(alloc);
+                    defer alloc.free(lhs);
+                    const rhs = try t.toString(alloc);
+                    defer alloc.free(rhs);
+                    std.debug.print("trying to coherce from {s} to {s}\n", .{ lhs, rhs });
+                    return error.InvalidConstantCohersion;
+                },
             },
             .f64 => |value| switch (t) {
                 .f64 => self,

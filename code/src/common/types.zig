@@ -40,6 +40,7 @@ pub const TypeBindings = struct {
     ) !TypeInfo {
         if (function.type_params.len > 0) {
             if (function.params.len != args.len) {
+                std.debug.print("mismatch in function {s}\n", .{function.name});
                 return error.ArgumentCountMismatch;
             }
             for (function.params, args) |param, arg| {
@@ -200,6 +201,8 @@ pub const TypeInfo = union(enum) {
         return switch (self) {
             // instances and callables are pointers
             .i64, .list, .tuple, .ptr, .f64, .instance, .callable => 8,
+            // use double for now
+            .@"enum" => 8,
             .i32, .f32 => 4,
             .bool, .char => 1,
             .type_variable => return error.GenericsNotLoweredProperly,
@@ -211,12 +214,12 @@ pub const TypeInfo = union(enum) {
     }
 
     /// expects a indexable input type
-    pub fn getElementType(typeInfo: TypeInfo) !TypeInfo {
+    pub fn getElementType(typeInfo: TypeInfo) TypeInfo {
         return switch (typeInfo) {
             .list => |list_type| list_type.element.*,
             .iterable => |it_type| it_type.element.*,
-            .lazy => |lazy| try getElementType(lazy.value.*),
-            else => error.ExpectedIndexableType,
+            .lazy => |lazy| getElementType(lazy.value.*),
+            else => unreachable,
         };
     }
 
@@ -409,6 +412,7 @@ pub const TypeInfo = union(enum) {
                 }
                 return false;
             },
+            .@"enum" => false,
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;
@@ -427,6 +431,7 @@ pub const TypeInfo = union(enum) {
             .module => try alloc.dupe(u8, "module"),
             .any => try alloc.dupe(u8, "any"),
             .void => try alloc.dupe(u8, "void"),
+            .@"enum" => try alloc.dupe(u8, "enum"),
             .tuple => |t| blk: {
                 var out: std.ArrayList(u8) = .empty;
                 errdefer out.deinit(alloc);
@@ -471,13 +476,12 @@ pub const TypeInfo = union(enum) {
                 defer alloc.free(class_id);
                 try out.appendSlice(alloc, class_id);
                 if (instance.args.len > 0) {
-                    try out.appendSlice(alloc, "[");
+                    try out.appendSlice(alloc, "_");
                     for (instance.args) |arg| {
                         const arg_name = try arg.toString(alloc);
                         defer alloc.free(arg_name);
                         try out.appendSlice(alloc, arg_name);
                     }
-                    try out.appendSlice(alloc, "]");
                 }
                 break :blk out.toOwnedSlice(alloc);
             },

@@ -153,7 +153,9 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
                             .cmp => |cmp| cmp.toClassBuiltin(),
                         };
                         const method = class.kind.record.findMethod(method_name) orelse {
-                            return error.CantFindBuiltin;
+                            // use the class default
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
                         };
                         var arguments: ArrayList(TypedOperand) = .empty;
                         errdefer {

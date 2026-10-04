@@ -24,7 +24,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
                 .list_literal => |ll| {
-                    const elem_type = try ll.dst.type.getElementType();
+                    const elem_type = ll.dst.type.getElementType();
                     const byte_count = 8 + ll.elements.len * try elem_type.sizeOfType();
                     const byte_count_ref: ValueRef = .{ .constant = .{ .i64 = @intCast(byte_count) } };
                     const list_length_ref: ValueRef = .{ .constant = .{ .i64 = @intCast(ll.elements.len) } };
@@ -87,7 +87,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     // dst <- list[index]
                     const scaled: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
                     const offset: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
-                    const elem_type = try s.src.type.getElementType();
+                    const elem_type = s.src.type.getElementType();
                     const elem_size = try elem_type.sizeOfType();
                     // scaled = index
                     if (elem_size == 1) {
@@ -200,7 +200,7 @@ fn rewriteListStore(
 ) !void {
     const scaled: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
     const offset: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
-    const elem_type = try ss.target.type.getElementType();
+    const elem_type = ss.target.type.getElementType();
     const elem_size = try elem_type.sizeOfType();
     // scaled = index
     if (elem_size == 1) {

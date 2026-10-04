@@ -286,6 +286,7 @@ fn specializeClass(
     defer alloc.free(specialized_name);
     // check if specialization already exists
     for (program.classes.items) |class| {
+        if (class.kind != .record) continue;
         if (class.kind.record.template_id != null and class.kind.record.template_id.? == template_id and std.mem.eql(u8, class.name, specialized_name)) {
             return class.id;
         }

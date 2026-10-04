@@ -27,7 +27,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
                 .list_repeat => |lr| {
-                    const elem_type = try lr.dst.type.getElementType();
+                    const elem_type = lr.dst.type.getElementType();
                     const list_length_temp: TypedOperand = .{
                         .operand = function.nextTemp(),
                         .type = try lr.count.type.clone(alloc),

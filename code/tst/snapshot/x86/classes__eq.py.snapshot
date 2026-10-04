@@ -1,0 +1,30 @@
+running program: (OPTIM=true)
+
+
+class Box():
+    def __init__(self, x: int) -> None:
+        self.x = x
+
+a = Box(1)
+b = a
+c = Box(1)
+
+print(a == b)
+print(a == c)
+
+performance report: (ORIGIN=user)
+number of asm lines: 85
+mov count: 40
+memory load count: 12
+memory store count: 19
+conditional jumps: 0
+unconditional jumps: 2
+comparisons: 2
+returns: 2
+call count: 9
+spill rounds: 0
+
+actual output:
+True
+False
+[!!memory report!!]: allocs=8 frees=8 allocated_bytes=90 freed_bytes=90

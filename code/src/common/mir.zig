@@ -926,7 +926,7 @@ pub const Instruction = union(enum) {
                 .move => |*move| switch (move.src) {
                     .constant => |constant| {
                         move.src = .{
-                            .constant = try constant.coherce(move.dst.type),
+                            .constant = try constant.coherce(move.dst.type, alloc),
                         };
                     },
                     else => {},

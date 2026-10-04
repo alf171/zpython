@@ -199,6 +199,7 @@ fn walkAugAssignment(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.All
     const lhs = c.PyObject_GetAttrString(stmt, "target");
     std.debug.assert(lhs != null);
     const lhs_value = try walkExpr(lhs, ir_builder, null, alloc);
+    errdefer lhs_value.deinit(alloc);
 
     const rhs = c.PyObject_GetAttrString(stmt, "value");
     const rhs_value = try walkExpr(rhs, ir_builder, null, alloc);
@@ -566,7 +567,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             for (0..@intCast(len)) |i| {
                 const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
                 std.debug.assert(elem != null);
-                const expected_elem_type: ?TypeInfo = if (expected_type) |t| try t.getElementType() else null;
+                const expected_elem_type: ?TypeInfo = if (expected_type) |t|
+                    t.getElementType()
+                else
+                    null;
                 // [conditional] use constant instead of an operand if we can
                 switch (getExprKind(elem)) {
                     .Constant => {
@@ -854,8 +858,11 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                         .record => {
                             const func = op.toClassBuiltin();
                             const method = class.kind.record.findMethod(func) orelse {
-                                std.debug.print("cant find method {s}\n", .{func});
-                                return error.CantFindMethod;
+                                if (rhs.type != .instance) {
+                                    return error.InvalidComparisonForDefault;
+                                }
+                                // the deafult comparison ops return bools
+                                break :blk .bool;
                             };
                             const function = ir_builder.getFunction(method.function_id) orelse {
                                 return error.CantFindFunction;
@@ -892,7 +899,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             if (std.mem.eql(u8, func_kind, "Name")) {
                 return walkNamedCall(stmt, func, ir_builder, expected_type, alloc);
             } else if (std.mem.eql(u8, func_kind, "Attribute")) {
-                return walkMethodCall(stmt, func, ir_builder, alloc);
+                return walkMethodCall(stmt, func, ir_builder, expected_type, alloc);
             } else if (std.mem.eql(u8, func_kind, "Subscript")) {
                 return walkGenericCall(stmt, func, ir_builder, alloc);
             }
@@ -1564,9 +1571,18 @@ fn walkNamedCall(
             return error.CantFindInit;
         };
     } else null;
+
+    var constructor_bindings: TypeBindings = .init(alloc);
+    defer constructor_bindings.deinit(alloc);
     if (constructor_init) |init| {
         if (init.params.len != c.PyList_Size(args) + 1) {
             return error.InvalidArgCount;
+        }
+        // bind constructor generics!
+        if (expected_type) |t| {
+            if (t == .instance) {
+                try init.params[0].type.unify(t, &constructor_bindings, alloc);
+            }
         }
     }
 
@@ -1607,13 +1623,20 @@ fn walkNamedCall(
                 function.params[i].type
         else
             null;
-        // dont infer type from generic args
-        const expected_arg_type = if (param_type) |t|
-            if (!t.containsGenericVariable(null)) t else null
+        // handle generics in expected_type
+        const resolved_param_type: ?TypeInfo = if (param_type) |t|
+            t.substitute(&constructor_bindings, alloc) catch |err| switch (err) {
+                error.ExpectedBinding => null,
+                else => return err,
+            }
         else
             null;
-        const arg = try walkExpr(arg_obj, ir_builder, expected_arg_type, alloc);
+        defer if (resolved_param_type) |t| t.deinit(alloc);
+        const arg = try walkExpr(arg_obj, ir_builder, resolved_param_type, alloc);
         try arguments.append(alloc, arg);
+        if (constructor_init) |init| {
+            try init.params[i + 1].type.unify(arg.type, &constructor_bindings, alloc);
+        }
     }
 
     if (ir_builder.getLocal(name_slice) catch null) |local_id| {
@@ -1648,18 +1671,16 @@ fn walkNamedCall(
     // class constructor
     if (ir_builder.findClass(name_slice)) |class| {
         const init = constructor_init orelse return error.CantFindInit;
-        var bindings: TypeBindings = .init(alloc);
-        defer bindings.deinit(alloc);
 
         for (init.params[1..], arguments.items) |param, arg| {
-            try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
+            try TypeInfo.unify(param.type, arg.type, &constructor_bindings, alloc);
         }
 
         const instance_args = try alloc.alloc(TypeInfo, class.kind.record.type_params.len);
         errdefer alloc.free(instance_args);
 
         for (class.kind.record.type_params, 0..) |type_param, i| {
-            const bound_type = bindings.get(type_param.id) orelse {
+            const bound_type = constructor_bindings.get(type_param.id) orelse {
                 return error.ExpectedBinding;
             };
             instance_args[i] = try bound_type.clone(alloc);
@@ -1687,7 +1708,13 @@ fn walkNamedCall(
 }
 
 // Call(func=Attribute(value=Name(id='audi', ctx=Load()), attr='print_speed', ctx=Load()))
-fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!TypedOperand {
+fn walkMethodCall(
+    stmt: *PyObject,
+    func: *PyObject,
+    ir_builder: *IrBuilder,
+    expected_type: ?TypeInfo,
+    alloc: std.mem.Allocator,
+) anyerror!TypedOperand {
     const instance_obj = c.PyObject_GetAttrString(func, "value");
     std.debug.assert(instance_obj != null);
 
@@ -1747,8 +1774,21 @@ fn walkMethodCall(stmt: *PyObject, func: *PyObject, ir_builder: *IrBuilder, allo
             const raw_name = c.PyUnicode_AsUTF8(id_obj);
             std.debug.assert(raw_name != null);
             const name = std.mem.span(raw_name);
+            if (std.mem.eql(u8, method_name, "__new__")) {
+                const t = expected_type orelse return error.TypeNotFound;
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try t.clone(alloc),
+                };
+                try ir_builder.emit(.{
+                    .class_alloc = .{ .dst = dst },
+                }, alloc);
+
+                return try dst.clone(alloc);
+            }
             if (ir_builder.findClassRecord(name)) |class| {
                 const method_info = class.findMethod(method_name) orelse {
+                    std.debug.print("cant find method {s}\n", .{method_name});
                     return error.CantFindMethod;
                 };
                 if (!method_info.is_static) return error.ExpectedInstance;
@@ -2089,16 +2129,23 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
     std.debug.assert(iter != null);
 
     const expr = try walkExpr(iter, ir_builder, null, alloc);
+    errdefer expr.deinit(alloc);
     std.debug.assert(expr.type.isIterable());
 
     const index0: TypedOperand = .{
         .operand = ir_builder.nextTemp(),
-        .type = try expr.type.getElementType(),
+        .type = switch (expr.type) {
+            .list => .i64,
+            else => expr.type.getElementType(),
+        },
     };
     const zero: ConstValue = switch (index0.type) {
         .i64 => .{ .i64 = 0 },
         .i32 => .{ .i32 = 0 },
-        else => return error.InvalidRange,
+        else => |e| {
+            std.debug.print("range called on {s}\n", .{@tagName(e)});
+            return error.InvalidRange;
+        },
     };
     try ir_builder.emit(.{ .lir = .{ .move = .{
         .dst = index0,
@@ -2128,9 +2175,11 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                     } }, alloc_);
                 },
                 .list => {
-                    std.debug.print("list\n", .{});
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{ .operand = value, .type = .any },
+                        .dst = .{
+                            .operand = value,
+                            .type = try iterable.type.getElementType().clone(alloc_),
+                        },
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
@@ -2145,7 +2194,10 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 },
                 .lazy => {
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{ .operand = value, .type = try iterable.type.getElementType() },
+                        .dst = .{
+                            .operand = value,
+                            .type = iterable.type.getElementType(),
+                        },
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
@@ -2153,15 +2205,15 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 else => return error.CantIndexInto,
             }
 
-            const elem_type = try iterable.type.getElementType();
+            const elem_type = iterable.type.getElementType();
             const local = try ir_builder_.currentScope().getOrCreateLocal(
                 body_.condition_var_name,
-                try elem_type.clone(alloc_),
+                elem_type,
                 alloc_,
             );
             const typed_value: TypedOperand = .{
                 .operand = value,
-                .type = elem_type,
+                .type = try elem_type.clone(alloc_),
             };
             try ir_builder_.currentScope().local_values.map.put(local, typed_value);
             try ir_builder_.emit(.{ .lir = .{ .store_local = .{
@@ -2170,7 +2222,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                     .name = try alloc_.dupe(u8, body_.condition_var_name),
                     .type = try elem_type.clone(alloc_),
                 },
-                .src = typed_value,
+                .src = try typed_value.clone(alloc_),
             } } }, alloc_);
 
             try walkStmtList(body_.stmt_list, ir_builder_, alloc_);
@@ -2430,6 +2482,7 @@ fn getCompareOp(expr: *PyObject) !CmpOp {
     const name = getPyType(ops_obj);
 
     if (std.mem.eql(u8, name, "Eq")) return .eq;
+    if (std.mem.eql(u8, name, "Is")) return .eq;
     if (std.mem.eql(u8, name, "NotEq")) return .neq;
     if (std.mem.eql(u8, name, "Lt")) return .lt;
     if (std.mem.eql(u8, name, "LtE")) return .lte;

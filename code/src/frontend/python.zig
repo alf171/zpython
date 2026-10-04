@@ -423,13 +423,13 @@ pub fn parseConstant(
     const value_type = getPyType(value_obj);
     if (std.mem.eql(u8, value_type, "int")) {
         const value: ConstValue = .{ .i64 = c.PyLong_AsLong(value_obj) };
-        return .{ .immediate = try value.coherce(expected_type) };
+        return .{ .immediate = try value.coherce(expected_type, alloc) };
     } else if (std.mem.eql(u8, value_type, "float")) {
         const value: ConstValue = .{ .f64 = c.PyFloat_AsDouble(value_obj) };
-        return .{ .immediate = try value.coherce(expected_type) };
+        return .{ .immediate = try value.coherce(expected_type, alloc) };
     } else if (std.mem.eql(u8, value_type, "bool")) {
         const value: ConstValue = .{ .bool = c.PyObject_IsTrue(value_obj) == 1 };
-        return .{ .immediate = try value.coherce(expected_type) };
+        return .{ .immediate = try value.coherce(expected_type, alloc) };
     } else if (std.mem.eql(u8, value_type, "str")) {
         var raw_len: isize = 0;
         const raw = c.PyUnicode_AsUTF8AndSize(value_obj, &raw_len);
@@ -509,7 +509,7 @@ pub fn parseTypeAnnotation(
                 .record => |record| {
                     if (record.type_params.len != 0) return error.InvalidTypeArgCount;
                 },
-                .@"enum" => {},
+                .@"enum" => return .{ .@"enum" = class.id },
             }
             return .{ .instance = .{
                 .class_id = class.id,
