@@ -103,6 +103,12 @@ pub fn emit(
                                             bits,
                                         });
                                     },
+                                    .bool => |b| {
+                                        try out.print(alloc, "\tv_mov_b32 v{d}, {d}\n", .{
+                                            dst.base,
+                                            @intFromBool(b),
+                                        });
+                                    },
                                     else => |e| {
                                         std.debug.print("cant handle {s}\n", .{@tagName(e)});
                                         return error.NotImpl;
@@ -210,7 +216,12 @@ pub fn emit(
                                                     try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
                                                     try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
                                                 },
-                                                else => return error.NotImpl,
+                                                // TODO: impl
+                                                .bool => {},
+                                                else => |e| {
+                                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                                    return error.NotImpl;
+                                                },
                                             }
                                         },
                                         else => |e| {
@@ -243,6 +254,14 @@ pub fn emit(
                                         },
                                         .i32, .f32 => {
                                             try out.print(alloc, "\tglobal_store_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                                offset.base,
+                                                src.base,
+                                                base.base,
+                                                base.base + 1,
+                                            });
+                                        },
+                                        .bool => {
+                                            try out.print(alloc, "\tglobal_store_b8 v{d}, v{d}, s[{d}:{d}]\n", .{
                                                 offset.base,
                                                 src.base,
                                                 base.base,
@@ -336,14 +355,19 @@ pub fn emit(
                                     try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
                                     try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
                                     switch (lo.dst.type) {
+                                        .i64, .list => {
+                                            std.debug.assert(dst.count == 2);
+                                            try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
+                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                        },
                                         .i32, .f32 => {
                                             std.debug.assert(dst.count == 1);
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
-                                        .i64, .list => {
-                                            std.debug.assert(dst.count == 2);
-                                            try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
+                                        .bool => {
+                                            std.debug.assert(dst.count == 1);
+                                            try out.print(alloc, "\tglobal_load_u8 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
                                         },
                                         else => |e| {
@@ -368,6 +392,17 @@ pub fn emit(
                                             std.debug.assert(dst.count == 1);
                                             std.debug.assert(src.count == 2);
                                             try out.print(alloc, "\tglobal_load_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                                dst.base,
+                                                offset.base,
+                                                src.base,
+                                                src.base + 1,
+                                            });
+                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                        },
+                                        .bool => {
+                                            std.debug.assert(dst.count == 1);
+                                            std.debug.assert(src.count == 2);
+                                            try out.print(alloc, "\tglobal_load_u8 v{d}, v{d}, s[{d}:{d}]\n", .{
                                                 dst.base,
                                                 offset.base,
                                                 src.base,
@@ -412,7 +447,14 @@ pub fn emit(
                                     try out.print(alloc, "v{d}, ", .{else_value.base});
                                 },
                                 .constant => |c| {
-                                    try out.print(alloc, "{d}, ", .{try c.valueAsIntImm()});
+                                    switch (c) {
+                                        .f64 => return error.NotImpl,
+                                        .f32 => |value| {
+                                            const bits: u32 = @bitCast(value);
+                                            try out.print(alloc, "0x{x}", .{bits});
+                                        },
+                                        else => try out.print(alloc, "{d}, ", .{try c.valueAsIntImm()}),
+                                    }
                                 },
                             }
                             switch (s.if_value) {
@@ -436,7 +478,14 @@ pub fn emit(
                                             std.debug.assert(src.reg_type == .vgpr);
                                             try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
                                         },
-                                        else => return error.NotImpl,
+                                        // TODO: impl
+                                        .bool => {
+                                            std.debug.print("swalling exception from exp(bool)", .{});
+                                        },
+                                        else => |e| {
+                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                            return error.NotImpl;
+                                        },
                                     }
                                 },
                                 else => |e| {
