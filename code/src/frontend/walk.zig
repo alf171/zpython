@@ -48,7 +48,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type, Hash };
 
 const BoolOp = enum { And, Or };
 
@@ -1560,6 +1560,40 @@ fn walkNamedCall(
                 } }, alloc);
                 return try dst.clone(alloc);
             },
+            .Hash => {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const value = try walkExpr(arg, ir_builder, null, alloc);
+                defer value.deinit(alloc);
+
+                if (value.type != .instance) {
+                    return error.HashOnlyAllowedOnInstance;
+                }
+
+                const class = ir_builder.getClassRecord(value.type.instance.class_id);
+                const method = class.findMethod("__hash__") orelse {
+                    return error.CantFindHashFunction;
+                };
+                const function = ir_builder.getFunction(method.function_id) orelse {
+                    return error.CantFindHashFunction;
+                };
+
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try function.return_type.clone(alloc),
+                };
+
+                const fargs = try alloc.alloc(TypedOperand, 1);
+                fargs[0] = value;
+
+                try ir_builder.emit(.{ .function_call = .{
+                    .dst = dst,
+                    .callee = .{ .direct = try alloc.dupe(u8, function.label) },
+                    .args = fargs,
+                } }, alloc);
+                return try dst.clone(alloc);
+            },
         }
     }
     // class constructor
@@ -2526,6 +2560,7 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "exp")) return .Exp;
     if (std.mem.eql(u8, name, "exp2")) return .Exp2;
     if (std.mem.eql(u8, name, "type")) return .Type;
+    if (std.mem.eql(u8, name, "hash")) return .Hash;
     return null;
 }
 
