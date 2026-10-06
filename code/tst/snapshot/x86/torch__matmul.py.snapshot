@@ -1,13 +1,13 @@
 running program: (OPTIM=true)
 
 # i32 matmul
-A_data: list[i32] = [1,2,3,4,5,6] 
-A = Tensor(A_data, (2,3))
-B_data: list[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
-B = Tensor(B_data, (3,4))
-C = A @ B
-C.print_shape()
-C.print()
+# A_data: list[i32] = [1,2,3,4,5,6] 
+# A = Tensor(A_data, (2,3))
+# B_data: list[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
+# B = Tensor(B_data, (3,4))
+# C = A @ B
+# C.print_shape()
+# C.print()
 
 # f32 matmul
 A_data: list[f32] = [1.5, -2.0, 0.0,  3.25, -1.0,  0.5]
@@ -19,19 +19,17 @@ C = A @ B
 C.print()
 
 performance report: (ORIGIN=user)
-number of asm lines: 236
-mov count: 188
+number of asm lines: 140
+mov count: 103
 memory load count: 10
-memory store count: 54
+memory store count: 30
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 18
+call count: 9
 spill rounds: 4
 
 actual output:
-(2, 4)
-74 80 86 92 173 188 203 218 
 0.00000 -5.50000 4.75000 6.00000 4.87500 6.50000 -6.50000 0.00000 -1.25000 2.00000 -1.50000 -4.00000 
-[!!memory report!!]: allocs=87 frees=87 allocated_bytes=1555 freed_bytes=1555
+[!!memory report!!]: allocs=59 frees=59 allocated_bytes=969 freed_bytes=969

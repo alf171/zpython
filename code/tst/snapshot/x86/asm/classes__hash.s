@@ -11,9 +11,26 @@ main:
 	pushq %r14
 	pushq %r15
 main_L0:
-	leaq _basic__f(%rip), %rdi
-	movq $0, %rsi
-	callq _basic__g
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq %r13, %rdi
+	movq $5, %rsi
+	callq _hash__Key____init__
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq $5, %rsi
+	callq _hash__Key____init__
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movq %r12, %rdi
+	movq $6, %rsi
+	callq _hash__Key____init__
+	movq %r13, %rdi
+	callq _hash__Key____hash__
 	movq %rax, %rbx
 	movq $10, %rdi
 	callq arena_malloc
@@ -29,6 +46,88 @@ main_L0:
 	movq %rbx, %rdi
 	movq %rdx, %rsi
 	callq _print__print_int
+	movq %r13, %rdi
+	callq _hash__Key____hash__
+	movq %rax, %rbx
+	movq %r14, %rdi
+	callq _hash__Key____hash__
+	movq %rax, %rdi
+	cmpq %rdi, %rbx
+	sete %r11b
+	movzbq %r11b, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _print__print_bool
+	movq %r13, %rdi
+	callq _hash__Key____hash__
+	movq %rax, %rbx
+	movq %r12, %rdi
+	callq _hash__Key____hash__
+	movq %rax, %rdi
+	cmpq %rdi, %rbx
+	sete %r11b
+	movzbq %r11b, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _print__print_bool
+	movq %r13, %rdi
+	movq %r14, %rsi
+	callq _hash__Key____eq__
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _print__print_bool
+	movq %r13, %rdi
+	movq %r12, %rsi
+	callq _hash__Key____eq__
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _print__print_bool
 	callq arena_free
 	jmp main_epilogue
 main_epilogue:
@@ -782,7 +881,7 @@ _module__Module____init___epilogue:
 	popq %rbp
 	retq
 # origin: user
-_basic__f:
+_hash__Key____init__:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -791,20 +890,12 @@ _basic__f:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_basic__f_L0:
-	cmpq $0, %rdi
-	jne _basic__f_L1
-	jmp _basic__f_L2
-_basic__f_L1:
-	movq $1, %rdi
-	jmp _basic__f_L3
-_basic__f_L2:
-	movq $2, %rdi
-	jmp _basic__f_L3
-_basic__f_L3:
-	movq %rdi, %rax
-	jmp _basic__f_epilogue
-_basic__f_epilogue:
+_hash__Key____init___L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	jmp _hash__Key____init___epilogue
+_hash__Key____init___epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -814,7 +905,7 @@ _basic__f_epilogue:
 	popq %rbp
 	retq
 # origin: user
-_basic__g:
+_hash__Key____hash__:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -823,15 +914,40 @@ _basic__g:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_basic__g_L0:
-	movq %rsi, %rdi
-	movq $2, %rbx
-	callq _basic__f
-	movq %rax, %rdi
-	imulq %rbx, %rdi
+_hash__Key____hash___L0:
+	movq 0(%rdi), %rdi
 	movq %rdi, %rax
-	jmp _basic__g_epilogue
-_basic__g_epilogue:
+	jmp _hash__Key____hash___epilogue
+_hash__Key____hash___epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: user
+_hash__Key____eq__:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_hash__Key____eq___L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq 0(%rdx), %rsi
+	movq 0(%rdi), %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rdi
+	movq %rdi, %rax
+	jmp _hash__Key____eq___epilogue
+_hash__Key____eq___epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

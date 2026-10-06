@@ -798,7 +798,7 @@ _closure__make_L0:
 	movq $16, %rdi
 	callq arena_malloc
 	movq %rax, %rsi
-	leaq _closure____lambda_92(%rip), %rdi
+	leaq _closure____lambda_91(%rip), %rdi
 	movq %rdi, 0(%rsi)
 	movl %ebx, 8(%rsi)
 	movq %rsi, %rax
@@ -812,29 +812,8 @@ _closure__make_epilogue:
 	addq $8, %rsp
 	popq %rbp
 	retq
-# origin: runtime
-_tensor____lambda_86:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_86_L0:
-	jmp _tensor____lambda_86_epilogue
-_tensor____lambda_86_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
 # origin: user
-_closure____lambda_92:
+_closure____lambda_91:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -843,11 +822,11 @@ _closure____lambda_92:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_closure____lambda_92_L0:
+_closure____lambda_91_L0:
 	movslq 8(%rdi), %rdi
 	movq %rdi, %rax
-	jmp _closure____lambda_92_epilogue
-_closure____lambda_92_epilogue:
+	jmp _closure____lambda_91_epilogue
+_closure____lambda_91_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

@@ -13,7 +13,7 @@ main:
 main_L0:
 	movq $2, %rdi
 	movq $3, %rsi
-	callq _lambda____lambda_91
+	callq _lambda____lambda_90
 	movq %rax, %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
@@ -782,29 +782,8 @@ _module__Module____init___epilogue:
 	addq $8, %rsp
 	popq %rbp
 	retq
-# origin: runtime
-_tensor____lambda_85:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_85_L0:
-	jmp _tensor____lambda_85_epilogue
-_tensor____lambda_85_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
 # origin: user
-_lambda____lambda_91:
+_lambda____lambda_90:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -813,13 +792,13 @@ _lambda____lambda_91:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_lambda____lambda_91_L0:
+_lambda____lambda_90_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rdi
 	addq %rdx, %rdi
 	movq %rdi, %rax
-	jmp _lambda____lambda_91_epilogue
-_lambda____lambda_91_epilogue:
+	jmp _lambda____lambda_90_epilogue
+_lambda____lambda_90_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

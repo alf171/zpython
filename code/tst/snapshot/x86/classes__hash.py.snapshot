@@ -1,0 +1,44 @@
+running program: (OPTIM=true)
+
+
+
+class Key:
+    def __init__(self, val: int) -> None:
+        self.val = val
+
+
+    def __hash__(self) -> int:
+        return self.val
+
+    def __eq__(self, other: Key) -> bool:
+        return self.val == other.val
+
+a = Key(5)
+b = Key(5)
+c = Key(6)
+
+print(hash(a))
+print(hash(a) == hash(b))
+print(hash(a) == hash(c))
+print(a == b)
+print(a == c)
+
+performance report: (ORIGIN=user)
+number of asm lines: 200
+mov count: 106
+memory load count: 27
+memory store count: 40
+conditional jumps: 0
+unconditional jumps: 4
+comparisons: 3
+returns: 4
+call count: 24
+spill rounds: 0
+
+actual output:
+5
+True
+False
+True
+False
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=182 freed_bytes=182

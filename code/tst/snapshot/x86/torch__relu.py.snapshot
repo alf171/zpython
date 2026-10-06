@@ -1,28 +1,28 @@
 running program: (OPTIM=true)
 
-neg_one: i32 = -1
+neg_one: f32 = -1
 A = Tensor.fill((3,3), neg_one)
 B = A.relu()
 print(B[0,0])
 
-one: i32 = 1
+one: f32 = 1
 C = Tensor.fill((3,3), one)
 D = C.relu()
 print(D[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 90
-mov count: 55
-memory load count: 6
-memory store count: 20
+number of asm lines: 93
+mov count: 56
+memory load count: 8
+memory store count: 22
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
 call count: 11
-spill rounds: 0
+spill rounds: 2
 
 actual output:
-0
-1
-[!!memory report!!]: allocs=34 frees=34 allocated_bytes=852 freed_bytes=852
+0.00000
+1.00000
+[!!memory report!!]: allocs=44 frees=44 allocated_bytes=984 freed_bytes=984

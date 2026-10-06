@@ -1172,8 +1172,8 @@ _matmul__matmul_L2:
 	movq %rdi, -24(%rbp)
 	movq %rdx, -32(%rbp)
 	movq %rsi, %rcx
-	movq %r8, %r12
-	movq %rbx, %rdx
+	movq %r8, %rdx
+	movq %rbx, %r12
 	movq %r9, %rsi
 	movq $0, %rbx
 	jmp _matmul__matmul_L4
@@ -1287,7 +1287,7 @@ _matmul__matmul_L5:
 	movq %rdi, %r13
 	addq %rbx, %r13
 	movq $8, %rdi
-	movq (%rdi,%r12), %rdi
+	movq (%rdi,%rdx), %rdi
 	movslq 0(%rdi), %r8
 	movq $0, %rdi
 	movq %rdi, -40(%rbp)
@@ -1302,8 +1302,8 @@ _matmul__matmul_L6:
 	movq $1, %rdi
 	addq %r10, %rdi
 	movq %rcx, %rsi
-	movq %r12, %r8
-	movq %rdx, %rbx
+	movq %rdx, %r8
+	movq %r12, %rbx
 	movq %rdi, %r10
 	jmp _matmul__matmul_L1
 _matmul__matmul_L7:
@@ -1322,9 +1322,8 @@ _matmul__matmul_L8:
 	movq %rsi, %r14
 	imulq %rdi, %r14
 	movq $8, %rdi
-	addq %rdi, %r14
-	movq -56(%rbp), %rdi
-	movq (%r14,%rdi), %r14
+	addq %r14, %rdi
+	movq (%rdi,%rdx), %r14
 	movq $4, %rdi
 	movq %r13, %r15
 	imulq %rdi, %r15
@@ -1352,8 +1351,9 @@ _matmul__matmul_L9:
 	movq %rsi, %r12
 	imulq %rdi, %r12
 	movq $8, %rdi
-	addq %r12, %rdi
-	movq (%rdi,%rdx), %r12
+	addq %rdi, %r12
+	movq -56(%rbp), %rdi
+	movq (%r12,%rdi), %r12
 	movq $4, %rdi
 	imulq %rdi, %r8
 	movq $8, %rdi
@@ -1374,27 +1374,6 @@ _matmul__matmul_epilogue:
 	popq %rbx
 	addq $8, %rsp
 	addq $64, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_tensor____lambda_86:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_86_L0:
-	jmp _tensor____lambda_86_epilogue
-_tensor____lambda_86_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
 	popq %rbp
 	retq
 # origin: runtime

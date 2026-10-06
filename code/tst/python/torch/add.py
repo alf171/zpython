@@ -5,11 +5,8 @@ B = Tensor.fill((3,3), three)
 
 C = A + B
 print(C[0, 0])
-# FIXME: subscriptions dont coherse
-one: f32 = 1.0
-C.grad[0, 0] = one
-print(A.grad[0, 0])
-print(B.grad[0, 0])
-C.backward()
-print(A.grad[0, 0])
-print(B.grad[0, 0])
+order = C.uop.toposort(16)
+print(len(order))
+print(order[0] == A.uop)
+print(order[1] == B.uop)
+print(order[2] == C.uop)

@@ -955,27 +955,6 @@ _module__Module____init___epilogue:
 	addq $8, %rsp
 	popq %rbp
 	retq
-# origin: runtime
-_tensor____lambda_90:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_90_L0:
-	jmp _tensor____lambda_90_epilogue
-_tensor____lambda_90_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
 # origin: user
 _generics___print__i64:
 	pushq %rbp

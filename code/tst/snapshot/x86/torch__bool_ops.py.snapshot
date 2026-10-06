@@ -18,7 +18,7 @@ y5 = x1 == x2
 y5.print()
 y6 = x1 != x2
 y6.print()
-
+swalling exception from exp(bool)
 performance report: (ORIGIN=user)
 number of asm lines: 117
 mov count: 78
@@ -38,4 +38,4 @@ True True True False
 False True True True 
 False True True False 
 True False False True 
-[!!memory report!!]: allocs=144 frees=144 allocated_bytes=2184 freed_bytes=2184
+[!!memory report!!]: allocs=162 frees=162 allocated_bytes=2366 freed_bytes=2366

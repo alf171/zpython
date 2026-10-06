@@ -779,10 +779,10 @@ _specialization__run_L0:
 	movq $1, %rdi
 	callq _specialization__make_box__i64
 	movq %rax, %rbx
-	movq $21, %rdi
+	movq $20, %rdi
 	callq arena_malloc
 	movq %rax, %r12
-	movq $13, %rdi
+	movq $12, %rdi
 	movq %rdi, 0(%r12)
 	movq $8, %rsi
 	movq $99, %rdi
@@ -803,10 +803,10 @@ _specialization__run_L0:
 	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $14, %rsi
-	movq $53, %rdi
+	movq $55, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $15, %rsi
-	movq $91, %rdi
+	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $16, %rsi
 	movq $105, %rdi
@@ -818,9 +818,6 @@ _specialization__run_L0:
 	movq $52, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $19, %rsi
-	movq $93, %rdi
-	movb %dil, (%r12,%rsi)
-	movq $20, %rsi
 	movq $0, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $10, %rdi
@@ -840,10 +837,10 @@ _specialization__run_L0:
 	movq $2, %rdi
 	callq _specialization__make_box__i64
 	movq %rax, %r15
-	movq $21, %rdi
+	movq $20, %rdi
 	callq arena_malloc
 	movq %rax, %r12
-	movq $13, %rdi
+	movq $12, %rdi
 	movq %rdi, 0(%r12)
 	movq $8, %rsi
 	movq $99, %rdi
@@ -864,10 +861,10 @@ _specialization__run_L0:
 	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $14, %rsi
-	movq $53, %rdi
+	movq $55, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $15, %rsi
-	movq $91, %rdi
+	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $16, %rsi
 	movq $105, %rdi
@@ -879,9 +876,6 @@ _specialization__run_L0:
 	movq $52, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $19, %rsi
-	movq $93, %rdi
-	movb %dil, (%r12,%rsi)
-	movq $20, %rsi
 	movq $0, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $10, %rdi
@@ -902,10 +896,10 @@ _specialization__run_L0:
 	movq %r11, %xmm0
 	callq _specialization__make_box__f64
 	movq %rax, %r14
-	movq $21, %rdi
+	movq $20, %rdi
 	callq arena_malloc
 	movq %rax, %r12
-	movq $13, %rdi
+	movq $12, %rdi
 	movq %rdi, 0(%r12)
 	movq $8, %rsi
 	movq $99, %rdi
@@ -926,10 +920,10 @@ _specialization__run_L0:
 	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $14, %rsi
-	movq $53, %rdi
+	movq $55, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $15, %rsi
-	movq $91, %rdi
+	movq $95, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $16, %rsi
 	movq $102, %rdi
@@ -941,9 +935,6 @@ _specialization__run_L0:
 	movq $52, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $19, %rsi
-	movq $93, %rdi
-	movb %dil, (%r12,%rsi)
-	movq $20, %rsi
 	movq $0, %rdi
 	movb %dil, (%r12,%rsi)
 	movq $10, %rdi
@@ -962,13 +953,13 @@ _specialization__run_L0:
 	callq _print__print_string
 	movq $4, %rdi
 	cvtsi2ssq %rdi, %xmm0
-	movq %xmm0, -16(%rbp)
+	movq %xmm0, -8(%rbp)
 	movq $12, %rdi
 	callq arena_malloc
 	movq %rax, %r13
 	movq $1, %rdi
 	movq %rdi, 0(%r13)
-	movq -16(%rbp), %xmm0
+	movq -8(%rbp), %xmm0
 	movq $8, %rdi
 	movss %xmm0, (%r13,%rdi)
 	movq $8, %rdi
@@ -977,10 +968,10 @@ _specialization__run_L0:
 	movq %r12, %rdi
 	movq %r13, %rsi
 	callq _specialization__Box____init____f32
-	movq $21, %rdi
+	movq $20, %rdi
 	callq arena_malloc
 	movq %rax, %r13
-	movq $13, %rdi
+	movq $12, %rdi
 	movq %rdi, 0(%r13)
 	movq $8, %rsi
 	movq $99, %rdi
@@ -1001,10 +992,10 @@ _specialization__run_L0:
 	movq $95, %rdi
 	movb %dil, (%r13,%rsi)
 	movq $14, %rsi
-	movq $53, %rdi
+	movq $55, %rdi
 	movb %dil, (%r13,%rsi)
 	movq $15, %rsi
-	movq $91, %rdi
+	movq $95, %rdi
 	movb %dil, (%r13,%rsi)
 	movq $16, %rsi
 	movq $102, %rdi
@@ -1016,9 +1007,6 @@ _specialization__run_L0:
 	movq $50, %rdi
 	movb %dil, (%r13,%rsi)
 	movq $19, %rsi
-	movq $93, %rdi
-	movb %dil, (%r13,%rsi)
-	movq $20, %rsi
 	movq $0, %rdi
 	movb %dil, (%r13,%rsi)
 	movq $10, %rdi
@@ -1072,7 +1060,7 @@ _specialization__run_L0:
 	movq 0(%r14), %rsi
 	movq $8, %rdi
 	movsd (%rdi,%rsi), %xmm0
-	movq %xmm0, -8(%rbp)
+	movq %xmm0, -16(%rbp)
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -1084,7 +1072,7 @@ _specialization__run_L0:
 	movq $9, %rsi
 	movq $0, %rdi
 	movb %dil, (%rdx,%rsi)
-	movq -8(%rbp), %xmm0
+	movq -16(%rbp), %xmm0
 	movq %rdx, %rsi
 	callq _print__print_float
 	movq 0(%r12), %rsi
@@ -1132,27 +1120,6 @@ _specialization__run_epilogue:
 	popq %rbx
 	addq $8, %rsp
 	addq $32, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_tensor____lambda_89:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_tensor____lambda_89_L0:
-	jmp _tensor____lambda_89_epilogue
-_tensor____lambda_89_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
 	popq %rbp
 	retq
 # origin: user
