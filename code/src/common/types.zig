@@ -6,6 +6,7 @@ pub const ClassId = @import("class.zig").ClassId;
 pub const ConstValue = @import("ir.zig").ConstValue;
 pub const TypedOperand = @import("alloc.zig").TypedOperand;
 pub const ModuleId = @import("module.zig").ModuleId;
+pub const Program = @import("program.zig").Program;
 
 pub const TypeVarId = u32;
 
@@ -34,6 +35,7 @@ pub const TypeBindings = struct {
 
     pub fn inferReturnType(
         self: *@This(),
+        program: *const Program,
         function: *const Function,
         args: []const TypedOperand,
         alloc: std.mem.Allocator,
@@ -44,7 +46,7 @@ pub const TypeBindings = struct {
                 return error.ArgumentCountMismatch;
             }
             for (function.params, args) |param, arg| {
-                try TypeInfo.unify(param.type, arg.type, self, alloc);
+                try TypeInfo.unify(param.type, arg.type, self, program, alloc);
             }
         }
         const return_type = if (function.type_params.len > 0)
@@ -72,7 +74,8 @@ pub const TypeInfo = union(enum) {
     bool,
     char,
     /// size is stored in runtime header
-    list: struct {
+    /// fixed size!
+    array: struct {
         element: *const TypeInfo,
     },
     tuple: struct {
@@ -99,9 +102,9 @@ pub const TypeInfo = union(enum) {
 
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
         switch (self) {
-            .list => |list| {
-                list.element.*.deinit(alloc);
-                alloc.destroy(@constCast(list.element));
+            .array => |array| {
+                array.element.*.deinit(alloc);
+                alloc.destroy(@constCast(array.element));
             },
             .tuple => |tuple| {
                 for (tuple.elements) |elem| {
@@ -147,9 +150,9 @@ pub const TypeInfo = union(enum) {
                 }
                 return .{ .tuple = .{ .elements = elements } };
             },
-            .list => |l| {
-                return .{ .list = .{
-                    .element = try (try l.element.*.clone(alloc)).toOwnedPointer(alloc),
+            .array => |a| {
+                return .{ .array = .{
+                    .element = try (try a.element.*.clone(alloc)).toOwnedPointer(alloc),
                 } };
             },
             .callable => |c| {
@@ -200,7 +203,7 @@ pub const TypeInfo = union(enum) {
     pub fn sizeOfType(self: @This()) !usize {
         return switch (self) {
             // instances and callables are pointers
-            .i64, .list, .tuple, .ptr, .f64, .instance, .callable => 8,
+            .i64, .array, .tuple, .ptr, .f64, .instance, .callable => 8,
             // use double for now
             .@"enum" => 8,
             .i32, .f32 => 4,
@@ -216,16 +219,19 @@ pub const TypeInfo = union(enum) {
     /// expects a indexable input type
     pub fn getElementType(typeInfo: TypeInfo) TypeInfo {
         return switch (typeInfo) {
-            .list => |list_type| list_type.element.*,
+            .array => |array_type| array_type.element.*,
             .iterable => |it_type| it_type.element.*,
             .lazy => |lazy| getElementType(lazy.value.*),
-            else => unreachable,
+            else => |e| {
+                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                unreachable;
+            },
         };
     }
 
     pub fn isIterable(self: @This()) bool {
         return switch (self) {
-            .list, .tuple, .iterable, .any => true,
+            .array, .tuple, .iterable, .any => true,
             .lazy => |lazy| isIterable(lazy.value.*),
             else => false,
         };
@@ -257,7 +263,7 @@ pub const TypeInfo = union(enum) {
     }
 
     /// verifies generics logic
-    pub fn unify(self: @This(), expected: TypeInfo, bindings: *TypeBindings, alloc: std.mem.Allocator) !void {
+    pub fn unify(self: @This(), expected: TypeInfo, bindings: *TypeBindings, program: *const Program, alloc: std.mem.Allocator) !void {
         switch (self) {
             .type_variable => |tv| {
                 if (bindings.get(tv)) |resolves| {
@@ -273,11 +279,18 @@ pub const TypeInfo = union(enum) {
                 }
                 try bindings.put(tv, try expected.clone(alloc));
             },
-            .list => |generic_l| switch (expected) {
-                .list => |expected_l| {
-                    try unify(generic_l.element.*, expected_l.element.*, bindings, alloc);
+            .array => |generic_a| switch (expected) {
+                .array => |expected_a| {
+                    try unify(generic_a.element.*, expected_a.element.*, bindings, program, alloc);
                 },
-                else => return error.TypeMistmatch,
+                else => {
+                    const lhs = try self.toDisplayName(program, alloc);
+                    defer alloc.free(lhs);
+                    const rhs = try expected.toDisplayName(program, alloc);
+                    defer alloc.free(rhs);
+                    std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
+                    return error.TypeMistmatch;
+                },
             },
             .instance => |instance| switch (expected) {
                 .instance => |expected_i| {
@@ -288,13 +301,13 @@ pub const TypeInfo = union(enum) {
                         return error.TypeMismatch;
                     }
                     for (instance.args, expected_i.args) |actual_arg, expected_arg| {
-                        try unify(actual_arg, expected_arg, bindings, alloc);
+                        try unify(actual_arg, expected_arg, bindings, program, alloc);
                     }
                 },
                 else => {
-                    const lhs = try self.toString(alloc);
+                    const lhs = try self.toDisplayName(program, alloc);
                     defer alloc.free(lhs);
-                    const rhs = try expected.toString(alloc);
+                    const rhs = try expected.toDisplayName(program, alloc);
                     defer alloc.free(rhs);
                     std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
                     return error.TypeMistmatch;
@@ -306,7 +319,7 @@ pub const TypeInfo = union(enum) {
                         return error.TypeMismatch;
                     }
                     for (tuple.elements, expected_t.elements) |t, e| {
-                        try unify(t, e, bindings, alloc);
+                        try unify(t, e, bindings, program, alloc);
                     }
                 },
                 else => {
@@ -324,9 +337,9 @@ pub const TypeInfo = union(enum) {
                         return error.TypeMismatch;
                     }
                     for (callable.params, expected_c.params) |param, expected_param| {
-                        try param.unify(expected_param, bindings, alloc);
+                        try param.unify(expected_param, bindings, program, alloc);
                     }
-                    try callable.returns.*.unify(expected_c.returns.*, bindings, alloc);
+                    try callable.returns.*.unify(expected_c.returns.*, bindings, program, alloc);
                 },
                 else => {
                     const lhs = try self.toString(alloc);
@@ -361,9 +374,9 @@ pub const TypeInfo = union(enum) {
                 };
                 return try actual.clone(alloc);
             },
-            .list => |l| {
-                const elem = try substitute(l.element.*, bindings, alloc);
-                return .{ .list = .{ .element = try elem.toOwnedPointer(alloc) } };
+            .array => |a| {
+                const elem = try substitute(a.element.*, bindings, alloc);
+                return .{ .array = .{ .element = try elem.toOwnedPointer(alloc) } };
             },
             // substitutes fields not methods
             .instance => |i| {
@@ -392,7 +405,7 @@ pub const TypeInfo = union(enum) {
     pub fn containsGenericVariable(self: @This(), wanted: ?TypeVarId) bool {
         return switch (self) {
             .type_variable => |found| if (wanted) |w| found == w else true,
-            .list => |x| x.element.containsGenericVariable(wanted),
+            .array => |a| a.element.containsGenericVariable(wanted),
             .tuple => |t| {
                 for (t.elements) |elem| {
                     if (elem.containsGenericVariable(wanted)) return true;
@@ -445,8 +458,8 @@ pub const TypeInfo = union(enum) {
                 try out.append(alloc, ')');
                 break :blk try out.toOwnedSlice(alloc);
             },
-            .list => |l| blk: {
-                const elem = try l.element.*.toString(alloc);
+            .array => |a| blk: {
+                const elem = try a.element.*.toString(alloc);
                 defer alloc.free(elem);
 
                 break :blk try std.fmt.allocPrint(alloc, "list_{s}", .{elem});
@@ -490,6 +503,29 @@ pub const TypeInfo = union(enum) {
                 return error.TypeStringNotImpl;
             },
         };
+    }
+
+    pub fn toDisplayName(self: @This(), program: *const Program, alloc: std.mem.Allocator) ![]const u8 {
+        switch (self) {
+            .instance => |instance| {
+                const class = program.classes.items[instance.class_id];
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                try out.appendSlice(alloc, class.name);
+                if (instance.args.len > 0) {
+                    try out.append(alloc, '[');
+                    for (instance.args, 0..) |arg, i| {
+                        if (i != 0) try out.appendSlice(alloc, ", ");
+                        const name = try arg.toDisplayName(program, alloc);
+                        defer alloc.free(name);
+                        try out.appendSlice(alloc, name);
+                    }
+                    try out.append(alloc, ']');
+                }
+                return out.toOwnedSlice(alloc);
+            },
+            else => return try self.toString(alloc),
+        }
     }
 };
 
