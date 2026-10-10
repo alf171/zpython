@@ -1,6 +1,6 @@
 running program: (OPTIM=true)
 
-A_data: list[f32] = [0.0, 1.0, -1.0, 5.0] 
+A_data: array[f32] = [0.0, 1.0, -1.0, 5.0] 
 A = Tensor(A_data, (2, 2))
 B = A.exp()
 
@@ -26,4 +26,4 @@ actual output:
 2.71828
 0.36787
 148.41316
-[!!memory report!!]: allocs=36 frees=36 allocated_bytes=640 freed_bytes=640
+[!!memory report!!]: allocs=34 frees=34 allocated_bytes=632 freed_bytes=632

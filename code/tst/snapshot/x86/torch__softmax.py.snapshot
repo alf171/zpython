@@ -1,7 +1,7 @@
 running program: (OPTIM=true)
 
 
-x_data: list[f32] = [1000.0, 999.9, -1000.0, -1001.0]
+x_data: array[f32] = [1000.0, 999.9, -1000.0, -1001.0]
 
 x = Tensor(x_data, (2,2))
 softmax = Softmax[f32]()
@@ -24,4 +24,4 @@ spill rounds: 2
 actual output:
 0.52497 0.47502 0.73105 0.26894 
 1.00000 1.00000 
-[!!memory report!!]: allocs=139 frees=139 allocated_bytes=2554 freed_bytes=2554
+[!!memory report!!]: allocs=131 frees=131 allocated_bytes=2530 freed_bytes=2530

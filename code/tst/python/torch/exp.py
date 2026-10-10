@@ -1,4 +1,4 @@
-A_data: list[f32] = [0.0, 1.0, -1.0, 5.0] 
+A_data: array[f32] = [0.0, 1.0, -1.0, 5.0] 
 A = Tensor(A_data, (2, 2))
 B = A.exp()
 

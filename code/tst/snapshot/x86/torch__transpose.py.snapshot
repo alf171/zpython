@@ -1,6 +1,6 @@
 running program: (OPTIM=true)
 
-A_data: list[f32] = [1,2,3,4]
+A_data: array[f32] = [1,2,3,4]
 A = Tensor(A_data, (2,2))
 B = A.transpose()
 print(B[1,0])
@@ -25,4 +25,4 @@ actual output:
 2.00000
 3.00000
 99.00000
-[!!memory report!!]: allocs=25 frees=25 allocated_bytes=452 freed_bytes=452
+[!!memory report!!]: allocs=27 frees=27 allocated_bytes=492 freed_bytes=492

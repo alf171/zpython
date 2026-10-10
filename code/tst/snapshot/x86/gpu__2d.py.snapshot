@@ -16,10 +16,10 @@ for i in range(5):
 print("\n", end="")
 
 performance report: (ORIGIN=user)
-number of asm lines: 201
-mov count: 137
-memory load count: 15
-memory store count: 40
+number of asm lines: 190
+mov count: 132
+memory load count: 14
+memory store count: 43
 conditional jumps: 2
 unconditional jumps: 7
 comparisons: 4
@@ -29,4 +29,4 @@ spill rounds: 4
 
 actual output:
 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 
-[!!memory report!!]: allocs=31 frees=31 allocated_bytes=373 freed_bytes=373
+[!!memory report!!]: allocs=35 frees=35 allocated_bytes=437 freed_bytes=437

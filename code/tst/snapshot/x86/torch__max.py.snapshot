@@ -1,6 +1,6 @@
 running program: (OPTIM=true)
 
-x_data: list[f32] = [40.0,20.0,50.0,30.0]
+x_data: array[f32] = [40.0,20.0,50.0,30.0]
 x1 = Tensor(x_data, (2,2))
 y = x1.max(0)
 y.print_shape()
@@ -26,4 +26,4 @@ actual output:
 50.00000 30.00000 
 (2, 1)
 40.00000 50.00000 
-[!!memory report!!]: allocs=65 frees=65 allocated_bytes=1004 freed_bytes=1004
+[!!memory report!!]: allocs=62 frees=62 allocated_bytes=992 freed_bytes=992

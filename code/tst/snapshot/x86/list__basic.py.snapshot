@@ -10,15 +10,15 @@ print(items[2])
 print(items)
 
 performance report: (ORIGIN=user)
-number of asm lines: 98
-mov count: 72
-memory load count: 9
+number of asm lines: 105
+mov count: 78
+memory load count: 13
 memory store count: 23
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 10
+call count: 11
 spill rounds: 0
 
 actual output:
@@ -26,4 +26,4 @@ actual output:
 2
 0
 [1, 2, 0]
-[!!memory report!!]: allocs=15 frees=15 allocated_bytes=168 freed_bytes=168
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=184 freed_bytes=184

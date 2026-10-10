@@ -10,17 +10,17 @@ kernel(out, (len(out), 1, 1))
 print(out)
 
 performance report: (ORIGIN=user)
-number of asm lines: 106
-mov count: 78
-memory load count: 8
-memory store count: 36
+number of asm lines: 115
+mov count: 86
+memory load count: 7
+memory store count: 41
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 5
+call count: 6
 spill rounds: 0
 
 actual output:
 [42, 42, 42, 42, 42]
-[!!memory report!!]: allocs=18 frees=18 allocated_bytes=212 freed_bytes=212
+[!!memory report!!]: allocs=19 frees=19 allocated_bytes=228 freed_bytes=228

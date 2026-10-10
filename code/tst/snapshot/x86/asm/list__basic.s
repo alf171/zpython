@@ -13,23 +13,28 @@ main:
 main_L0:
 	movq $32, %rdi
 	callq arena_malloc
-	movq %rax, %rbx
+	movq %rax, %rdx
 	movq $3, %rdi
-	movq %rdi, 0(%rbx)
+	movq %rdi, 0(%rdx)
 	movq $8, %rsi
 	movq $1, %rdi
-	movq %rdi, (%rbx,%rsi)
+	movq %rdi, (%rdx,%rsi)
 	movq $16, %rsi
 	movq $2, %rdi
-	movq %rdi, (%rbx,%rsi)
+	movq %rdi, (%rdx,%rsi)
 	movq $24, %rsi
 	movq $3, %rdi
-	movq %rdi, (%rbx,%rsi)
-	movq $0, %rsi
+	movq %rdi, (%rdx,%rsi)
+	movq %rdx, %rdi
+	callq _list__list__from_array__i64
+	movq %rax, %rbx
+	movq $0, %rdx
+	movq 0(%rbx), %rsi
 	movq $24, %rdi
-	movq %rsi, (%rbx,%rdi)
+	movq %rdx, (%rsi,%rdi)
+	movq 0(%rbx), %rsi
 	movq $8, %rdi
-	movq (%rdi,%rbx), %r12
+	movq (%rdi,%rsi), %r12
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -44,8 +49,9 @@ main_L0:
 	movq %r12, %rdi
 	movq %rdx, %rsi
 	callq _print__print_int
+	movq 0(%rbx), %rsi
 	movq $16, %rdi
-	movq (%rdi,%rbx), %r12
+	movq (%rdi,%rsi), %r12
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -60,8 +66,9 @@ main_L0:
 	movq %r12, %rdi
 	movq %rdx, %rsi
 	callq _print__print_int
+	movq 0(%rbx), %rsi
 	movq $24, %rdi
-	movq (%rdi,%rbx), %r12
+	movq (%rdi,%rsi), %r12
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -89,7 +96,7 @@ main_L0:
 	movb %dil, (%rdx,%rsi)
 	movq %rbx, %rdi
 	movq %rdx, %rsi
-	callq _print__print_int_list
+	callq _list__list____print____i64
 	callq arena_free
 	jmp main_epilogue
 main_epilogue:
@@ -143,7 +150,7 @@ _concat__string_concat_L0:
 	movq %r15, %rdi
 	movq %r12, %rsi
 	movq %r14, %rdx
-	callq _repeat__list_repeat__char
+	callq _repeat__array_repeat__char
 	movslq 0(%rbx), %rsi
 	movq $1, %rdi
 	movq %rsi, %rax
@@ -510,7 +517,7 @@ _print__print_string_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_print__print_int_list:
+_print__print_int_array:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $16, %rsp
@@ -520,7 +527,7 @@ _print__print_int_list:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_print__print_int_list_L0:
+_print__print_int_array_L0:
 	movq %rdi, %r12
 	movq %rsi, %rbx
 	movq $10, %rdi
@@ -551,15 +558,15 @@ _print__print_int_list_L0:
 	movq %rsi, %r13
 	movq %rbx, -8(%rbp)
 	movq $0, %rbx
-	jmp _print__print_int_list_L1
-_print__print_int_list_L1:
+	jmp _print__print_int_array_L1
+_print__print_int_array_L1:
 	cmpq %r13, %rbx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _print__print_int_list_L2
-	jmp _print__print_int_list_L3
-_print__print_int_list_L2:
+	jne _print__print_int_array_L2
+	jmp _print__print_int_array_L3
+_print__print_int_array_L2:
 	movq -16(%rbp), %rdi
 	movq %rdi, %r15
 	addq %rbx, %r15
@@ -589,9 +596,9 @@ _print__print_int_list_L2:
 	setne %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _print__print_int_list_L4
-	jmp _print__print_int_list_L5
-_print__print_int_list_L3:
+	jne _print__print_int_array_L4
+	jmp _print__print_int_array_L5
+_print__print_int_array_L3:
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -606,8 +613,8 @@ _print__print_int_list_L3:
 	movq %rdx, %rdi
 	movq -8(%rbp), %rsi
 	callq _print__print_string
-	jmp _print__print_int_list_epilogue
-_print__print_int_list_L4:
+	jmp _print__print_int_array_epilogue
+_print__print_int_array_L4:
 	movq $11, %rdi
 	callq arena_malloc
 	movq %rax, %r14
@@ -633,15 +640,15 @@ _print__print_int_list_L4:
 	movq %r14, %rdi
 	movq %rdx, %rsi
 	callq _print__print_string
-	jmp _print__print_int_list_L6
-_print__print_int_list_L5:
-	jmp _print__print_int_list_L6
-_print__print_int_list_L6:
+	jmp _print__print_int_array_L6
+_print__print_int_array_L5:
+	jmp _print__print_int_array_L6
+_print__print_int_array_L6:
 	movq $1, %rdi
 	addq %rbx, %rdi
 	movq %rdi, %rbx
-	jmp _print__print_int_list_L1
-_print__print_int_list_epilogue:
+	jmp _print__print_int_array_L1
+_print__print_int_array_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -843,7 +850,7 @@ _module__Module____init___epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_repeat__list_repeat__char:
+_str__int_:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -852,7 +859,337 @@ _repeat__list_repeat__char:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_repeat__list_repeat__char_L0:
+_str__int__L0:
+	movq $11, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $3, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $52, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $50, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $10, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rdx, %rax
+	jmp _str__int__epilogue
+_str__int__epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_str__bool_:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_str__bool__L0:
+	movq %rdi, %r12
+	movq $13, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq $5, %rdi
+	movq %rdi, 0(%rbx)
+	movq $8, %rsi
+	movq $84, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $9, %rsi
+	movq $114, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $10, %rsi
+	movq $117, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $11, %rsi
+	movq $101, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $12, %rsi
+	movq $0, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $14, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $6, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $70, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $97, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $10, %rsi
+	movq $108, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $11, %rsi
+	movq $115, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $12, %rsi
+	movq $101, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $13, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	cmpq $0, %r12
+	movq %rbx, %r11
+	movq %rdx, %rdi
+	cmovne %r11, %rdi
+	movq %rdi, %rax
+	jmp _str__bool__epilogue
+_str__bool__epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list__from_array__i64:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list__from_array__i64_L0:
+	movq %rdi, %rbx
+	movq $16, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, 0(%rsi)
+	movslq 0(%rbx), %rdi
+	movl %edi, 8(%rsi)
+	movq %rsi, %rax
+	jmp _list__list__from_array__i64_epilogue
+_list__list__from_array__i64_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____setitem____i64:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____setitem____i64_L0:
+	movq %rdx, %rcx
+	movq 0(%rdi), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq %rcx, (%rdx,%rdi)
+	jmp _list__list____setitem____i64_epilogue
+_list__list____setitem____i64_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____getitem____i64:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____getitem____i64_L0:
+	movq 0(%rdi), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%rdx), %rdi
+	movq %rdi, %rax
+	jmp _list__list____getitem____i64_epilogue
+_list__list____getitem____i64_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____print____i64:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____print____i64_L0:
+	movq %rdi, %r12
+	movq %rsi, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq $2, %rdi
+	movq %rdi, 0(%r13)
+	movq $8, %rsi
+	movq $91, %rdi
+	movb %dil, (%r13,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%r13,%rsi)
+	movq $9, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $1, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %r13, %rdi
+	movq %rdx, %rsi
+	callq _print__print_string
+	movq 8(%r12), %rsi
+	movq $0, %rdi
+	movq %rdi, -16(%rbp)
+	movq %rsi, %r13
+	movq %rbx, -8(%rbp)
+	movq $0, %rbx
+	jmp _list__list____print____i64_L1
+_list__list____print____i64_L1:
+	cmpq %r13, %rbx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list____print____i64_L2
+	jmp _list__list____print____i64_L3
+_list__list____print____i64_L2:
+	movq -16(%rbp), %rdi
+	movq %rdi, %r14
+	addq %rbx, %r14
+	movq $0, %rdi
+	cmpq %rdi, %r14
+	setne %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list____print____i64_L4
+	jmp _list__list____print____i64_L5
+_list__list____print____i64_L3:
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $93, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rdx, %rdi
+	movq -8(%rbp), %rsi
+	callq _print__print_string
+	jmp _list__list____print____i64_epilogue
+_list__list____print____i64_L4:
+	movq $11, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq $3, %rdi
+	movq %rdi, 0(%r15)
+	movq $8, %rsi
+	movq $44, %rdi
+	movb %dil, (%r15,%rsi)
+	movq $9, %rsi
+	movq $32, %rdi
+	movb %dil, (%r15,%rsi)
+	movq $10, %rsi
+	movq $0, %rdi
+	movb %dil, (%r15,%rsi)
+	movq $9, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $1, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %r15, %rdi
+	movq %rdx, %rsi
+	callq _print__print_string
+	jmp _list__list____print____i64_L6
+_list__list____print____i64_L5:
+	jmp _list__list____print____i64_L6
+_list__list____print____i64_L6:
+	movq 0(%r12), %rdx
+	movq $8, %rdi
+	movq %r14, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%rdx), %r14
+	movq $9, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $1, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %r14, %rdi
+	movq %rdx, %rsi
+	callq _print__print_int
+	movq $1, %rdi
+	addq %rbx, %rdi
+	movq %rdi, %rbx
+	jmp _list__list____print____i64_L1
+_list__list____print____i64_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_repeat__array_repeat__char:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_repeat__array_repeat__char_L0:
 	movq %rdi, %r9
 	movq %rsi, %rax
 	movq %rdx, %rdi
@@ -861,15 +1198,15 @@ _repeat__list_repeat__char_L0:
 	imulq %rdi, %r8
 	movq $0, %rcx
 	movq $0, %rdx
-	jmp _repeat__list_repeat__char_L1
-_repeat__list_repeat__char_L1:
+	jmp _repeat__array_repeat__char_L1
+_repeat__array_repeat__char_L1:
 	cmpq %r8, %rdx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _repeat__list_repeat__char_L2
-	jmp _repeat__list_repeat__char_L3
-_repeat__list_repeat__char_L2:
+	jne _repeat__array_repeat__char_L2
+	jmp _repeat__array_repeat__char_L3
+_repeat__array_repeat__char_L2:
 	movq %rcx, %rbx
 	addq %rdx, %rbx
 	pushq %rax
@@ -890,10 +1227,10 @@ _repeat__list_repeat__char_L2:
 	movb %sil, (%r9,%rdi)
 	movq $1, %rdi
 	addq %rdi, %rdx
-	jmp _repeat__list_repeat__char_L1
-_repeat__list_repeat__char_L3:
-	jmp _repeat__list_repeat__char_epilogue
-_repeat__list_repeat__char_epilogue:
+	jmp _repeat__array_repeat__char_L1
+_repeat__array_repeat__char_L3:
+	jmp _repeat__array_repeat__char_epilogue
+_repeat__array_repeat__char_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

@@ -1,5 +1,5 @@
 
-x_data: list[f32] = [1, 2, 3, 4]
+x_data: array[f32] = [1, 2, 3, 4]
 x = Tensor(x_data, (2, 2))
 print(x[0, 1])
 print(x[1, 0])

@@ -31,25 +31,25 @@ def run() -> None:
 run()
 
 performance report: (ORIGIN=user)
-number of asm lines: 522
-mov count: 351
-memory load count: 62
-memory store count: 140
+number of asm lines: 500
+mov count: 326
+memory load count: 67
+memory store count: 128
 conditional jumps: 0
 unconditional jumps: 8
 comparisons: 0
 returns: 8
-call count: 37
+call count: 40
 spill rounds: 4
 
 actual output:
-class_7_i64
-class_7_i64
-class_7_f64
-class_7_f32
+Box[i64]
+Box[i64]
+Box[f64]
+Box[f32]
 1
 2
 3.00000
 4.00000
 1
-[!!memory report!!]: allocs=23 frees=23 allocated_bytes=282 freed_bytes=282
+[!!memory report!!]: allocs=27 frees=27 allocated_bytes=334 freed_bytes=334

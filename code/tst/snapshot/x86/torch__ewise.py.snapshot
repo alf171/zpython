@@ -9,6 +9,8 @@ print(C[0,0])
 
 D = B - A
 print(D[0,0])
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 91
@@ -25,4 +27,4 @@ spill rounds: 0
 actual output:
 6
 1
-[!!memory report!!]: allocs=52 frees=52 allocated_bytes=1268 freed_bytes=1268
+[!!memory report!!]: allocs=42 frees=42 allocated_bytes=1012 freed_bytes=1012

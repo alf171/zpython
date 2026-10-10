@@ -1,8 +1,8 @@
 running program: (OPTIM=true)
 
-x1_data: list[f32] = [5.00,10.0,20.0,40.0]
+x1_data: array[f32] = [5.00,10.0,20.0,40.0]
 x1 = Tensor(x1_data, (2,2))
-x2_data: list[f32] = [10.0,10.0,20.0,30.0]
+x2_data: array[f32] = [10.0,10.0,20.0,30.0]
 x2 = Tensor(x2_data, (2,2))
 
 y1 = x1 > x2
@@ -18,7 +18,9 @@ y5 = x1 == x2
 y5.print()
 y6 = x1 != x2
 y6.print()
-swalling exception from exp(bool)
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
+
 performance report: (ORIGIN=user)
 number of asm lines: 117
 mov count: 78
@@ -38,4 +40,4 @@ True True True False
 False True True True 
 False True True False 
 True False False True 
-[!!memory report!!]: allocs=162 frees=162 allocated_bytes=2366 freed_bytes=2366
+[!!memory report!!]: allocs=164 frees=164 allocated_bytes=2490 freed_bytes=2490

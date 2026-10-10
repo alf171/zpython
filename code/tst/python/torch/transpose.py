@@ -1,4 +1,4 @@
-A_data: list[f32] = [1,2,3,4]
+A_data: array[f32] = [1,2,3,4]
 A = Tensor(A_data, (2,2))
 B = A.transpose()
 print(B[1,0])

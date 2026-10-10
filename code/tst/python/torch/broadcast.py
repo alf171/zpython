@@ -1,4 +1,4 @@
-x_data: list[f32] = [10.0,20.0]
+x_data: array[f32] = [10.0,20.0]
 x1 = Tensor(x_data, (1,2))
 
 y = x1.broadcast_to((3,2))

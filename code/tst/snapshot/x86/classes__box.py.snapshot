@@ -11,17 +11,17 @@ box = Box([1, 2, 3])
 print(consume(box))
 
 performance report: (ORIGIN=user)
-number of asm lines: 95
-mov count: 40
+number of asm lines: 98
+mov count: 42
 memory load count: 19
 memory store count: 26
 conditional jumps: 0
 unconditional jumps: 3
 comparisons: 0
 returns: 3
-call count: 7
+call count: 8
 spill rounds: 0
 
 actual output:
 [1, 2, 3]
-[!!memory report!!]: allocs=13 frees=13 allocated_bytes=146 freed_bytes=146
+[!!memory report!!]: allocs=14 frees=14 allocated_bytes=162 freed_bytes=162
