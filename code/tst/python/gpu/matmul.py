@@ -14,4 +14,4 @@ A = Tensor(A_data, (3, 2))
 B_data: array[f32] = [2.0, -1.0,  0.5, 4.0, 1.5,  2.0, -2.0, 0.0]
 B = Tensor(B_data, (2, 4))
 C = A @ B
-C.print()
+print(C)

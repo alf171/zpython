@@ -4,21 +4,21 @@ x_data: array[f32] = [10.0,20.0,30.0,40.0]
 x1 = Tensor(x_data, (2,2))
 y = x1.sum(0)
 y.print_shape()
-y.print()
+print(y)
 z = x1.sum(1)
 z.print_shape()
-z.print()
+print(z)
 
 performance report: (ORIGIN=user)
-number of asm lines: 70
-mov count: 41
+number of asm lines: 94
+mov count: 63
 memory load count: 6
-memory store count: 13
+memory store count: 19
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 10
+call count: 12
 spill rounds: 0
 
 actual output:

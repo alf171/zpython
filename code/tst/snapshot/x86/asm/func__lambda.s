@@ -13,7 +13,7 @@ main:
 main_L0:
 	movq $2, %rdi
 	movq $3, %rsi
-	callq _lambda____lambda_99
+	callq _lambda____lambda_97
 	movq %rax, %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
@@ -782,114 +782,8 @@ _module__Module____init___epilogue:
 	addq $8, %rsp
 	popq %rbp
 	retq
-# origin: runtime
-_str__int_:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_str__int__L0:
-	movq $11, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $3, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $52, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $50, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $10, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq %rdx, %rax
-	jmp _str__int__epilogue
-_str__int__epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_str__bool_:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_str__bool__L0:
-	movq %rdi, %r12
-	movq $13, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $5, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $84, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $114, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $10, %rsi
-	movq $117, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $11, %rsi
-	movq $101, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $12, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $14, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $6, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $70, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $97, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $10, %rsi
-	movq $108, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $11, %rsi
-	movq $115, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $12, %rsi
-	movq $101, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $13, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	cmpq $0, %r12
-	movq %rbx, %r11
-	movq %rdx, %rdi
-	cmovne %r11, %rdi
-	movq %rdi, %rax
-	jmp _str__bool__epilogue
-_str__bool__epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
 # origin: user
-_lambda____lambda_99:
+_lambda____lambda_97:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -898,13 +792,13 @@ _lambda____lambda_99:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_lambda____lambda_99_L0:
+_lambda____lambda_97_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rdi
 	addq %rdx, %rdi
 	movq %rdi, %rax
-	jmp _lambda____lambda_99_epilogue
-_lambda____lambda_99_epilogue:
+	jmp _lambda____lambda_97_epilogue
+_lambda____lambda_97_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

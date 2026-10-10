@@ -16,18 +16,18 @@ A = Tensor(A_data, (3, 2))
 B_data: array[f32] = [2.0, -1.0,  0.5, 4.0, 1.5,  2.0, -2.0, 0.0]
 B = Tensor(B_data, (2, 4))
 C = A @ B
-C.print()
+print(C)
 
 performance report: (ORIGIN=user)
-number of asm lines: 140
-mov count: 103
+number of asm lines: 153
+mov count: 115
 memory load count: 10
-memory store count: 30
+memory store count: 33
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 9
+call count: 10
 spill rounds: 4
 
 actual output:

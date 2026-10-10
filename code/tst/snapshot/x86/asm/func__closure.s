@@ -783,112 +783,6 @@ _module__Module____init___epilogue:
 	addq $8, %rsp
 	popq %rbp
 	retq
-# origin: runtime
-_str__int_:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_str__int__L0:
-	movq $11, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $3, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $52, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $50, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $10, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq %rdx, %rax
-	jmp _str__int__epilogue
-_str__int__epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_str__bool_:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_str__bool__L0:
-	movq %rdi, %r12
-	movq $13, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $5, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $84, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $114, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $10, %rsi
-	movq $117, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $11, %rsi
-	movq $101, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $12, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $14, %rdi
-	callq arena_malloc
-	movq %rax, %rdx
-	movq $6, %rdi
-	movq %rdi, 0(%rdx)
-	movq $8, %rsi
-	movq $70, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $9, %rsi
-	movq $97, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $10, %rsi
-	movq $108, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $11, %rsi
-	movq $115, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $12, %rsi
-	movq $101, %rdi
-	movb %dil, (%rdx,%rsi)
-	movq $13, %rsi
-	movq $0, %rdi
-	movb %dil, (%rdx,%rsi)
-	cmpq $0, %r12
-	movq %rbx, %r11
-	movq %rdx, %rdi
-	cmovne %r11, %rdi
-	movq %rdi, %rax
-	jmp _str__bool__epilogue
-_str__bool__epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
 # origin: user
 _closure__make:
 	pushq %rbp
@@ -904,7 +798,7 @@ _closure__make_L0:
 	movq $16, %rdi
 	callq arena_malloc
 	movq %rax, %rsi
-	leaq _closure____lambda_100(%rip), %rdi
+	leaq _closure____lambda_98(%rip), %rdi
 	movq %rdi, 0(%rsi)
 	movl %ebx, 8(%rsi)
 	movq %rsi, %rax
@@ -919,7 +813,7 @@ _closure__make_epilogue:
 	popq %rbp
 	retq
 # origin: user
-_closure____lambda_100:
+_closure____lambda_98:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -928,11 +822,11 @@ _closure____lambda_100:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_closure____lambda_100_L0:
+_closure____lambda_98_L0:
 	movslq 8(%rdi), %rdi
 	movq %rdi, %rax
-	jmp _closure____lambda_100_epilogue
-_closure____lambda_100_epilogue:
+	jmp _closure____lambda_98_epilogue
+_closure____lambda_98_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

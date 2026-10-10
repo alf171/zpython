@@ -4,15 +4,14 @@ x2_data: array[f32] = [10.0,10.0,20.0,30.0]
 x2 = Tensor(x2_data, (2,2))
 
 y1 = x1 > x2
-# TODO: support overriding `print`
-y1.print()
+print(y1)
 y2 = x1 < x2
-y2.print()
+print(y2)
 y3 = x1 <= x2
-y3.print()
+print(y3)
 y4 = x1 >= x2
-y4.print()
+print(y4)
 y5 = x1 == x2
-y5.print()
+print(y5)
 y6 = x1 != x2
-y6.print()
+print(y6)

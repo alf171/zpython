@@ -132,8 +132,8 @@ class Tensor[T]:
         res = Tensor._init(uop)
         return res
 
-    def print(self) -> None:
-        self.realize().print()
+    def __print__(self, end:str="\n") -> None:
+        print(self.realize(), end=end)
 
     def print_shape(self) -> None:
         print("(", end = "")

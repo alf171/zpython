@@ -5,6 +5,7 @@ class list[T]:
         self.data: array[T] = array_empty(capacity)
         self.size: int = 0
 
+    # used by compiler!
     @staticmethod
     def from_array[U](data: array[U]) -> list[U]:
         res: list[U] = list.__new__(list)

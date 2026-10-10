@@ -13,4 +13,4 @@ print(y[5,5])
 z = Tensor.fill((16, 16), f32(42));
 # this will get run on the gpu
 a = y + z
-a.print()
+print(a)

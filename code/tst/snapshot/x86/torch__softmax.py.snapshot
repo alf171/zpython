@@ -6,19 +6,19 @@ x_data: array[f32] = [1000.0, 999.9, -1000.0, -1001.0]
 x = Tensor(x_data, (2,2))
 softmax = Softmax[f32]()
 y = softmax.forward(x)
-y.print()
-y.sum(1).print()
+print(y)
+print(y.sum(1))
 
 performance report: (ORIGIN=user)
-number of asm lines: 82
-mov count: 49
+number of asm lines: 107
+mov count: 72
 memory load count: 8
-memory store count: 15
+memory store count: 21
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 10
+call count: 12
 spill rounds: 2
 
 actual output:

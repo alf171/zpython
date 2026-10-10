@@ -157,9 +157,9 @@ class TensorData[T]:
             _max_rows_gpu(out.data, self, (self.rows, 1, 1))
         return out
 
-    def print(self) -> None:
+    def __print__(self, end:str="\n") -> None:
         for i in range(self.rows):
             for j in range(self.cols):
                 print(self[i, j], end=" ")
-        print("\n", end="")
+        print(end, end="")
 

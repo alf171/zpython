@@ -35,15 +35,15 @@ main_L0:
 	movss %xmm0, (%rbx,%rdi)
 	movq $2, %rsi
 	movq $2, %rdi
-	leaq -16(%rbp), %r13
-	movl %esi, 0(%r13)
-	movl %edi, 8(%r13)
+	leaq -16(%rbp), %r12
+	movl %esi, 0(%r12)
+	movl %edi, 8(%r12)
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %r12
-	movq %r12, %rdi
+	movq %rax, %r13
+	movq %r13, %rdi
 	movq %rbx, %rsi
-	movq %r13, %rdx
+	movq %r12, %rdx
 	callq _tensor__Tensor____init____f32
 	movq $24, %rdi
 	callq arena_malloc
@@ -73,41 +73,119 @@ main_L0:
 	movl %edi, 8(%r14)
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %r13
-	movq %r13, %rdi
+	movq %rax, %r12
+	movq %r12, %rdi
 	movq %rbx, %rsi
 	movq %r14, %rdx
 	callq _tensor__Tensor____init____f32
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____gt____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____lt____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____le____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____ge____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____eq____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
-	movq %r12, %rdi
-	movq %r13, %rsi
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
+	movq %r13, %rdi
+	movq %r12, %rsi
 	callq _tensor__Tensor____ne____f32
-	movq %rax, %rdi
-	callq _tensor__Tensor__print__bool
+	movq %rax, %rbx
+	movq $10, %rdi
+	callq arena_malloc
+	movq %rax, %rdx
+	movq $2, %rdi
+	movq %rdi, 0(%rdx)
+	movq $8, %rsi
+	movq $10, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq $9, %rsi
+	movq $0, %rdi
+	movb %dil, (%rdx,%rsi)
+	movq %rbx, %rdi
+	movq %rdx, %rsi
+	callq _tensor__Tensor____print____bool
 	callq arena_free
 	jmp main_epilogue
 main_epilogue:
@@ -998,7 +1076,7 @@ _tensor__Tensor____gt____f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_tensor__Tensor__print__bool:
+_tensor__Tensor____print____bool:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -1007,12 +1085,14 @@ _tensor__Tensor__print__bool:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_tensor__Tensor__print__bool_L0:
+_tensor__Tensor____print____bool_L0:
+	movq %rsi, %rbx
 	callq _tensor__Tensor__realize__bool
 	movq %rax, %rdi
-	callq _data__TensorData__print__bool
-	jmp _tensor__Tensor__print__bool_epilogue
-_tensor__Tensor__print__bool_epilogue:
+	movq %rbx, %rsi
+	callq _data__TensorData____print____bool
+	jmp _tensor__Tensor____print____bool_epilogue
+_tensor__Tensor____print____bool_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -1869,54 +1949,47 @@ _tensor__Tensor__realize__bool_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_data__TensorData__print__bool:
+_data__TensorData____print____bool:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $48, %rsp
+	subq $64, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_data__TensorData__print__bool_L0:
-	movq %rdi, %r14
-	movslq 8(%r14), %rsi
+_data__TensorData____print____bool_L0:
+	movq %rdi, %rcx
+	movq %rsi, %rbx
+	movslq 8(%rcx), %rsi
 	movq $0, %rdi
 	movq %rdi, -24(%rbp)
 	movq %rsi, -32(%rbp)
-	movq $0, %r13
-	jmp _data__TensorData__print__bool_L1
-_data__TensorData__print__bool_L1:
+	movq $0, %r14
+	jmp _data__TensorData____print____bool_L1
+_data__TensorData____print____bool_L1:
 	movq -32(%rbp), %rdi
-	cmpq %rdi, %r13
+	cmpq %rdi, %r14
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _data__TensorData__print__bool_L2
-	jmp _data__TensorData__print__bool_L3
-_data__TensorData__print__bool_L2:
+	jne _data__TensorData____print____bool_L2
+	jmp _data__TensorData____print____bool_L3
+_data__TensorData____print____bool_L2:
 	movq -24(%rbp), %rdi
-	movq %rdi, %r12
-	addq %r13, %r12
-	movslq 12(%r14), %rsi
+	movq %rdi, %rdx
+	addq %r14, %rdx
+	movslq 12(%rcx), %rsi
 	movq $0, %rdi
-	movq %rdi, -40(%rbp)
-	movq %rsi, -48(%rbp)
+	movq %rdi, -48(%rbp)
+	movq %rsi, -56(%rbp)
+	movq %rbx, -40(%rbp)
+	movq %rcx, %r13
+	movq %rdx, %r12
 	movq $0, %rbx
-	jmp _data__TensorData__print__bool_L4
-_data__TensorData__print__bool_L3:
-	movq $10, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $2, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rsi
-	movq $10, %rdi
-	movb %dil, (%rbx,%rsi)
-	movq $9, %rsi
-	movq $0, %rdi
-	movb %dil, (%rbx,%rsi)
+	jmp _data__TensorData____print____bool_L4
+_data__TensorData____print____bool_L3:
 	movq $9, %rdi
 	callq arena_malloc
 	movq %rax, %rdx
@@ -1928,22 +2001,22 @@ _data__TensorData__print__bool_L3:
 	movq %rbx, %rdi
 	movq %rdx, %rsi
 	callq _print__print_string
-	jmp _data__TensorData__print__bool_epilogue
-_data__TensorData__print__bool_L4:
-	movq -48(%rbp), %rdi
+	jmp _data__TensorData____print____bool_epilogue
+_data__TensorData____print____bool_L4:
+	movq -56(%rbp), %rdi
 	cmpq %rdi, %rbx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _data__TensorData__print__bool_L5
-	jmp _data__TensorData__print__bool_L6
-_data__TensorData__print__bool_L5:
-	movq -40(%rbp), %rdi
+	jne _data__TensorData____print____bool_L5
+	jmp _data__TensorData____print____bool_L6
+_data__TensorData____print____bool_L5:
+	movq -48(%rbp), %rdi
 	addq %rbx, %rdi
 	leaq -16(%rbp), %rsi
 	movl %r12d, 0(%rsi)
 	movl %edi, 8(%rsi)
-	movq %r14, %rdi
+	movq %r13, %rdi
 	callq _data__TensorData____getitem____bool
 	movq %rax, %r15
 	movq $10, %rdi
@@ -1962,19 +2035,22 @@ _data__TensorData__print__bool_L5:
 	callq _print__print_bool
 	movq $1, %rdi
 	addq %rdi, %rbx
-	jmp _data__TensorData__print__bool_L4
-_data__TensorData__print__bool_L6:
+	jmp _data__TensorData____print____bool_L4
+_data__TensorData____print____bool_L6:
 	movq $1, %rdi
-	addq %rdi, %r13
-	jmp _data__TensorData__print__bool_L1
-_data__TensorData__print__bool_epilogue:
+	addq %r14, %rdi
+	movq -40(%rbp), %rbx
+	movq %r13, %rcx
+	movq %rdi, %r14
+	jmp _data__TensorData____print____bool_L1
+_data__TensorData____print____bool_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $48, %rsp
+	addq $64, %rsp
 	popq %rbp
 	retq
 # origin: runtime
