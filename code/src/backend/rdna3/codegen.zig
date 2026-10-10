@@ -115,7 +115,7 @@ pub fn emit(
                                     },
                                 },
                                 .top => |top| switch (top.type) {
-                                    .list, .ptr, .i64, .f64, .instance => {
+                                    .array, .ptr, .i64, .f64, .instance => {
                                         const src = try abi.regFor(top.operand);
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         std.debug.assert(dst.count == 2);
@@ -217,7 +217,9 @@ pub fn emit(
                                                     try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
                                                 },
                                                 // TODO: impl
-                                                .bool => {},
+                                                .i32, .bool => {
+                                                    std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
+                                                },
                                                 else => |e| {
                                                     std.debug.print("cant handle {s}\n", .{@tagName(e)});
                                                     return error.NotImpl;
@@ -243,7 +245,7 @@ pub fn emit(
                                 .sgpr => {
                                     // *(base + offset) = src
                                     switch (so.src.type) {
-                                        .i64, .list => {
+                                        .i64, .array => {
                                             try out.print(alloc, "\tglobal_store_b64 v{d}, v[{d}:{d}], s[{d}:{d}]\n", .{
                                                 offset.base,
                                                 src.base,
@@ -355,7 +357,7 @@ pub fn emit(
                                     try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
                                     try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
                                     switch (lo.dst.type) {
-                                        .i64, .list => {
+                                        .i64, .array, .instance => {
                                             std.debug.assert(dst.count == 2);
                                             try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
                                             try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
@@ -378,7 +380,7 @@ pub fn emit(
                                 },
                                 .sgpr => {
                                     switch (lo.dst.type) {
-                                        .i64, .list, .f64 => {
+                                        .i64, .array, .f64 => {
                                             try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v{d}, s[{d}:{d}]\n", .{
                                                 dst.base,
                                                 dst.base + 1,
@@ -479,8 +481,8 @@ pub fn emit(
                                             try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
                                         },
                                         // TODO: impl
-                                        .bool => {
-                                            std.debug.print("swalling exception from exp(bool)", .{});
+                                        .bool, .i32 => {
+                                            std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
                                         },
                                         else => |e| {
                                             std.debug.print("cant handle {s}\n", .{@tagName(e)});

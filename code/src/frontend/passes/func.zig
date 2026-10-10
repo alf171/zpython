@@ -80,7 +80,7 @@ fn rewriteFunction(
                                 const elements = try alloc.dupe(ValueRef, comp.elements);
                                 errdefer alloc.free(elements);
 
-                                try new_instructions.append(alloc, .{ .list_literal = .{
+                                try new_instructions.append(alloc, .{ .array_literal = .{
                                     .dst = try default_arg.clone(alloc),
                                     .elements = elements,
                                 } });

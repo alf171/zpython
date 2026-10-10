@@ -48,7 +48,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type, Hash };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type, Hash, ArrayEmpty };
 
 const BoolOp = enum { And, Or };
 
@@ -262,8 +262,8 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
             defer container.deinit(alloc);
 
             switch (container.type) {
-                .list => |list| {
-                    const element_type = list.element.*;
+                .array => |array| {
+                    const element_type = array.element.*;
                     if (!element_type.equal(rhs_value.type)) {
                         std.debug.print("cannot store {s} in list of type {s}\n", .{ @tagName(rhs_value.type), @tagName(element_type) });
                         return error.TypeMismatch;
@@ -377,7 +377,7 @@ fn storeAssignmentTarget(lhs: *PyObject, rhs_value: TypedOperand, ir_builder: *I
                 field = &class.fields.items[field_idx.?];
                 var bindings: TypeBindings = .init(alloc);
                 defer bindings.deinit(alloc);
-                try field.?.type.unify(rhs_value.type, &bindings, alloc);
+                try field.?.type.unify(rhs_value.type, &bindings, &ir_builder.program, alloc);
             }
 
             try ir_builder.emit(.{ .field_store = .{
@@ -440,7 +440,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             // list repeat has expected_type propogate through only lhs
             const lhs_expected_type: ?TypeInfo = if (expected_type) |t|
                 switch (t) {
-                    .list => t,
+                    .array, .instance => t,
                     else => null,
                 }
             else
@@ -451,20 +451,20 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const rhs = try walkExpr(right, ir_builder, null, alloc);
             errdefer rhs.deinit(alloc);
 
-            if (lhs.type == .list and (rhs.type == .i64 or rhs.type == .i32)) {
-                // list_repeat owns clones of both operands, so release these
+            if (lhs.type == .array and (rhs.type == .i64 or rhs.type == .i32)) {
+                // array_repeat owns clones of both operands, so release these
                 // expression temporaries after building the instruction.
                 defer lhs.deinit(alloc);
                 defer rhs.deinit(alloc);
                 const dst: TypedOperand = .{
                     .operand = ir_builder.nextTemp(),
-                    .type = .{ .list = .{
-                        .element = try (try lhs.type.list.element.clone(alloc)).toOwnedPointer(alloc),
+                    .type = .{ .array = .{
+                        .element = try (try lhs.type.array.element.clone(alloc)).toOwnedPointer(alloc),
                     } },
                 };
-                try ir_builder.emit(.{ .list_repeat = .{
+                try ir_builder.emit(.{ .array_repeat = .{
                     .dst = dst,
-                    .list = try lhs.clone(alloc),
+                    .array = try lhs.clone(alloc),
                     .count = try rhs.clone(alloc),
                 } }, alloc);
                 return try dst.clone(alloc);
@@ -483,7 +483,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     };
                     var bindings: TypeBindings = .init(alloc);
                     defer bindings.deinit(alloc);
-                    const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
+                    const return_type = try bindings.inferReturnType(&ir_builder.program, function, &.{ lhs, rhs }, alloc);
                     break :blk return_type;
                 },
                 else => blk: {
@@ -548,7 +548,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                         .operand = ir_builder.nextTemp(),
                         .type = comp.type,
                     };
-                    try ir_builder.emit(.{ .list_literal = .{
+                    try ir_builder.emit(.{ .array_literal = .{
                         .dst = dst,
                         .elements = comp.elements,
                     } }, alloc);
@@ -564,13 +564,31 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             var result: ArrayList(ValueRef) = .empty;
             errdefer result.deinit(alloc);
 
+            const expected_elem_type: ?TypeInfo = if (expected_type) |t|
+                switch (t) {
+                    .instance => |instance| blk: {
+                        const class = ir_builder.getClassRecord(instance.class_id);
+                        const method = class.findMethod("__getitem__") orelse {
+                            return error.CantFindGetItem;
+                        };
+                        const function = ir_builder.getFunction(method.function_id) orelse {
+                            return error.CantFindFunction;
+                        };
+                        var bindings: TypeBindings = .init(alloc);
+                        defer bindings.deinit(alloc);
+
+                        try function.params[0].type.unify(t, &bindings, &ir_builder.program, alloc);
+                        break :blk try function.return_type.substitute(&bindings, alloc);
+                    },
+                    else => try t.getElementType().clone(alloc),
+                }
+            else
+                null;
+            defer if (expected_elem_type) |t| t.deinit(alloc);
+
             for (0..@intCast(len)) |i| {
                 const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
                 std.debug.assert(elem != null);
-                const expected_elem_type: ?TypeInfo = if (expected_type) |t|
-                    t.getElementType()
-                else
-                    null;
                 // [conditional] use constant instead of an operand if we can
                 switch (getExprKind(elem)) {
                     .Constant => {
@@ -586,7 +604,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                                     .operand = ir_builder.nextTemp(),
                                     .type = comp.type,
                                 };
-                                try ir_builder.emit(.{ .list_literal = .{
+                                try ir_builder.emit(.{ .array_literal = .{
                                     .dst = dst,
                                     .elements = comp.elements,
                                 } }, alloc);
@@ -601,23 +619,46 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     },
                 }
             }
-            const dst_type: TypeInfo = if (expected_type) |t|
-                try t.clone(alloc)
-            else blk: {
-                if (result.items.len == 0) return error.NoTypeFound;
-                const elem_type = try result.items[0].toType(alloc);
-                break :blk .{
-                    .list = .{ .element = try elem_type.toOwnedPointer(alloc) },
-                };
+            const elem_type: TypeInfo = if (expected_elem_type) |e|
+                try e.clone(alloc)
+            else if (result.items.len == 0)
+                // cant infer type from element so push to later
+                .any
+            else
+                try result.items[0].toType(alloc);
+            const dst_type: TypeInfo = .{
+                .array = .{ .element = try elem_type.toOwnedPointer(alloc) },
             };
 
-            const dst: TypedOperand = .{
+            const array: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),
                 .type = dst_type,
             };
-            try ir_builder.emit(.{ .list_literal = .{
-                .dst = dst,
+            try ir_builder.emit(.{ .array_literal = .{
+                .dst = array,
                 .elements = try result.toOwnedSlice(alloc),
+            } }, alloc);
+            // early return if we should return an array
+            if (expected_type != null and expected_type.? == .array) {
+                return try array.clone(alloc);
+            }
+            // otherwise wrap in a list
+            const class = ir_builder.findClassRecord("list") orelse return error.ClassNotLoaded;
+            const from_array = class.findMethod("from_array") orelse return error.CantFindFromArray;
+            const from_array_fn = ir_builder.getFunction(from_array.function_id) orelse return error.CantFindFunction;
+            var bindings: TypeBindings = .init(alloc);
+            defer bindings.deinit(alloc);
+            const return_type = try bindings.inferReturnType(&ir_builder.program, from_array_fn, &.{array}, alloc);
+            const dst: TypedOperand = .{
+                .operand = ir_builder.nextTemp(),
+                .type = return_type,
+            };
+            const args = try alloc.alloc(TypedOperand, 1);
+            args[0] = try array.clone(alloc);
+            try ir_builder.emit(.{ .function_call = .{
+                .dst = dst,
+                .callee = .{ .direct = try alloc.dupe(u8, from_array_fn.label) },
+                .args = args,
             } }, alloc);
             return try dst.clone(alloc);
         },
@@ -676,11 +717,11 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const index = try walkExpr(slice, ir_builder, null, alloc);
 
             switch (value.type) {
-                .list => |list| {
+                .array => |array| {
                     if (index.type != .i64 and index.type != .i32 and index.type != .any) {
                         return error.ArrayIndexMustBeInt;
                     }
-                    const elem_type = list.element.*;
+                    const elem_type = array.element.*;
 
                     const dst: TypedOperand = .{
                         .operand = ir_builder.nextTemp(),
@@ -727,7 +768,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
 
                     var bindings: TypeBindings = .init(alloc);
                     defer bindings.deinit(alloc);
-                    const return_type = try bindings.inferReturnType(getitem_function, &.{ value, index }, alloc);
+                    const return_type = try bindings.inferReturnType(&ir_builder.program, getitem_function, &.{ value, index }, alloc);
 
                     const dst: TypedOperand = .{
                         .operand = ir_builder.nextTemp(),
@@ -869,7 +910,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                             };
                             var bindings: TypeBindings = .init(alloc);
                             defer bindings.deinit(alloc);
-                            const return_type = try bindings.inferReturnType(function, &.{ lhs, rhs }, alloc);
+                            const return_type = try bindings.inferReturnType(&ir_builder.program, function, &.{ lhs, rhs }, alloc);
                             break :blk return_type;
                         },
                         .@"enum" => break :blk .bool,
@@ -1085,7 +1126,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     .type = composite.type,
                 };
 
-                try ir_builder.emit(.{ .list_literal = .{
+                try ir_builder.emit(.{ .array_literal = .{
                     .dst = dst,
                     .elements = composite.elements,
                 } }, alloc);
@@ -1276,11 +1317,50 @@ fn walkNamedCall(
                     std.debug.assert(end_value_obj != null);
                     end = try walkExpr(end_value_obj, ir_builder, null, alloc);
                 }
+                switch (src.type) {
+                    .instance => {
+                        const class = ir_builder.getClassRecord(src.type.instance.class_id);
+                        const method = class.findMethod("__print__") orelse {
+                            return error.CantFindPrint;
+                        };
+                        const f_args = if (end) |e| blk: {
+                            var res = try alloc.alloc(TypedOperand, 2);
+                            res[0] = src;
+                            res[1] = e;
+                            break :blk res;
+                        } else blk: {
+                            var res = try alloc.alloc(TypedOperand, 2);
+                            res[0] = src;
+                            // default param of "\n" handled manually
+                            const str = try makeStringLiteral("\n", alloc);
+                            const composite = str.composite;
+                            const default_end: TypedOperand = .{
+                                .operand = ir_builder.nextTemp(),
+                                .type = composite.type,
+                            };
+                            res[1] = try default_end.clone(alloc);
+                            try ir_builder.emit(.{ .array_literal = .{
+                                .dst = default_end,
+                                .elements = composite.elements,
+                            } }, alloc);
+                            break :blk res;
+                        };
+                        try ir_builder.emit(.{ .function_call = .{
+                            .dst = null,
+                            .callee = .{
+                                .direct = try alloc.dupe(u8, method.function_label),
+                            },
+                            .args = f_args,
+                        } }, alloc);
+                    },
+                    else => {
+                        try ir_builder.emit(.{ .print = .{
+                            .src = src,
+                            .end = end,
+                        } }, alloc);
+                    },
+                }
 
-                try ir_builder.emit(Instruction{ .print = .{
-                    .src = src,
-                    .end = end,
-                } }, alloc);
                 return .{ .operand = .unknown, .type = .any };
             },
             .Write => {
@@ -1295,7 +1375,7 @@ fn walkNamedCall(
                 std.debug.assert(arg2 != null);
                 const len = try walkExpr(arg2, ir_builder, null, alloc);
                 switch (buf.type) {
-                    .list => {
+                    .array => {
                         // gross but we need to increment past the book keeping size value
                         const eight: TypedOperand = .{ .operand = ir_builder.nextTemp(), .type = .i64 };
                         try ir_builder.emit(.{ .lir = .{ .move = .{
@@ -1357,7 +1437,7 @@ fn walkNamedCall(
                 };
                 try ir_builder.emit(.{ .len = .{
                     .dst = dst,
-                    .value = value,
+                    .src = value,
                 } }, alloc);
                 return try dst.clone(alloc);
             },
@@ -1412,7 +1492,10 @@ fn walkNamedCall(
                         }, alloc),
                     },
                 };
-                const typed_dst = TypedOperand{ .operand = dst, .type = type_ };
+                const typed_dst: TypedOperand = .{
+                    .operand = dst,
+                    .type = type_,
+                };
                 try ir_builder.emit(.{ .range = .{
                     .dst = typed_dst,
                     .start = bounds.start,
@@ -1545,7 +1628,7 @@ fn walkNamedCall(
                 const value = try walkExpr(arg, ir_builder, null, alloc);
                 defer value.deinit(alloc);
 
-                const type_name = try value.type.toString(alloc);
+                const type_name = try value.type.toDisplayName(&ir_builder.program, alloc);
                 defer alloc.free(type_name);
 
                 const string = try makeStringLiteral(type_name, alloc);
@@ -1554,7 +1637,7 @@ fn walkNamedCall(
                     .operand = ir_builder.nextTemp(),
                     .type = composite.type,
                 };
-                try ir_builder.emit(.{ .list_literal = .{
+                try ir_builder.emit(.{ .array_literal = .{
                     .dst = dst,
                     .elements = composite.elements,
                 } }, alloc);
@@ -1594,6 +1677,25 @@ fn walkNamedCall(
                 } }, alloc);
                 return try dst.clone(alloc);
             },
+            .ArrayEmpty => {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const value = try walkExpr(arg, ir_builder, .i64, alloc);
+                defer value.deinit(alloc);
+
+                const t = expected_type orelse return error.TypeNotFound;
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try t.clone(alloc),
+                };
+                try ir_builder.emit(.{ .array_alloc = .{
+                    .dst = dst,
+                    .len = try value.clone(alloc),
+                } }, alloc);
+
+                return try dst.clone(alloc);
+            },
         }
     }
     // class constructor
@@ -1615,7 +1717,7 @@ fn walkNamedCall(
         // bind constructor generics!
         if (expected_type) |t| {
             if (t == .instance) {
-                try init.params[0].type.unify(t, &constructor_bindings, alloc);
+                try init.params[0].type.unify(t, &constructor_bindings, &ir_builder.program, alloc);
             }
         }
     }
@@ -1669,7 +1771,7 @@ fn walkNamedCall(
         const arg = try walkExpr(arg_obj, ir_builder, resolved_param_type, alloc);
         try arguments.append(alloc, arg);
         if (constructor_init) |init| {
-            try init.params[i + 1].type.unify(arg.type, &constructor_bindings, alloc);
+            try init.params[i + 1].type.unify(arg.type, &constructor_bindings, &ir_builder.program, alloc);
         }
     }
 
@@ -1707,7 +1809,7 @@ fn walkNamedCall(
         const init = constructor_init orelse return error.CantFindInit;
 
         for (init.params[1..], arguments.items) |param, arg| {
-            try TypeInfo.unify(param.type, arg.type, &constructor_bindings, alloc);
+            try TypeInfo.unify(param.type, arg.type, &constructor_bindings, &ir_builder.program, alloc);
         }
 
         const instance_args = try alloc.alloc(TypeInfo, class.kind.record.type_params.len);
@@ -2163,14 +2265,14 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
     std.debug.assert(iter != null);
 
     const expr = try walkExpr(iter, ir_builder, null, alloc);
-    errdefer expr.deinit(alloc);
-    std.debug.assert(expr.type.isIterable());
+    defer expr.deinit(alloc);
+    std.debug.assert(expr.type.isIterable() or expr.type == .instance);
 
     const index0: TypedOperand = .{
         .operand = ir_builder.nextTemp(),
         .type = switch (expr.type) {
-            .list => .i64,
-            else => expr.type.getElementType(),
+            .array, .instance => .i64,
+            else => try expr.type.getElementType().clone(alloc),
         },
     };
     const zero: ConstValue = switch (index0.type) {
@@ -2199,64 +2301,94 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 ir_builder_.currentScope().local_values.map.get(local) orelse return error.NotFound
             else
                 body_.iterator;
+            var dst: ?TypedOperand = null;
             switch (iterable.type) {
                 .tuple => {
                     std.debug.print("tuple\n", .{});
+                    dst = .{ .operand = value, .type = .any };
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{ .operand = value, .type = .any },
+                        .dst = dst.?,
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
                 },
-                .list => {
+                .array => {
+                    dst = .{
+                        .operand = value,
+                        .type = try iterable.type.getElementType().clone(alloc_),
+                    };
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{
-                            .operand = value,
-                            .type = try iterable.type.getElementType().clone(alloc_),
-                        },
+                        .dst = dst.?,
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
                 },
                 .iterable => {
                     std.debug.print("iterable\n", .{});
+                    dst = .{ .operand = value, .type = .any };
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{ .operand = value, .type = .any },
+                        .dst = dst.?,
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
                     } }, alloc_);
                 },
                 .lazy => {
+                    dst = .{
+                        .operand = value,
+                        .type = try iterable.type.getElementType().clone(alloc_),
+                    };
                     try ir_builder_.emit(.{ .subscript = .{
-                        .dst = .{
-                            .operand = value,
-                            .type = iterable.type.getElementType(),
-                        },
+                        .dst = dst.?,
                         .src = try iterable.clone(alloc_),
                         .index = try index.clone(alloc_),
+                    } }, alloc_);
+                },
+                .instance => |instance| {
+                    const class = ir_builder_.getClassRecord(instance.class_id);
+                    const method = class.findMethod("__getitem__") orelse {
+                        return error.CantFindGetItem;
+                    };
+                    const function = ir_builder_.getFunction(method.function_id) orelse {
+                        return error.CantFindFunction;
+                    };
+                    const args = try alloc_.alloc(TypedOperand, 2);
+                    // self
+                    args[0] = try iterable.clone(alloc_);
+                    args[1] = try index.clone(alloc_);
+
+                    var bindings: TypeBindings = .init(alloc_);
+                    defer bindings.deinit(alloc_);
+                    const dst_type: TypeInfo = try bindings.inferReturnType(&ir_builder_.program, function, args, alloc_);
+
+                    dst = .{
+                        .operand = value,
+                        .type = dst_type,
+                    };
+                    try ir_builder_.emit(.{ .function_call = .{
+                        .dst = dst.?,
+                        .callee = .{ .direct = try alloc_.dupe(u8, method.function_label) },
+                        .args = args,
                     } }, alloc_);
                 },
                 else => return error.CantIndexInto,
             }
 
-            const elem_type = iterable.type.getElementType();
             const local = try ir_builder_.currentScope().getOrCreateLocal(
                 body_.condition_var_name,
-                elem_type,
+                dst.?.type,
                 alloc_,
             );
-            const typed_value: TypedOperand = .{
-                .operand = value,
-                .type = try elem_type.clone(alloc_),
-            };
-            try ir_builder_.currentScope().local_values.map.put(local, typed_value);
+            try ir_builder_.currentScope().local_values.map.put(
+                local,
+                try dst.?.clone(alloc_),
+            );
             try ir_builder_.emit(.{ .lir = .{ .store_local = .{
                 .local = .{
                     .id = local,
                     .name = try alloc_.dupe(u8, body_.condition_var_name),
-                    .type = try elem_type.clone(alloc_),
+                    .type = try dst.?.type.clone(alloc_),
                 },
-                .src = try typed_value.clone(alloc_),
+                .src = try dst.?.clone(alloc_),
             } } }, alloc_);
 
             try walkStmtList(body_.stmt_list, ir_builder_, alloc_);
@@ -2304,10 +2436,9 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
         .type = try index0.type.clone(alloc),
     };
 
-    std.debug.assert(expr.type.isIterable());
     try ir_builder.emit(.{ .len = .{
         .dst = len_temp,
-        .value = expr,
+        .src = try expr.clone(alloc),
     } }, alloc);
 
     // set for j in jj where type(jj) == array
@@ -2441,7 +2572,7 @@ fn emitResolvedCall(
     }
     var bindings: TypeBindings = .init(alloc);
     defer bindings.deinit(alloc);
-    const return_type = try bindings.inferReturnType(function, arguments.items, alloc);
+    const return_type = try bindings.inferReturnType(&ir_builder.program, function, arguments.items, alloc);
 
     const maybe_dst: ?TypedOperand = if (function.return_type != .void)
         .{
@@ -2561,6 +2692,7 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "exp2")) return .Exp2;
     if (std.mem.eql(u8, name, "type")) return .Type;
     if (std.mem.eql(u8, name, "hash")) return .Hash;
+    if (std.mem.eql(u8, name, "array_empty")) return .ArrayEmpty;
     return null;
 }
 

@@ -130,8 +130,8 @@ fn rewriteUses(instruction: *Instruction, copyMap: *HashMap(Operand, ValueRef)) 
             tl.src.operand = try resolveOperand(tl.src.operand, copyMap);
             tl.index.operand = try resolveOperand(tl.index.operand, copyMap);
         },
-        .list_literal => |*ll| {
-            for (ll.elements) |*elem| {
+        .array_literal => |*al| {
+            for (al.elements) |*elem| {
                 switch (elem.*) {
                     .top => |*top| top.*.operand = try resolveOperand(top.*.operand, copyMap),
                     .constant => {},
@@ -172,7 +172,7 @@ fn resolve(init: ValueRef, copyMap: *HashMap(Operand, ValueRef)) !ValueRef {
     var cur: ValueRef = init;
     while (copyMap.get(cur.top.operand)) |next| {
         switch (next) {
-            .top => |top| cur = .{ .top = top },
+            .top => |top| cur.top.operand = top.operand,
             .constant => |cur_const| return .{ .constant = cur_const },
         }
     }

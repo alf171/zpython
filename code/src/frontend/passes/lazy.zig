@@ -68,7 +68,7 @@ fn rewriteFunction(function: *Function, producers: *HashMap(LazyKey, LazyProduce
                     instruction.deinit(alloc);
                 },
                 .len => |l| {
-                    const producer = producers.get(.{ .operand = l.value.operand }) orelse {
+                    const producer = producers.get(.{ .operand = l.src.operand }) orelse {
                         try new_instructions.append(alloc, instruction.*);
                         continue;
                     };

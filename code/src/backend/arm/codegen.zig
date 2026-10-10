@@ -77,7 +77,7 @@ fn emitFunction(
                                     std.debug.assert(top.type == .i64);
                                     const offset = try abi.regFor(top.operand);
                                     switch (so.src.type) {
-                                        .i64, .list => {
+                                        .i64, .array => {
                                             try out.print(alloc, "\tstr {s}, [{s}, {s}]\n", .{ src, dst, offset });
                                         },
                                         .i32 => {

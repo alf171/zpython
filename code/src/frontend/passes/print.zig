@@ -3,22 +3,21 @@ const ArrayList = std.ArrayList;
 const HashMap = std.HashMap;
 const Operand = @import("common").alloc.Operand;
 const TypedOperand = @import("common").alloc.TypedOperand;
+const TypeInfo = @import("common").types.TypeInfo;
 const ValueRef = @import("common").ir.ValueRef;
 const Function = @import("common").function.Function;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
-const PrintInst = @import("common").mir.PrintInst;
-const ownedPointer = @import("common").types.ownedPointer;
 
 pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
-    try rewriteFunction(&program.main, alloc);
+    try rewriteFunction(program, &program.main, alloc);
     for (program.functions.items) |*function| {
-        try rewriteFunction(function, alloc);
+        try rewriteFunction(program, function, alloc);
     }
 }
 
 /// rewrite function distructively
-fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
+fn rewriteFunction(program: *const Program, function: *Function, alloc: std.mem.Allocator) !void {
     for (function.blocks.items) |*block| {
         var new_instructions: ArrayList(Instruction) = .empty;
         errdefer new_instructions.deinit(alloc);
@@ -30,7 +29,10 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     else
                         try alloc.alloc(TypedOperand, 1);
 
-                    errdefer alloc.free(args);
+                    errdefer {
+                        for (args) |arg| arg.deinit(alloc);
+                        alloc.free(args);
+                    }
                     args[0] = switch (p.src.type) {
                         // i32 and f32 require a cast to their 64 bit versions
                         .f32 => blk: {
@@ -67,7 +69,18 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                         args[1] = try end.clone(alloc);
                     }
                     switch (p.src.type) {
-                        .list => |l| {
+                        .instance => |i| {
+                            const class = &program.classes.items[i.class_id].kind.record;
+                            const method = class.findMethod("__print__") orelse {
+                                return error.CantPrintWithoutStr;
+                            };
+                            try new_instructions.append(alloc, .{ .function_call = .{
+                                .dst = null,
+                                .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
+                                .args = args,
+                            } });
+                        },
+                        .array => |l| {
                             if (l.element.* == .char) {
                                 try new_instructions.append(alloc, .{ .function_call = .{
                                     .dst = null,
@@ -77,7 +90,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             } else if (l.element.* == .i64 or l.element.* == .i32) {
                                 try new_instructions.append(alloc, .{ .function_call = .{
                                     .dst = null,
-                                    .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int_list") },
+                                    .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int_array") },
                                     .args = args,
                                 } });
                             }

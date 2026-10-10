@@ -26,22 +26,22 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
 
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .list_repeat => |lr| {
-                    const elem_type = lr.dst.type.getElementType();
+                .array_repeat => |ar| {
+                    const elem_type = ar.dst.type.getElementType();
                     const list_length_temp: TypedOperand = .{
                         .operand = function.nextTemp(),
-                        .type = try lr.count.type.clone(alloc),
+                        .type = try ar.count.type.clone(alloc),
                     };
                     try new_instructions.append(alloc, .{
                         .len = .{
                             .dst = list_length_temp,
-                            .value = try lr.list.clone(alloc),
+                            .src = try ar.array.clone(alloc),
                         },
                     });
                     // byte_count = 8 + elem_size * list_length * repeat_count
                     const repeat_list_count: TypedOperand = .{
                         .operand = function.nextTemp(),
-                        .type = try lr.count.type.clone(alloc),
+                        .type = try ar.count.type.clone(alloc),
                     };
                     // repeat_list_size = list_length * repeat_count
                     try new_instructions.append(alloc, .{ .lir = .{
@@ -49,7 +49,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             .dst = repeat_list_count,
                             .lhs = list_length_temp,
                             .op = .{ .bop = .mul },
-                            .rhs = try lr.count.clone(alloc),
+                            .rhs = try ar.count.clone(alloc),
                         },
                     } });
 
@@ -105,7 +105,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     const list_length_ref: ValueRef = .{ .top = repeat_list_count };
                     try lowerListAlloc(
                         function,
-                        lr.dst,
+                        ar.dst,
                         byte_count_ref,
                         list_length_ref,
                         &new_instructions,
@@ -113,12 +113,12 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     );
                     // set repeat elements
                     const args = try alloc.alloc(TypedOperand, 3);
-                    args[0] = try lr.dst.clone(alloc);
-                    args[1] = try lr.list.clone(alloc);
-                    args[2] = try lr.count.clone(alloc);
+                    args[0] = try ar.dst.clone(alloc);
+                    args[1] = try ar.array.clone(alloc);
+                    args[2] = try ar.count.clone(alloc);
                     try new_instructions.append(alloc, .{ .function_call = .{
                         .dst = null,
-                        .callee = .{ .direct = try alloc.dupe(u8, "_repeat__list_repeat") },
+                        .callee = .{ .direct = try alloc.dupe(u8, "_repeat__array_repeat") },
                         .args = args,
                     } });
                     instruction.deinit(alloc);

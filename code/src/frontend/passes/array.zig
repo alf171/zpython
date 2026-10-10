@@ -23,16 +23,71 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
 
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .list_literal => |ll| {
+                .array_alloc => |aa| {
+                    const elem_type = aa.dst.type.getElementType();
+                    const elem_size: TypedOperand = .{
+                        .operand = function.nextTemp(),
+                        .type = .i64,
+                    };
+                    try new_instructions.append(alloc, .{ .lir = .{
+                        .move = .{
+                            .dst = elem_size,
+                            .src = .{ .constant = .{ .i64 = @intCast(try elem_type.sizeOfType()) } },
+                        },
+                    } });
+                    const array_size: TypedOperand = .{
+                        .operand = function.nextTemp(),
+                        .type = .i64,
+                    };
+                    try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
+                        .dst = array_size,
+                        .op = .{ .bop = .mul },
+                        .lhs = try aa.len.clone(alloc),
+                        .rhs = try elem_size.clone(alloc),
+                    } } });
+                    const byte_count: TypedOperand = .{
+                        .operand = function.nextTemp(),
+                        .type = .i64,
+                    };
+                    const eight: TypedOperand = .{
+                        .operand = function.nextTemp(),
+                        .type = .i64,
+                    };
+                    try new_instructions.append(alloc, .{ .lir = .{
+                        .move = .{
+                            .dst = eight,
+                            .src = .{ .constant = .{ .i64 = 8 } },
+                        },
+                    } });
+                    try new_instructions.append(alloc, .{ .lir = .{ .binop = .{
+                        .dst = byte_count,
+                        .op = .{ .bop = .add },
+                        .lhs = try eight.clone(alloc),
+                        .rhs = try array_size.clone(alloc),
+                    } } });
+                    // 8 + aa.elements.len * try elem_type.sizeOfType();
+                    const byte_count_ref: ValueRef = .{ .top = try byte_count.clone(alloc) };
+                    const array_length_ref: ValueRef = .{ .top = try aa.len.clone(alloc) };
+                    try lowerArrayAlloc(
+                        function,
+                        aa.dst,
+                        byte_count_ref,
+                        array_length_ref,
+                        &new_instructions,
+                        alloc,
+                    );
+                    instruction.deinit(alloc);
+                },
+                .array_literal => |ll| {
                     const elem_type = ll.dst.type.getElementType();
                     const byte_count = 8 + ll.elements.len * try elem_type.sizeOfType();
                     const byte_count_ref: ValueRef = .{ .constant = .{ .i64 = @intCast(byte_count) } };
-                    const list_length_ref: ValueRef = .{ .constant = .{ .i64 = @intCast(ll.elements.len) } };
-                    try lowerListAlloc(
+                    const array_length_ref: ValueRef = .{ .constant = .{ .i64 = @intCast(ll.elements.len) } };
+                    try lowerArrayAlloc(
                         function,
                         ll.dst,
                         byte_count_ref,
-                        list_length_ref,
+                        array_length_ref,
                         &new_instructions,
                         alloc,
                     );
@@ -62,7 +117,7 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             .dst = index,
                             .src = .{ .constant = .{ .i64 = @intCast(i) } },
                         } } });
-                        try rewriteListStore(function, .{
+                        try rewriteAllocStore(function, .{
                             .target = ll.dst,
                             .index = index,
                             .src = src,
@@ -71,20 +126,20 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     instruction.deinit(alloc);
                 },
                 .subscript_store => |ss| {
-                    if (ss.target.type != .list) {
+                    if (ss.target.type != .array) {
                         try new_instructions.append(alloc, instruction.*);
                         continue;
                     }
-                    try rewriteListStore(function, ss, &new_instructions, alloc);
+                    try rewriteAllocStore(function, ss, &new_instructions, alloc);
                     instruction.deinit(alloc);
                 },
                 .subscript => |s| {
-                    if (s.src.type != .list) {
+                    if (s.src.type != .array) {
                         try new_instructions.append(alloc, instruction.*);
                         continue;
                     }
 
-                    // dst <- list[index]
+                    // dst <- array[index]
                     const scaled: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
                     const offset: TypedOperand = .{ .operand = function.nextTemp(), .type = .i64 };
                     const elem_type = s.src.type.getElementType();
@@ -132,13 +187,13 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     instruction.deinit(alloc);
                 },
                 .len => |l| {
-                    if (l.value.type != .list) {
+                    if (l.src.type != .array) {
                         try new_instructions.append(alloc, instruction.*);
                         continue;
                     }
                     try new_instructions.append(alloc, .{ .lir = .{ .load_offset = .{
                         .dst = try l.dst.clone(alloc),
-                        .src = try l.value.clone(alloc),
+                        .src = try l.src.clone(alloc),
                         .offset = .{ .constant = .{ .i64 = 0 } },
                     } } });
                     instruction.deinit(alloc);
@@ -152,11 +207,11 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
 }
 
 /// calls malloc and stores size at index 0
-fn lowerListAlloc(
+fn lowerArrayAlloc(
     function: *Function,
     dst: TypedOperand,
     byte_count: ValueRef,
-    list_length: ValueRef,
+    array_length: ValueRef,
     new_instructions: *std.ArrayList(Instruction),
     alloc: std.mem.Allocator,
 ) !void {
@@ -175,12 +230,12 @@ fn lowerListAlloc(
         },
         .args = args,
     } });
-    // store list size
+    // store array size
     {
         const src = function.nextTemp();
         try new_instructions.append(alloc, .{ .lir = .{ .move = .{
             .dst = .{ .operand = src, .type = .i64 },
-            .src = list_length,
+            .src = array_length,
         } } });
         try new_instructions.append(alloc, .{
             .lir = .{ .store_offset = .{
@@ -192,7 +247,7 @@ fn lowerListAlloc(
     }
 }
 
-fn rewriteListStore(
+fn rewriteAllocStore(
     function: *Function,
     ss: SubscriptStore,
     new_instructions: *std.ArrayList(Instruction),

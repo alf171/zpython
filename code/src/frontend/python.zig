@@ -18,7 +18,7 @@ pub const c = @cImport({
 pub const PyObject = c.PyObject;
 
 pub const SubscriberTypes = union(enum) {
-    list,
+    array,
     tuple,
     callable,
     instance: ClassId,
@@ -465,7 +465,7 @@ pub fn makeStringLiteral(bytes: []const u8, alloc: std.mem.Allocator) !ParsedCon
     // try element_types.append(alloc, .char);
 
     const _type: TypeInfo = .{
-        .list = .{
+        .array = .{
             // .elements = try element_types.toOwnedSlice(alloc),
             .element = try TypeInfo.toOwnedPointer(.char, alloc),
             // .size = elements.items.len,
@@ -499,7 +499,7 @@ pub fn parseTypeAnnotation(
         if (std.mem.eql(u8, annotation_name, "f32")) return .f32;
         if (std.mem.eql(u8, annotation_name, "char")) return .char;
         if (std.mem.eql(u8, annotation_name, "str")) {
-            return .{ .list = .{ .element = try TypeInfo.toOwnedPointer(.char, alloc) } };
+            return .{ .array = .{ .element = try TypeInfo.toOwnedPointer(.char, alloc) } };
         }
         if (irBuilder.getActiveParmType(annotation_name)) |param_type| {
             return .{ .type_variable = param_type.id };
@@ -528,11 +528,11 @@ pub fn parseTypeAnnotation(
         std.debug.assert(slice_obj != null);
 
         switch (try getSubscriberType(annotation, irBuilder)) {
-            // Subscript(value=Name(id='list', ctx=Load()), slice=Name(id='int', ctx=Load()), ctx=Load())
-            .list => {
+            // Subscript(value=Name(id='array', ctx=Load()), slice=Name(id='int', ctx=Load()), ctx=Load())
+            .array => {
                 // recursively get type
                 const elem_type = try parseTypeAnnotation(slice_obj, irBuilder, alloc);
-                return .{ .list = .{
+                return .{ .array = .{
                     .element = try elem_type.toOwnedPointer(alloc),
                 } };
             },
@@ -627,7 +627,7 @@ pub fn getSubscriberType(annotation: *PyObject, irBuilder: *IrBuilder) !Subscrib
     const id_obj = c.PyObject_GetAttrString(value_obj, "id");
     std.debug.assert(id_obj != null);
     const name = std.mem.span(c.PyUnicode_AsUTF8(id_obj));
-    if (std.mem.eql(u8, name, "list")) return .list;
+    if (std.mem.eql(u8, name, "array")) return .array;
     if (std.mem.eql(u8, name, "tuple")) return .tuple;
     if (std.mem.eql(u8, name, "Callable")) return .callable;
     if (irBuilder.findClass(name)) |class| {

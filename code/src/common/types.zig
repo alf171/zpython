@@ -304,6 +304,7 @@ pub const TypeInfo = union(enum) {
                         try unify(actual_arg, expected_arg, bindings, program, alloc);
                     }
                 },
+                .any => {},
                 else => {
                     const lhs = try self.toDisplayName(program, alloc);
                     defer alloc.free(lhs);
@@ -462,7 +463,19 @@ pub const TypeInfo = union(enum) {
                 const elem = try a.element.*.toString(alloc);
                 defer alloc.free(elem);
 
-                break :blk try std.fmt.allocPrint(alloc, "list_{s}", .{elem});
+                break :blk try std.fmt.allocPrint(alloc, "array_{s}", .{elem});
+            },
+            .lazy => |l| blk: {
+                const elem = try l.value.*.toString(alloc);
+                defer alloc.free(elem);
+
+                break :blk try std.fmt.allocPrint(alloc, "lazy_{s}", .{elem});
+            },
+            .iterable => |i| blk: {
+                const elem = try i.element.*.toString(alloc);
+                defer alloc.free(elem);
+
+                break :blk try std.fmt.allocPrint(alloc, "iterable_{s}", .{elem});
             },
             .callable => |c| blk: {
                 var out: std.ArrayList(u8) = .empty;
@@ -507,6 +520,12 @@ pub const TypeInfo = union(enum) {
 
     pub fn toDisplayName(self: @This(), program: *const Program, alloc: std.mem.Allocator) ![]const u8 {
         switch (self) {
+            .array => |a| {
+                const elem = try a.element.*.toDisplayName(program, alloc);
+                defer alloc.free(elem);
+
+                return try std.fmt.allocPrint(alloc, "array[{s}]", .{elem});
+            },
             .instance => |instance| {
                 const class = program.classes.items[instance.class_id];
                 var out: std.ArrayList(u8) = .empty;

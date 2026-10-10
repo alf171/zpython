@@ -19,7 +19,7 @@ pub const GpuArgLayout = union(enum) {
     scalar: struct {
         size: usize,
     },
-    list: struct {
+    array: struct {
         element_size: usize,
     },
     instance: struct {
@@ -97,7 +97,7 @@ fn rewriteFunction(
                                     try element_types.append(alloc, .i64);
                                 },
                                 // [value, <byte_count>]
-                                .list => |list| {
+                                .array => |array| {
                                     try elements.append(alloc, .{ .top = try arg.clone(alloc) });
                                     try element_types.append(alloc, try arg.type.clone(alloc));
                                     // const byte_count = 8 + elem_size * elem_count;
@@ -108,7 +108,7 @@ fn rewriteFunction(
                                     };
                                     try new_instructions.append(alloc, .{ .lir = .{ .move = .{
                                         .dst = elem_size_value,
-                                        .src = .{ .constant = .{ .i64 = @intCast(list.element_size) } },
+                                        .src = .{ .constant = .{ .i64 = @intCast(array.element_size) } },
                                     } } });
                                     const elem_count: TypedOperand = .{
                                         .operand = function.nextTemp(),
@@ -116,7 +116,7 @@ fn rewriteFunction(
                                     };
                                     try new_instructions.append(alloc, .{ .len = .{
                                         .dst = elem_count,
-                                        .value = try arg.clone(alloc),
+                                        .src = try arg.clone(alloc),
                                     } });
                                     const data_bytes: TypedOperand = .{
                                         .operand = function.nextTemp(),
@@ -160,7 +160,7 @@ fn rewriteFunction(
                                     for (instance.fields) |field| {
                                         switch (field.layout) {
                                             .scalar => {},
-                                            .list => |list| {
+                                            .array => |list| {
                                                 list_field_count += 1;
                                                 try list_elements.append(alloc, .{ .constant = .{
                                                     .i64 = @intCast(field.offset),
@@ -298,7 +298,7 @@ fn rewriteFunction(
 fn buildGpuArgLayout(type_info: TypeInfo, program: *const Program, alloc: std.mem.Allocator) !GpuArgLayout {
     return switch (type_info) {
         .i64, .i32, .callable => .{ .scalar = .{ .size = try type_info.sizeOfType() } },
-        .list => |list| .{ .list = .{ .element_size = try list.element.sizeOfType() } },
+        .array => |array| .{ .array = .{ .element_size = try array.element.sizeOfType() } },
         .instance => |instance| {
             for (program.classes.items) |class| {
                 if (class.id == instance.class_id) {

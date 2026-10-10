@@ -134,12 +134,12 @@ fn specializeCall(
         return null;
     }
     if (callee.params.len != args.len) {
-        return null;
+        return error.ArgCountMismatch;
     }
 
     // populate
     for (callee.params, args) |param, arg| {
-        try TypeInfo.unify(param.type, arg.type, &bindings, alloc);
+        try TypeInfo.unify(param.type, arg.type, &bindings, program, alloc);
     }
 
     return try specializeWithBindings(callee, program, pending, &bindings, alloc);

@@ -152,7 +152,7 @@ fn emitFunction(
                                     std.debug.assert(top.type == .i64);
                                     const offset = try abi.regFor(top.operand);
                                     switch (so.src.type) {
-                                        .i64, .list, .instance => {
+                                        .i64, .array, .instance => {
                                             try out.print(alloc, "\tmovq %{s}, (%{s},%{s})\n", .{ src, dst, offset });
                                         },
                                         .f64 => {
@@ -442,7 +442,7 @@ fn emitFunction(
                                         .f32 => {
                                             try out.print(alloc, "\tmovss (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
-                                        .i64, .list, .instance => {
+                                        .i64, .array, .instance => {
                                             try out.print(alloc, "\tmovq (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
                                         .i32 => {
@@ -568,7 +568,7 @@ fn emitLoadConstant(
     alloc: std.mem.Allocator,
 ) !void {
     switch (type_) {
-        .i64, .list, .callable, .instance, .tuple, .@"enum" => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
+        .i64, .array, .callable, .instance, .tuple, .@"enum" => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .i32 => try out.print(alloc, "\tmovslq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .bool => try out.print(alloc, "\tmovsbl {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         else => |e| {
@@ -587,7 +587,7 @@ fn emitStoreConstant(
     alloc: std.mem.Allocator,
 ) !void {
     switch (type_) {
-        .i64, .list, .instance, .tuple, .callable, .@"enum" => try out.print(alloc, "\tmovq %{s}, {d}(%{s})\n", .{ src, offset, dst }),
+        .i64, .array, .instance, .tuple, .callable, .@"enum" => try out.print(alloc, "\tmovq %{s}, {d}(%{s})\n", .{ src, offset, dst }),
         .i32 => try out.print(alloc, "\tmovl %{s}, {d}(%{s})\n", .{ reg32(src), offset, dst }),
         .char, .bool => try out.print(alloc, "\tmovb %{s}, {d}(%{s})\n", .{ reg8(src), offset, dst }),
         else => |e| {

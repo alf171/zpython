@@ -4,7 +4,7 @@ const c = @import("frontend").python.c;
 const walkAstWithRuntime = @import("frontend").run.walkAstWithRuntime;
 const tuple = @import("frontend").tuple;
 const lazy = @import("frontend").lazy;
-const list = @import("frontend").list;
+const array = @import("frontend").array;
 const print = @import("frontend").print;
 const func = @import("frontend").func;
 const closure = @import("frontend").closure;
@@ -116,7 +116,7 @@ pub fn main(init: std.process.Init) !void {
     try print.rewrite(&ir_program, alloc);
     try func.rewrite(&ir_program, alloc);
     try lazy.rewrite(&ir_program, alloc);
-    try list.rewrite(&ir_program, alloc);
+    try array.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);
 
     if (std_lib_enabled) {

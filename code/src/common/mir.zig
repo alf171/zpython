@@ -71,7 +71,7 @@ pub const Instruction = union(enum) {
     },
     len: struct {
         dst: TypedOperand,
-        value: TypedOperand,
+        src: TypedOperand,
     },
     range: struct {
         dst: TypedOperand,
@@ -122,9 +122,13 @@ pub const Instruction = union(enum) {
         args: []TypedOperand,
     },
     // heap based variable size
-    list_literal: struct {
+    array_literal: struct {
         dst: TypedOperand,
         elements: []ValueRef,
+    },
+    array_alloc: struct {
+        dst: TypedOperand,
+        len: TypedOperand,
     },
     // target[index] <- src
     subscript_store: SubscriptStore,
@@ -173,9 +177,10 @@ pub const Instruction = union(enum) {
         axis: ValueRef,
     },
     // dst <- [lst] * count
-    list_repeat: struct {
+    // TODO: deprecate for stdlib version
+    array_repeat: struct {
         dst: TypedOperand,
-        list: TypedOperand,
+        array: TypedOperand,
         count: TypedOperand,
     },
     // deglate to LIR impl
@@ -234,12 +239,16 @@ pub const Instruction = union(enum) {
                 s.src.deinit(alloc);
                 s.index.deinit(alloc);
             },
-            .list_literal => |ll| {
-                ll.dst.deinit(alloc);
-                for (ll.elements) |elem| {
+            .array_literal => |al| {
+                al.dst.deinit(alloc);
+                for (al.elements) |elem| {
                     elem.deinit(alloc);
                 }
-                alloc.free(ll.elements);
+                alloc.free(al.elements);
+            },
+            .array_alloc => |aa| {
+                aa.dst.deinit(alloc);
+                aa.len.deinit(alloc);
             },
             .subscript_store => |ss| {
                 ss.target.deinit(alloc);
@@ -280,14 +289,14 @@ pub const Instruction = union(enum) {
                 fs.instance.deinit(alloc);
                 fs.src.deinit(alloc);
             },
-            .list_repeat => |lr| {
-                lr.dst.deinit(alloc);
-                lr.list.deinit(alloc);
-                lr.count.deinit(alloc);
+            .array_repeat => |ar| {
+                ar.dst.deinit(alloc);
+                ar.array.deinit(alloc);
+                ar.count.deinit(alloc);
             },
             .len => |l| {
                 l.dst.deinit(alloc);
-                l.value.deinit(alloc);
+                l.src.deinit(alloc);
             },
             .print => |p| {
                 p.src.deinit(alloc);
@@ -339,7 +348,7 @@ pub const Instruction = union(enum) {
             .len => |l| {
                 l.dst.operand.print();
                 debugPrint(" <- len(", .{});
-                l.value.operand.print();
+                l.src.operand.print();
                 debugPrint(")\n", .{});
             },
             .phi => |p| {
@@ -383,7 +392,7 @@ pub const Instruction = union(enum) {
                 tl.index.operand.print();
                 debugPrint(")\n", .{});
             },
-            .list_literal => |al| {
+            .array_literal => |al| {
                 al.dst.operand.print();
                 debugPrint(" <- [", .{});
                 for (al.elements, 0..) |elem, i| {
@@ -391,6 +400,12 @@ pub const Instruction = union(enum) {
                     elem.print();
                 }
                 debugPrint("]\n", .{});
+            },
+            .array_alloc => |aa| {
+                aa.dst.operand.print();
+                debugPrint(" <- array_empty(", .{});
+                aa.len.operand.print();
+                debugPrint(")", .{});
             },
             .subscript_store => |ss| {
                 ss.target.operand.print();
@@ -464,7 +479,7 @@ pub const Instruction = union(enum) {
                 if (r.end.operand.equal(old)) r.end.operand = new;
             },
             .len => |*l| {
-                if (l.value.operand.equal(old)) l.value.operand = new;
+                if (l.src.operand.equal(old)) l.src.operand = new;
             },
             .subscript => |*tl| {
                 if (tl.src.operand.equal(old)) tl.src.operand = new;
@@ -480,8 +495,8 @@ pub const Instruction = union(enum) {
                     }
                 }
             },
-            .list_literal => |*ll| {
-                for (ll.elements) |*elem| {
+            .array_literal => |*al| {
+                for (al.elements) |*elem| {
                     switch (elem.*) {
                         .top => |*top| {
                             if (top.operand.equal(old)) top.*.operand = new;
@@ -490,9 +505,12 @@ pub const Instruction = union(enum) {
                     }
                 }
             },
-            .list_repeat => |*lr| {
-                if (lr.list.operand.equal(old)) lr.list.operand = new;
-                if (lr.count.operand.equal(old)) lr.count.operand = new;
+            .array_alloc => |*aa| {
+                if (aa.len.operand.equal(old)) aa.len.operand = new;
+            },
+            .array_repeat => |*ar| {
+                if (ar.array.operand.equal(old)) ar.array.operand = new;
+                if (ar.count.operand.equal(old)) ar.count.operand = new;
             },
             .subscript_store => |*ss| {
                 if (ss.target.operand.equal(old)) ss.target.operand = new;
@@ -547,11 +565,14 @@ pub const Instruction = union(enum) {
             .tuple_literal => |*tl| {
                 if (tl.dst.operand.equal(old)) tl.dst.operand = new;
             },
-            .list_literal => |*ll| {
-                if (ll.dst.operand.equal(old)) ll.dst.operand = new;
+            .array_literal => |*al| {
+                if (al.dst.operand.equal(old)) al.dst.operand = new;
             },
-            .list_repeat => |*lr| {
-                if (lr.dst.operand.equal(old)) lr.dst.operand = new;
+            .array_alloc => |*aa| {
+                if (aa.dst.operand.equal(old)) aa.dst.operand = new;
+            },
+            .array_repeat => |*ar| {
+                if (ar.dst.operand.equal(old)) ar.dst.operand = new;
             },
             .subscript => |*s| {
                 if (s.dst.operand.equal(old)) s.dst.operand = new;
@@ -596,7 +617,8 @@ pub const Instruction = union(enum) {
             .len => |*l| .{ .top = &l.dst },
             .tuple_literal => |*tl| .{ .top = &tl.dst },
             .subscript => |*tl| .{ .top = &tl.dst },
-            .list_literal => |*ll| .{ .top = &ll.dst },
+            .array_literal => |*al| .{ .top = &al.dst },
+            .array_alloc => |*aa| .{ .top = &aa.dst },
             .subscript_store => null,
             .print => null,
             .function_ref => |*fr| .{ .top = &fr.dst },
@@ -605,7 +627,7 @@ pub const Instruction = union(enum) {
             .function_return => null,
             .global_idx => |*gi| .{ .top = &gi.dst },
             .gpu_launch => null,
-            .list_repeat => |*lr| .{ .top = &lr.dst },
+            .array_repeat => |*ar| .{ .top = &ar.dst },
             .field_store => null,
             .field_load => |*fl| .{ .top = &fl.dst },
             .class_init => |*ci| .{ .top = &ci.dst },
@@ -654,7 +676,7 @@ pub const Instruction = union(enum) {
                 try res.append(alloc, .{ .top = &r.end });
             },
             .len => |*l| {
-                try res.append(alloc, .{ .top = &l.value });
+                try res.append(alloc, .{ .top = &l.src });
             },
             .tuple_literal => |*tl| {
                 for (tl.elements) |*elem| {
@@ -668,17 +690,20 @@ pub const Instruction = union(enum) {
                 try res.append(alloc, .{ .top = &s.src });
                 try res.append(alloc, .{ .top = &s.index });
             },
-            .list_literal => |*ll| {
-                for (ll.elements) |*elem| {
+            .array_literal => |*al| {
+                for (al.elements) |*elem| {
                     switch (elem.*) {
                         .top => |*top| try res.append(alloc, .{ .top = top }),
                         .constant => {},
                     }
                 }
             },
-            .list_repeat => |*lr| {
-                try res.append(alloc, .{ .top = &lr.list });
-                try res.append(alloc, .{ .top = &lr.count });
+            .array_alloc => |*aa| {
+                try res.append(alloc, .{ .top = &aa.len });
+            },
+            .array_repeat => |*ar| {
+                try res.append(alloc, .{ .top = &ar.array });
+                try res.append(alloc, .{ .top = &ar.count });
             },
             .subscript_store => |*ss| {
                 try res.append(alloc, .{ .top = &ss.target });
@@ -769,7 +794,7 @@ pub const Instruction = union(enum) {
             } },
             .len => |l| .{ .len = .{
                 .dst = try l.dst.clone(alloc),
-                .value = try l.value.clone(alloc),
+                .src = try l.src.clone(alloc),
             } },
             .function_return => |fr| .{ .function_return = .{
                 .value = if (fr.value) |value| try value.clone(alloc) else null,
@@ -815,20 +840,24 @@ pub const Instruction = union(enum) {
                     },
                 };
             },
-            .list_literal => |ll| blk: {
-                const elements = try alloc.alloc(ValueRef, ll.elements.len);
-                for (ll.elements, 0..) |elem, i| {
+            .array_literal => |al| blk: {
+                const elements = try alloc.alloc(ValueRef, al.elements.len);
+                for (al.elements, 0..) |elem, i| {
                     elements[i] = try elem.clone(alloc);
                 }
-                break :blk .{ .list_literal = .{
-                    .dst = try ll.dst.clone(alloc),
+                break :blk .{ .array_literal = .{
+                    .dst = try al.dst.clone(alloc),
                     .elements = elements,
                 } };
             },
-            .list_repeat => |lr| .{ .list_repeat = .{
-                .dst = try lr.dst.clone(alloc),
-                .list = try lr.list.clone(alloc),
-                .count = try lr.count.clone(alloc),
+            .array_alloc => |aa| .{ .array_alloc = .{
+                .dst = try aa.dst.clone(alloc),
+                .len = try aa.len.clone(alloc),
+            } },
+            .array_repeat => |ar| .{ .array_repeat = .{
+                .dst = try ar.dst.clone(alloc),
+                .array = try ar.array.clone(alloc),
+                .count = try ar.count.clone(alloc),
             } },
             .tuple_literal => |tl| blk: {
                 const elements = try alloc.alloc(ValueRef, tl.elements.len);

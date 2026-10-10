@@ -131,6 +131,38 @@ fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !
                     });
                     instruction.deinit(alloc);
                 },
+                // len
+                .len => |l| {
+                    if (l.src.type != .instance) {
+                        try new_instructions.append(alloc, instruction.*);
+                        continue;
+                    }
+
+                    const class = &program.classes.items[l.src.type.instance.class_id];
+
+                    const method = class.kind.record.findMethod("__len__") orelse {
+                        return error.CantFindBuiltin;
+                    };
+
+                    var arguments = try alloc.alloc(TypedOperand, 1);
+                    errdefer {
+                        for (arguments) |*arg| {
+                            arg.deinit(alloc);
+                        }
+                    }
+                    arguments[0] = try l.src.clone(alloc);
+
+                    try new_instructions.append(alloc, .{
+                        .function_call = .{
+                            .dst = try l.dst.clone(alloc),
+                            .callee = .{
+                                .direct = try alloc.dupe(u8, method.function_label),
+                            },
+                            .args = arguments,
+                        },
+                    });
+                    instruction.deinit(alloc);
+                },
                 .lir => |lir| switch (lir) {
                     .binop => |bop| {
                         const instance = switch (bop.lhs.type) {

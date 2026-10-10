@@ -242,6 +242,7 @@ pub const IrBuilder = struct {
         return self.program.findFunction(name);
     }
 
+    /// FIXME: idx should make this not optional
     /// get function from index
     pub fn getFunction(self: *@This(), id: usize) ?*Function {
         if (id == 0 or id > self.program.functions.items.len) return null;
