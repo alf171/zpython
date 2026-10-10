@@ -18,15 +18,15 @@ from kernels import max_rows as _max_rows_gpu
 from kernels import max_cols as _max_cols_gpu
 
 class TensorData[T]:
-    def __init__(self, data: list[T], shape: tuple[i32, i32]) -> None:
-        self.data: list[T] = data
+    def __init__(self, data: array[T], shape: tuple[i32, i32]) -> None:
+        self.data: array[T] = data
         self.rows: i32 = shape[0]
         self.cols: i32 = shape[1]
         self.row_stride: i32 = shape[1]
         self.col_stride: i32 = 1
 
     @staticmethod
-    def _view[U](data: list[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> TensorData[U]:
+    def _view[U](data: array[U], rows: i32, cols: i32, row_stride: i32, col_stride: i32) -> TensorData[U]:
         res = TensorData(data, (rows, cols))
         res.row_stride = row_stride
         res.col_stride = col_stride
@@ -85,8 +85,11 @@ class TensorData[T]:
 
     @staticmethod
     def fill[U](shape: tuple[i32, i32], value: U) -> TensorData[U]:
-        count: int =  shape[0] * shape[1]
-        return TensorData([value] * count, shape)
+        count: int = shape[0] * shape[1]
+        data: array[U] = array_empty(count)
+        for i in range(count):
+            data[i] = value
+        return TensorData(data, shape)
 
     def __add__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
@@ -132,7 +135,7 @@ class TensorData[T]:
         _exp_gpu(res.data, self.data, (self.rows * self.cols, 1, 1))
         return res
 
-    # NOTE: consider support axes: list[i32]
+    # NOTE: consider support axes: array[i32]
     # keep_dims could also be supported once shape is more generic than just 2d always
     def sum(self, axis: i32) -> TensorData[T]:
         zero: T = 0

@@ -128,13 +128,13 @@ def relu[U](out: TensorData[U], a: TensorData[U]) -> None:
 
 @gpu
 # a bit hacky for rdna3 :)
-def exp[U](out: list[U], a: list[U]) -> None:
+def exp[U](out: array[U], a: array[U]) -> None:
     i = global_id(0)
     log2_e: f32 = 1.4426950408889634
     out[i] = exp2(a[i] * log2_e)
 
 @gpu
-def sum_cols[U](out: list[U], a: TensorData[U]) -> None:
+def sum_cols[U](out: array[U], a: TensorData[U]) -> None:
     col = global_id(0)
     total: U = 0
 
@@ -144,7 +144,7 @@ def sum_cols[U](out: list[U], a: TensorData[U]) -> None:
     out[col] = total
 
 @gpu
-def sum_rows[U](out: list[U], a: TensorData[U]) -> None:
+def sum_rows[U](out: array[U], a: TensorData[U]) -> None:
     row = global_id(0)
     total: U = 0
 
@@ -154,7 +154,7 @@ def sum_rows[U](out: list[U], a: TensorData[U]) -> None:
     out[row] = total
 
 @gpu
-def max_cols[U](out: list[U], a: TensorData[U]) -> None:
+def max_cols[U](out: array[U], a: TensorData[U]) -> None:
     col = global_id(0)
     best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
 
@@ -164,7 +164,7 @@ def max_cols[U](out: list[U], a: TensorData[U]) -> None:
     out[col] = best
 
 @gpu
-def max_rows[U](out: list[U], a: TensorData[U]) -> None:
+def max_rows[U](out: array[U], a: TensorData[U]) -> None:
     row = global_id(0)
     best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
 

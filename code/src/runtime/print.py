@@ -33,14 +33,14 @@ def print_string(s: str, end: str = "\n") -> None:
     if len(end) > 1:
         write(1, end, len(end) - 1)
 
-# print(l: list[int]) delegates to this method
-def print_int_list(l: list[int], end: str = "\n") -> None:
+# print(a: array[int]) delegates to this method
+def print_int_array(a: array[int], end: str = "\n") -> None:
     print_string('[', "")
-    for i in range(len(l)):
-        d = l[i]
+    for i in range(len(a)):
+        d = a[i]
         print_int(d, "")
         # dont print in last case
-        if i != len(l) - 1:
+        if i != len(a) - 1:
             print_string(', ', "")
     print_string(']', end)
 

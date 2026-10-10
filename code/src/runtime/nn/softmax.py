@@ -10,7 +10,7 @@ class Softmax[T](Module):
     """
     def forward(self, x: Tensor[T]) -> Tensor[T]:
         # FIXME: make shape accessable on Tensor also!
-        x_shifted = x - x.max(1).broadcast_to((x.view.rows, x.view.cols))
+        x_shifted = x - x.max(1).broadcast_to((x.uop.shape[0], x.uop.shape[1]))
         x_exp = x_shifted.exp()
-        x_sum = x_exp.sum(1).broadcast_to((x.view.rows, x.view.cols))
+        x_sum = x_exp.sum(1).broadcast_to((x.uop.shape[0], x.uop.shape[1]))
         return x_exp / x_sum

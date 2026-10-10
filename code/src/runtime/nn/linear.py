@@ -14,5 +14,5 @@ class Linear[T](Module):
     """
     def forward(self, x: Tensor[T]) -> Tensor[T]:
         projected = x @ self.weights.transpose()
-        bias = self.bias.broadcast_to((x.view.rows, self.bias.view.cols))
+        bias = self.bias.broadcast_to((x.uop.shape[0], self.bias.uop.shape[1]))
         return projected + bias
