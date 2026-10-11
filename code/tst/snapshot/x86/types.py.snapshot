@@ -12,15 +12,15 @@ infer_floats = [0.0, 1.0, 2.0]
 print(type(infer_floats))
 
 performance report: (ORIGIN=user)
-number of asm lines: 285
-mov count: 248
+number of asm lines: 297
+mov count: 256
 memory load count: 6
 memory store count: 78
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 21
+call count: 25
 spill rounds: 0
 
 actual output:
@@ -28,4 +28,4 @@ list[i32]
 list[f32]
 list[i64]
 list[f64]
-[!!memory report!!]: allocs=16 frees=16 allocated_bytes=280 freed_bytes=280
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=264 freed_bytes=264

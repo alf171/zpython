@@ -26,4 +26,4 @@ actual output:
 50.00000 30.00000 
 (2, 1)
 40.00000 50.00000 
-[!!memory report!!]: allocs=62 frees=62 allocated_bytes=992 freed_bytes=992
+[!!memory report!!]: allocs=62 frees=62 allocated_bytes=968 freed_bytes=968

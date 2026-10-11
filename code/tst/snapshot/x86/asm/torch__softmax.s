@@ -862,51 +862,57 @@ _tensor__Tensor____init____f32:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor____init____f32_L0:
-	movq %rdi, %rbx
-	movq %rsi, %r14
+	movq %rdi, %r13
+	movq %rsi, %rbx
 	movq %rdx, %r12
 	movq $24, %rdi
 	callq arena_malloc
-	movq %rax, %r13
-	movq %r13, %rdi
-	movq %r14, %rsi
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
 	movq %r12, %rdx
 	callq _data__TensorData____init____f32
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $1, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %r13, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
+	movq %r14, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r15
+	movq %r15, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $36, %rdi
 	callq arena_malloc
-	movq %rax, %r13
-	movq %r13, %rdi
+	movq %rax, %rbx
+	movq %rbx, %rdi
 	movq %r15, %rsi
 	movq %r14, %rdx
 	movq $0, %rcx
 	movq %r12, %r8
 	movq $0, %r9
 	callq _uop__Uop____init____f32
-	movq %r13, 0(%rbx)
+	movq %rbx, 0(%r13)
 	movq %r12, %rdi
 	movl $0, %r11d
 	movd %r11d, %xmm1
 	callq _data__TensorData__fill__f32
 	movq %rax, %rdi
-	movq %rdi, 8(%rbx)
+	movq %rdi, 8(%r13)
 	jmp _tensor__Tensor____init____f32_epilogue
 _tensor__Tensor____init____f32_epilogue:
 	popq %r15
@@ -1044,37 +1050,43 @@ _tensor__Tensor__sum__f32:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor__sum__f32_L0:
-	movq %rdi, %rbx
+	movq %rdi, %r13
 	movq %rsi, %r12
-	movq 0(%rbx), %r13
+	movq 0(%r13), %r14
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $1, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %r13, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
-	movq %rax, %r13
+	movq %r14, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
-	movq %rax, %r14
-	movq 0(%rbx), %rdi
-	movq 24(%rdi), %r15
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq %r15, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
+	movq 0(%r13), %rdi
+	movq 24(%rdi), %r13
 	movq $36, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
 	movq %rbx, %rdi
-	movq %r13, %rsi
-	movq %r14, %rdx
+	movq %r14, %rsi
+	movq %r15, %rdx
 	movq $9, %rcx
-	movq %r15, %r8
+	movq %r13, %r8
 	movq %r12, %r9
 	callq _uop__Uop____init____f32
 	movq %rbx, %rdi
@@ -1128,7 +1140,7 @@ _data__TensorData____init____f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list__from_array__class_3_f32:
+_list__list____init____class_3_f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -1137,17 +1149,14 @@ _list__list__from_array__class_3_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list__from_array__class_3_f32_L0:
-	movq %rdi, %rbx
-	movq $16, %rdi
-	callq arena_malloc
-	movq %rax, %rsi
-	movq %rbx, 0(%rsi)
-	movslq 0(%rbx), %rdi
-	movl %edi, 8(%rsi)
-	movq %rsi, %rax
-	jmp _list__list__from_array__class_3_f32_epilogue
-_list__list__from_array__class_3_f32_epilogue:
+_list__list____init____class_3_f32_L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	movslq 0(%rdi), %rdi
+	movl %edi, 8(%rdx)
+	jmp _list__list____init____class_3_f32_epilogue
+_list__list____init____class_3_f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -1157,7 +1166,7 @@ _list__list__from_array__class_3_f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list__from_array__class_1_f32:
+_list__list____init____class_1_f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -1166,17 +1175,14 @@ _list__list__from_array__class_1_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list__from_array__class_1_f32_L0:
-	movq %rdi, %rbx
-	movq $16, %rdi
-	callq arena_malloc
-	movq %rax, %rsi
-	movq %rbx, 0(%rsi)
-	movslq 0(%rbx), %rdi
-	movl %edi, 8(%rsi)
-	movq %rsi, %rax
-	jmp _list__list__from_array__class_1_f32_epilogue
-_list__list__from_array__class_1_f32_epilogue:
+_list__list____init____class_1_f32_L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	movslq 0(%rdi), %rdi
+	movl %edi, 8(%rdx)
+	jmp _list__list____init____class_1_f32_epilogue
+_list__list____init____class_1_f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -1300,37 +1306,43 @@ _tensor__Tensor__max__f32:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor__max__f32_L0:
-	movq %rdi, %rbx
+	movq %rdi, %r13
 	movq %rsi, %r12
-	movq 0(%rbx), %r13
+	movq 0(%r13), %r14
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $1, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %r13, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
-	movq %rax, %r13
+	movq %r14, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
-	movq %rax, %r14
-	movq 0(%rbx), %rdi
-	movq 24(%rdi), %r15
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq %r15, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
+	movq 0(%r13), %rdi
+	movq 24(%rdi), %r13
 	movq $36, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
 	movq %rbx, %rdi
-	movq %r13, %rsi
-	movq %r14, %rdx
+	movq %r14, %rsi
+	movq %r15, %rdx
 	movq $10, %rcx
-	movq %r15, %r8
+	movq %r13, %r8
 	movq %r12, %r9
 	callq _uop__Uop____init____f32
 	movq %rbx, %rdi
@@ -1359,25 +1371,31 @@ _tensor__Tensor__broadcast_to__f32:
 	pushq %r15
 _tensor__Tensor__broadcast_to__f32_L0:
 	movq %rsi, %r12
-	movq 0(%rdi), %rbx
+	movq 0(%rdi), %r13
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $1, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %rbx, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
+	movq %r13, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r13
+	movq %r13, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
 	movq $36, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
@@ -1413,31 +1431,37 @@ _tensor__Tensor____sub____f32:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor____sub____f32_L0:
-	movq %rdi, %rbx
+	movq %rdi, %r12
 	movq %rsi, %rdi
-	movq 0(%rbx), %r13
-	movq 0(%rdi), %r12
+	movq 0(%r12), %r14
+	movq 0(%rdi), %r13
 	movq $24, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $2, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %r13, (%rsi,%rdi)
+	movq %r14, (%rbx,%rdi)
 	movq $16, %rdi
-	movq %r12, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
+	movq %r13, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r13
+	movq %r13, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r14
-	movq 0(%rbx), %rdi
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
+	movq 0(%r12), %rdi
 	movq 24(%rdi), %r12
 	movq $36, %rdi
 	callq arena_malloc
@@ -1475,25 +1499,31 @@ _tensor__Tensor__exp__f32:
 	pushq %r15
 _tensor__Tensor__exp__f32_L0:
 	movq %rdi, %rbx
-	movq 0(%rbx), %r12
+	movq 0(%rbx), %r13
 	movq $16, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %r12
 	movq $1, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%r12)
 	movq $8, %rdi
-	movq %r12, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
+	movq %r13, (%r12,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r13
+	movq %r13, %rdi
+	movq %r12, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %r12
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
+	movq %rdi, 0(%r12)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r14
+	movq %r14, %rdi
+	movq %r12, %rsi
+	callq _list__list____init____class_3_f32
 	movq 0(%rbx), %rdi
 	movq 24(%rdi), %r12
 	movq $36, %rdi
@@ -1531,31 +1561,37 @@ _tensor__Tensor____truediv____f32:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor____truediv____f32_L0:
-	movq %rdi, %rbx
+	movq %rdi, %r12
 	movq %rsi, %rdi
-	movq 0(%rbx), %r13
-	movq 0(%rdi), %r12
+	movq 0(%r12), %r14
+	movq 0(%rdi), %r13
 	movq $24, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $2, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %r13, (%rsi,%rdi)
+	movq %r14, (%rbx,%rdi)
 	movq $16, %rdi
-	movq %r12, (%rsi,%rdi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_1_f32
+	movq %r13, (%rbx,%rdi)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r13
+	movq %r13, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_1_f32
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %rsi
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
-	movq %rsi, %rdi
-	callq _list__list__from_array__class_3_f32
+	movq %rdi, 0(%rbx)
+	movq $12, %rdi
+	callq arena_malloc
 	movq %rax, %r14
-	movq 0(%rbx), %rdi
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_3_f32
+	movq 0(%r12), %rdi
 	movq 24(%rdi), %r12
 	movq $36, %rdi
 	callq arena_malloc
@@ -1640,9 +1676,9 @@ _data__TensorData____print____f32_L2:
 	addq %r15, %rdx
 	movslq 12(%rcx), %rsi
 	movq $0, %rdi
-	movq %rdi, -48(%rbp)
+	movq %rdi, -40(%rbp)
 	movq %rsi, %r14
-	movq %rbx, -40(%rbp)
+	movq %rbx, -48(%rbp)
 	movq %rcx, %r13
 	movq %rdx, %r12
 	movq $0, %rbx
@@ -1668,7 +1704,7 @@ _data__TensorData____print____f32_L4:
 	jne _data__TensorData____print____f32_L5
 	jmp _data__TensorData____print____f32_L6
 _data__TensorData____print____f32_L5:
-	movq -48(%rbp), %rdi
+	movq -40(%rbp), %rdi
 	addq %rbx, %rdi
 	leaq -16(%rbp), %rsi
 	movl %r12d, 0(%rsi)
@@ -1697,7 +1733,7 @@ _data__TensorData____print____f32_L5:
 _data__TensorData____print____f32_L6:
 	movq $1, %rdi
 	addq %r15, %rdi
-	movq -40(%rbp), %rbx
+	movq -48(%rbp), %rbx
 	movq %r13, %rcx
 	movq %rdi, %r15
 	jmp _data__TensorData____print____f32_L1

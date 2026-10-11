@@ -1,17 +1,11 @@
 
 # TODO: add asserts
 class list[T]:
-    def __init__(self, capacity: int) -> None:
-        self.data: array[T] = array_empty(capacity)
-        self.size: int = 0
-
     # used by compiler!
-    @staticmethod
-    def from_array[U](data: array[U]) -> list[U]:
-        res: list[U] = list.__new__(list)
-        res.data = data
-        res.size = len(data)
-        return res
+    def __init__(self, data: array[T]) -> None:
+        self.data: array[T] = data
+        # 4.2 billion is max size here
+        self.size: i32 = len(data)
 
     @inline
     def __getitem__(self, i: int) -> T:
@@ -29,7 +23,7 @@ class list[T]:
         data: array[T] = array_empty(self.size * count)
         for i in range(self.size * count):
             data[i] = self.data[i % self.size]
-        return list.from_array(data)
+        return list(data)
 
     # FIXME: should override __str__
     # would require a rework of the print pass
@@ -41,9 +35,15 @@ class list[T]:
           print(self.data[i], end="")
       print("]", end=end)
 
-    # def append(self, value: T) -> None:
-    #     if self.size == len(self.data):
-    #         self._grow()
-    #     self.storage[self.size] = value
-    #     self.size += 1
-    #
+    def append(self, value: T) -> None:
+        if self.size == len(self.data):
+            self._grow()
+        self.data[self.size] = value
+        self.size += 1
+
+    def _grow(self) -> None:
+        capacity = 8 if len(self.data) < 8 else len(self.data) * 2
+        new_data: array[T] = array_empty(capacity)
+        for i in range(self.size):
+            new_data[i] = self.data[i]
+        self.data = new_data

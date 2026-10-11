@@ -2,28 +2,36 @@ running program: (OPTIM=true)
 
 
 items: list[int] = [1, 2, 3]
+print(items)
 items[2] = 0
-
-print(items[0])
-print(items[1])
-print(items[2])
+print(items)
+print(len(items.data))
+items.append(4)
+print(items)
+print(len(items.data), end = " ")
+for i in range(5, 10):
+    items.append(i)
+    print(len(items.data), end=" ")
+print("\n", end="")
 print(items)
 
 performance report: (ORIGIN=user)
-number of asm lines: 105
-mov count: 78
+number of asm lines: 191
+mov count: 143
 memory load count: 13
-memory store count: 23
-conditional jumps: 0
-unconditional jumps: 1
-comparisons: 0
+memory store count: 37
+conditional jumps: 1
+unconditional jumps: 4
+comparisons: 2
 returns: 1
-call count: 11
+call count: 23
 spill rounds: 0
 
 actual output:
-1
-2
-0
+[1, 2, 3]
 [1, 2, 0]
-[!!memory report!!]: allocs=16 frees=16 allocated_bytes=184 freed_bytes=184
+3
+[1, 2, 0, 4]
+8 8 8 8 8 16 
+[1, 2, 0, 4, 5, 6, 7, 8, 9]
+[!!memory report!!]: allocs=78 frees=78 allocated_bytes=968 freed_bytes=968

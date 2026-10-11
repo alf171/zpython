@@ -4,6 +4,7 @@ class Animal:
         self.sound = sound
 
     def speak(self) -> None:
+        # TODO: support something other than strings in fstrings
         print(f"{self.name} says {self.sound}")
 
 class Dog(Animal):

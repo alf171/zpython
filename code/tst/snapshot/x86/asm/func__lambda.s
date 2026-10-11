@@ -13,7 +13,7 @@ main:
 main_L0:
 	movq $2, %rdi
 	movq $3, %rsi
-	callq _lambda____lambda_97
+	callq _lambda____lambda_98
 	movq %rax, %rdi
 	movslq %edi, %rbx
 	movq $10, %rdi
@@ -783,7 +783,7 @@ _module__Module____init___epilogue:
 	popq %rbp
 	retq
 # origin: user
-_lambda____lambda_97:
+_lambda____lambda_98:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -792,13 +792,13 @@ _lambda____lambda_97:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_lambda____lambda_97_L0:
+_lambda____lambda_98_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rdi
 	addq %rdx, %rdi
 	movq %rdi, %rax
-	jmp _lambda____lambda_97_epilogue
-_lambda____lambda_97_epilogue:
+	jmp _lambda____lambda_98_epilogue
+_lambda____lambda_98_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

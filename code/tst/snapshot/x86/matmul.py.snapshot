@@ -28,16 +28,16 @@ matmul(
 )
 
 performance report: (ORIGIN=user)
-number of asm lines: 690
-mov count: 565
-memory load count: 60
-memory store count: 145
+number of asm lines: 748
+mov count: 605
+memory load count: 68
+memory store count: 148
 conditional jumps: 3
 unconditional jumps: 11
 comparisons: 6
 returns: 2
-call count: 48
-spill rounds: 9
+call count: 66
+spill rounds: 12
 
 actual output:
 215
@@ -45,4 +45,4 @@ actual output:
 895
 1310
 1775
-[!!memory report!!]: allocs=41 frees=41 allocated_bytes=902 freed_bytes=902
+[!!memory report!!]: allocs=41 frees=41 allocated_bytes=830 freed_bytes=830

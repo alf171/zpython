@@ -32,4 +32,4 @@ spill rounds: 4
 
 actual output:
 0.00000 -5.50000 4.75000 6.00000 4.87500 6.50000 -6.50000 0.00000 -1.25000 2.00000 -1.50000 -4.00000 
-[!!memory report!!]: allocs=61 frees=61 allocated_bytes=1017 freed_bytes=1017
+[!!memory report!!]: allocs=61 frees=61 allocated_bytes=993 freed_bytes=993

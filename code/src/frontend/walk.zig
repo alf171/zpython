@@ -643,21 +643,31 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 return try array.clone(alloc);
             }
             // otherwise wrap in a list
-            const class = ir_builder.findClassRecord("list") orelse return error.ClassNotLoaded;
-            const from_array = class.findMethod("from_array") orelse return error.CantFindFromArray;
-            const from_array_fn = ir_builder.getFunction(from_array.function_id) orelse return error.CantFindFunction;
+            const class = ir_builder.findClass("list") orelse return error.ClassNotLoaded;
+            const class_record = &class.kind.record;
+            const init_method = class_record.findMethod("__init__") orelse return error.CantFindFromArray;
+            const init_fn = ir_builder.getFunction(init_method.function_id) orelse return error.CantFindFunction;
             var bindings: TypeBindings = .init(alloc);
             defer bindings.deinit(alloc);
-            const return_type = try bindings.inferReturnType(&ir_builder.program, from_array_fn, &.{array}, alloc);
+            // const return_type = try bindings.inferReturnType(&ir_builder.program, init_fn, &.{array}, alloc);
+            try TypeInfo.unify(init_fn.params[1].type, array.type, &bindings, &ir_builder.program, alloc);
+            const dst_args = try alloc.alloc(TypeInfo, class_record.type_params.len);
+            for (class_record.type_params, 0..) |type_param, i| {
+                const t = bindings.get(type_param.id) orelse return error.CantResolveType;
+                dst_args[i] = try t.clone(alloc);
+            }
             const dst: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),
-                .type = return_type,
+                .type = .{ .instance = .{
+                    .class_id = class.id,
+                    .args = dst_args,
+                } },
             };
             const args = try alloc.alloc(TypedOperand, 1);
             args[0] = try array.clone(alloc);
-            try ir_builder.emit(.{ .function_call = .{
+            try ir_builder.emit(.{ .class_init = .{
                 .dst = dst,
-                .callee = .{ .direct = try alloc.dupe(u8, from_array_fn.label) },
+                .class_id = class.id,
                 .args = args,
             } }, alloc);
             return try dst.clone(alloc);
