@@ -176,13 +176,6 @@ pub const Instruction = union(enum) {
         // x=0, y=1, z=2
         axis: ValueRef,
     },
-    // dst <- [lst] * count
-    // TODO: deprecate for stdlib version
-    array_repeat: struct {
-        dst: TypedOperand,
-        array: TypedOperand,
-        count: TypedOperand,
-    },
     // deglate to LIR impl
     lir: LirInstruction,
     unkown,
@@ -288,11 +281,6 @@ pub const Instruction = union(enum) {
             .field_store => |fs| {
                 fs.instance.deinit(alloc);
                 fs.src.deinit(alloc);
-            },
-            .array_repeat => |ar| {
-                ar.dst.deinit(alloc);
-                ar.array.deinit(alloc);
-                ar.count.deinit(alloc);
             },
             .len => |l| {
                 l.dst.deinit(alloc);
@@ -508,10 +496,6 @@ pub const Instruction = union(enum) {
             .array_alloc => |*aa| {
                 if (aa.len.operand.equal(old)) aa.len.operand = new;
             },
-            .array_repeat => |*ar| {
-                if (ar.array.operand.equal(old)) ar.array.operand = new;
-                if (ar.count.operand.equal(old)) ar.count.operand = new;
-            },
             .subscript_store => |*ss| {
                 if (ss.target.operand.equal(old)) ss.target.operand = new;
                 if (ss.index.operand.equal(old)) ss.index.operand = new;
@@ -571,9 +555,6 @@ pub const Instruction = union(enum) {
             .array_alloc => |*aa| {
                 if (aa.dst.operand.equal(old)) aa.dst.operand = new;
             },
-            .array_repeat => |*ar| {
-                if (ar.dst.operand.equal(old)) ar.dst.operand = new;
-            },
             .subscript => |*s| {
                 if (s.dst.operand.equal(old)) s.dst.operand = new;
             },
@@ -627,7 +608,6 @@ pub const Instruction = union(enum) {
             .function_return => null,
             .global_idx => |*gi| .{ .top = &gi.dst },
             .gpu_launch => null,
-            .array_repeat => |*ar| .{ .top = &ar.dst },
             .field_store => null,
             .field_load => |*fl| .{ .top = &fl.dst },
             .class_init => |*ci| .{ .top = &ci.dst },
@@ -700,10 +680,6 @@ pub const Instruction = union(enum) {
             },
             .array_alloc => |*aa| {
                 try res.append(alloc, .{ .top = &aa.len });
-            },
-            .array_repeat => |*ar| {
-                try res.append(alloc, .{ .top = &ar.array });
-                try res.append(alloc, .{ .top = &ar.count });
             },
             .subscript_store => |*ss| {
                 try res.append(alloc, .{ .top = &ss.target });
@@ -853,11 +829,6 @@ pub const Instruction = union(enum) {
             .array_alloc => |aa| .{ .array_alloc = .{
                 .dst = try aa.dst.clone(alloc),
                 .len = try aa.len.clone(alloc),
-            } },
-            .array_repeat => |ar| .{ .array_repeat = .{
-                .dst = try ar.dst.clone(alloc),
-                .array = try ar.array.clone(alloc),
-                .count = try ar.count.clone(alloc),
             } },
             .tuple_literal => |tl| blk: {
                 const elements = try alloc.alloc(ValueRef, tl.elements.len);

@@ -451,25 +451,6 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const rhs = try walkExpr(right, ir_builder, null, alloc);
             errdefer rhs.deinit(alloc);
 
-            if (lhs.type == .array and (rhs.type == .i64 or rhs.type == .i32)) {
-                // array_repeat owns clones of both operands, so release these
-                // expression temporaries after building the instruction.
-                defer lhs.deinit(alloc);
-                defer rhs.deinit(alloc);
-                const dst: TypedOperand = .{
-                    .operand = ir_builder.nextTemp(),
-                    .type = .{ .array = .{
-                        .element = try (try lhs.type.array.element.clone(alloc)).toOwnedPointer(alloc),
-                    } },
-                };
-                try ir_builder.emit(.{ .array_repeat = .{
-                    .dst = dst,
-                    .array = try lhs.clone(alloc),
-                    .count = try rhs.clone(alloc),
-                } }, alloc);
-                return try dst.clone(alloc);
-            }
-
             const result_type: TypeInfo = switch (lhs.type) {
                 .instance => |instance| blk: {
                     const class = ir_builder.getClass(instance.class_id);

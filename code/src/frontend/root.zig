@@ -13,7 +13,6 @@ pub const gpu = @import("passes/gpu.zig");
 pub const print = @import("passes/print.zig");
 pub const class = @import("passes/class.zig");
 pub const runtime = @import("runtime.zig");
-pub const repeat = @import("passes/repeat.zig");
 pub const generics = @import("passes/generics.zig");
 pub const module = @import("module.zig");
 

@@ -13,7 +13,6 @@ const runtime = @import("frontend").runtime;
 const class = @import("frontend").class;
 const gpu = @import("frontend").gpu;
 const generics = @import("frontend").generics;
-const repeat = @import("frontend").repeat;
 const middle = @import("middle");
 const backend = @import("backend");
 const Assembler = @import("assembler").Assembler;
@@ -109,7 +108,6 @@ pub fn main(init: std.process.Init) !void {
     // storage depends on generics
     try class.lowerStorage(&ir_program, alloc);
     try inline_.rewrite(&ir_program, alloc);
-    try repeat.rewrite(&ir_program, alloc);
     try generics.rewrite(&ir_program, alloc);
     generics.dropTemplates(&ir_program, alloc);
     try gpu.rewrite(&ir_program, alloc);
