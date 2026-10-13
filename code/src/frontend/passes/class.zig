@@ -6,17 +6,29 @@ const Instruction = @import("common").mir.Instruction;
 const TypedOperand = @import("common").alloc.TypedOperand;
 
 pub fn lowerCalls(program: *Program, alloc: std.mem.Allocator) !void {
-    try lowerCall(program, &program.main, alloc);
+    try lowerCall(program, &program.main, false, alloc);
     for (program.functions.items) |*function| {
-        try lowerCall(program, function, alloc);
+        try lowerCall(program, function, false, alloc);
     }
 }
 
-fn lowerCall(program: *Program, function: *Function, alloc: std.mem.Allocator) !void {
+pub fn lowerOperators(program: *Program, alloc: std.mem.Allocator) !void {
+    try lowerCall(program, &program.main, true, alloc);
+    for (program.functions.items) |*function| {
+        try lowerCall(program, function, true, alloc);
+    }
+}
+
+fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc: std.mem.Allocator) !void {
     for (function.blocks.items) |*block| {
         var new_instructions: ArrayList(Instruction) = .empty;
         errdefer new_instructions.deinit(alloc);
         for (block.instructions.items) |*instruction| {
+            const is_operator = (instruction.* == .lir and instruction.*.lir == .binop);
+            if (is_operator != operator_only) {
+                try new_instructions.append(alloc, instruction.*);
+                continue;
+            }
             switch (instruction.*) {
                 // instance <- Class(*args)
                 // :becomes:

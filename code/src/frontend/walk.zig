@@ -1090,19 +1090,14 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                         .operand = ir_builder.nextTemp(),
                         .type = try lhs.type.clone(alloc),
                     };
-                    const args = try alloc.alloc(TypedOperand, 2);
-                    args[0] = lhs;
-                    args[1] = value;
-                    errdefer {
-                        lhs.deinit(alloc);
-                        value.deinit(alloc);
-                        alloc.free(args);
-                    }
-                    try ir_builder.emit(.{ .function_call = .{
-                        .dst = try dst.clone(alloc),
-                        .callee = .{ .direct = try alloc.dupe(u8, "_concat__string_concat") },
-                        .args = args,
-                    } }, alloc);
+                    try ir_builder.emit(.{
+                        .lir = .{ .binop = .{
+                            .dst = try dst.clone(alloc),
+                            .op = .{ .bop = .add },
+                            .lhs = lhs,
+                            .rhs = value,
+                        } },
+                    }, alloc);
                     result = dst;
                 } else {
                     result = value;
@@ -1289,10 +1284,12 @@ fn walkNamedCall(
                 const arg0 = c.PyList_GetItem(args, 0);
                 std.debug.assert(arg0 != null);
                 const src = try walkExpr(arg0, ir_builder, null, alloc);
+                errdefer src.deinit(alloc);
 
                 const keywords = c.PyObject_GetAttrString(stmt, "keywords");
                 std.debug.assert(keywords != null);
                 var end: ?TypedOperand = null;
+                errdefer if (end) |e| e.deinit(alloc);
                 const keyword_length = c.PyList_Size(keywords);
                 std.debug.assert(keyword_length == 0 or keyword_length == 1);
                 if (keyword_length == 1) {
@@ -1307,6 +1304,20 @@ fn walkNamedCall(
                     const end_value_obj = c.PyObject_GetAttrString(end_obj, "value");
                     std.debug.assert(end_value_obj != null);
                     end = try walkExpr(end_value_obj, ir_builder, null, alloc);
+                }
+                // FIXME: hack bc of print/func pass orders
+                if (end == null) {
+                    const literal = try makeStringLiteral("\n", alloc);
+                    const composite = literal.composite;
+                    const buffer: TypedOperand = .{
+                        .operand = ir_builder.nextTemp(),
+                        .type = composite.type,
+                    };
+                    try ir_builder.emit(.{ .array_literal = .{
+                        .dst = buffer,
+                        .elements = composite.elements,
+                    } }, alloc);
+                    end = try wrapString(buffer, ir_builder, alloc);
                 }
                 switch (src.type) {
                     .instance => {
@@ -1408,6 +1419,22 @@ fn walkNamedCall(
                                 .callee = .{ .direct = try alloc.dupe(u8, "write") },
                             },
                         }, alloc);
+                    },
+                    .instance => |instance| {
+                        const class = ir_builder.getClassRecord(instance.class_id);
+                        const method = class.findMethod("__write__") orelse {
+                            return error.CantFindWrite;
+                        };
+                        const write_args = try alloc.alloc(TypedOperand, 3);
+                        write_args[0] = buf; // self
+                        write_args[1] = fd;
+                        write_args[2] = len;
+
+                        try ir_builder.emit(.{ .function_call = .{
+                            .dst = null,
+                            .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
+                            .args = write_args,
+                        } }, alloc);
                     },
                     else => |e| {
                         std.debug.print("cant write type {s}\n", .{@tagName(e)});
@@ -1632,7 +1659,7 @@ fn walkNamedCall(
                     .dst = dst,
                     .elements = composite.elements,
                 } }, alloc);
-                return try dst.clone(alloc);
+                return try wrapString(dst, ir_builder, alloc);
             },
             .Hash => {
                 std.debug.assert(c.PyList_Size(args) == 1);
@@ -1641,30 +1668,14 @@ fn walkNamedCall(
                 const value = try walkExpr(arg, ir_builder, null, alloc);
                 defer value.deinit(alloc);
 
-                if (value.type != .instance) {
-                    return error.HashOnlyAllowedOnInstance;
-                }
-
-                const class = ir_builder.getClassRecord(value.type.instance.class_id);
-                const method = class.findMethod("__hash__") orelse {
-                    return error.CantFindHashFunction;
-                };
-                const function = ir_builder.getFunction(method.function_id) orelse {
-                    return error.CantFindHashFunction;
-                };
-
                 const dst: TypedOperand = .{
                     .operand = ir_builder.nextTemp(),
-                    .type = try function.return_type.clone(alloc),
+                    .type = .i64,
                 };
 
-                const fargs = try alloc.alloc(TypedOperand, 1);
-                fargs[0] = value;
-
-                try ir_builder.emit(.{ .function_call = .{
+                try ir_builder.emit(.{ .hash = .{
                     .dst = dst,
-                    .callee = .{ .direct = try alloc.dupe(u8, function.label) },
-                    .args = fargs,
+                    .src = value,
                 } }, alloc);
                 return try dst.clone(alloc);
             },

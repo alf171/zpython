@@ -16,22 +16,22 @@ def print_int(d: int, end: str = "\n") -> None:
         write(1, '-', 1)
         d = -d
     _print_int_helper(d)
-    if len(end) > 1:
-        write(1, end, len(end) - 1)
+    if len(end) > 0:
+        write(1, end, len(end))
 
 # print(b: bool) delegates to this method
 def print_bool(b: bool, end: str = "\n") -> None:
     s = "True" if b else "False"
     len = 4 if b else 5
     write(1, s, len)
-    if len(end) > 1:
-        write(1, end, len(end) - 1)
+    if len(end) > 0:
+        write(1, end, len(end))
 
 # print(b: str) delegates to this method
 def print_string(s: str, end: str = "\n") -> None:
-    write(1, s, len(s) - 1)
-    if len(end) > 1:
-        write(1, end, len(end) - 1)
+    write(1, s, len(s))
+    if len(end) > 0:
+        write(1, end, len(end))
 
 # print(a: array[int]) delegates to this method
 def print_int_array(a: array[int], end: str = "\n") -> None:
@@ -62,5 +62,5 @@ def print_float(f: float, end: str = "\n") -> None:
         _print_int_helper(whole)
         frac = frac - float(whole)
 
-    if len(end) > 1:
-        write(1, end, len(end) - 1)
+    if len(end) > 0:
+        write(1, end, len(end))

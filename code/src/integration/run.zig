@@ -6,6 +6,7 @@ const tuple = @import("frontend").tuple;
 const lazy = @import("frontend").lazy;
 const array = @import("frontend").array;
 const print = @import("frontend").print;
+const hash = @import("frontend").hash;
 const func = @import("frontend").func;
 const closure = @import("frontend").closure;
 const inline_ = @import("frontend").inline_;
@@ -101,10 +102,13 @@ pub fn main(init: std.process.Init) !void {
     // rewrite layer
     var timer = TimerMetrics.init();
     timer.begin(.frontend_total, io);
+    try func.rewrite(&ir_program, alloc);
     try class.lowerCalls(&ir_program, alloc);
     try closure.rewrite(&ir_program, alloc);
     // classes can contain generics
     try generics.rewrite(&ir_program, alloc);
+    // lower just the operators first
+    try class.lowerOperators(&ir_program, alloc);
     // storage depends on generics
     try class.lowerStorage(&ir_program, alloc);
     try inline_.rewrite(&ir_program, alloc);
@@ -112,7 +116,7 @@ pub fn main(init: std.process.Init) !void {
     generics.dropTemplates(&ir_program, alloc);
     try gpu.rewrite(&ir_program, alloc);
     try print.rewrite(&ir_program, alloc);
-    try func.rewrite(&ir_program, alloc);
+    try hash.rewrite(&ir_program, alloc);
     try lazy.rewrite(&ir_program, alloc);
     try array.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);

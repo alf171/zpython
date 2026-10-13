@@ -16,19 +16,20 @@ pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
         try function_params.put(function.label, function.params);
     }
 
-    try rewriteFunction(&program.main, &function_params, alloc);
+    try rewriteFunction(program, &program.main, &function_params, alloc);
     for (program.functions.items) |*function| {
-        try rewriteFunction(function, &function_params, alloc);
+        try rewriteFunction(program, function, &function_params, alloc);
     }
 }
 
 fn rewriteFunction(
+    program: *const Program,
     function: *Function,
     function_params: *std.StringHashMap([]Param),
     alloc: std.mem.Allocator,
 ) !void {
     for (function.blocks.items) |*block| {
-        var new_instructions = std.ArrayList(Instruction).empty;
+        var new_instructions: std.ArrayList(Instruction) = .empty;
         errdefer new_instructions.deinit(alloc);
 
         for (block.instructions.items) |*instruction| {
@@ -86,7 +87,34 @@ fn rewriteFunction(
                                 } });
                             },
                         }
-                        new_args[i] = default_arg;
+                        // FIXME: this layer shouldnt need to work so hard to create a string
+                        if (default == .composite and param.type == .instance and std.mem.eql(u8, program.classes.items[param.type.instance.class_id].name, "str")) {
+                            const class = program.classes.items[param.type.instance.class_id];
+                            const string: TypedOperand = .{
+                                .operand = function.nextTemp(),
+                                .type = .{
+                                    .instance = .{
+                                        .class_id = class.id,
+                                        .args = try alloc.alloc(TypeInfo, 0),
+                                    },
+                                },
+                            };
+
+                            const args = try alloc.alloc(TypedOperand, 1);
+                            args[0] = try default_arg.clone(alloc);
+
+                            try new_instructions.append(alloc, .{
+                                .class_init = .{
+                                    .dst = string,
+                                    .class_id = class.id,
+                                    .args = args,
+                                },
+                            });
+                            default_arg.deinit(alloc);
+                            new_args[i] = try string.clone(alloc);
+                        } else {
+                            new_args[i] = default_arg;
+                        }
                     }
 
                     try new_instructions.append(alloc, .{ .function_call = .{

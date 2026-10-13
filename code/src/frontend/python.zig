@@ -498,9 +498,6 @@ pub fn parseTypeAnnotation(
         if (std.mem.eql(u8, annotation_name, "float")) return .f64;
         if (std.mem.eql(u8, annotation_name, "f32")) return .f32;
         if (std.mem.eql(u8, annotation_name, "char")) return .char;
-        if (std.mem.eql(u8, annotation_name, "str")) {
-            return .{ .array = .{ .element = try TypeInfo.toOwnedPointer(.char, alloc) } };
-        }
         if (irBuilder.getActiveParmType(annotation_name)) |param_type| {
             return .{ .type_variable = param_type.id };
         }
@@ -584,13 +581,21 @@ pub fn parseTypeAnnotation(
                 if (arity == 0) return error.InvalidTypeArgCount;
 
                 const args = try alloc.alloc(TypeInfo, arity);
-
-                // arity = 1 is a special case
-                // more args get pushed into elts
                 if (arity == 1) {
                     args[0] = try parseTypeAnnotation(slice_obj, irBuilder, alloc);
                 } else {
-                    return error.NotImpl;
+                    if (!std.mem.eql(u8, getPyType(slice_obj), "Tuple")) {
+                        return error.InvalidGenericsState;
+                    }
+                    const elts = c.PyObject_GetAttrString(slice_obj, "elts");
+                    std.debug.assert(elts != null);
+                    const count = c.PyList_Size(elts);
+                    if (count != arity) return error.InvalidArgCount;
+                    for (0..@intCast(count)) |i| {
+                        const elt = c.PyList_GetItem(elts, @intCast(i));
+                        std.debug.assert(elt != null);
+                        args[i] = try parseTypeAnnotation(elt, irBuilder, alloc);
+                    }
                 }
 
                 return .{ .instance = .{

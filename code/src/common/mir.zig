@@ -69,6 +69,11 @@ pub const Instruction = union(enum) {
         src: TypedOperand,
         end: ?TypedOperand,
     },
+    // TODO: deprecate
+    hash: struct {
+        dst: TypedOperand,
+        src: TypedOperand,
+    },
     len: struct {
         dst: TypedOperand,
         src: TypedOperand,
@@ -289,6 +294,10 @@ pub const Instruction = union(enum) {
             .print => |p| {
                 p.src.deinit(alloc);
                 if (p.end) |*end| end.deinit(alloc);
+            },
+            .hash => |h| {
+                h.dst.deinit(alloc);
+                h.src.deinit(alloc);
             },
             .class_alloc => |ca| {
                 ca.dst.deinit(alloc);
@@ -527,6 +536,9 @@ pub const Instruction = union(enum) {
                     else => {},
                 }
             },
+            .hash => |*h| {
+                if (h.src.operand.equal(old)) h.src.operand = new;
+            },
             // delegate to lir
             .lir => |*l| {
                 l.replaceUses(old, new);
@@ -573,6 +585,9 @@ pub const Instruction = union(enum) {
                     gi.dst.operand = new;
                 }
             },
+            .hash => |*h| {
+                if (h.dst.operand.equal(old)) h.dst.operand = new;
+            },
             .lir => |*l| {
                 l.replaceDefines(old, new);
             },
@@ -602,6 +617,7 @@ pub const Instruction = union(enum) {
             .array_alloc => |*aa| .{ .top = &aa.dst },
             .subscript_store => null,
             .print => null,
+            .hash => |*h| .{ .top = &h.dst },
             .function_ref => |*fr| .{ .top = &fr.dst },
             .function_param => |*fp| .{ .top = &fp.dst },
             .function_call => |*fc| if (fc.dst) |*op| .{ .top = op } else null,
@@ -650,6 +666,9 @@ pub const Instruction = union(enum) {
                 if (pi.end) |*end| {
                     try res.append(alloc, .{ .top = end });
                 }
+            },
+            .hash => |*h| {
+                try res.append(alloc, .{ .top = &h.src });
             },
             .range => |*r| {
                 try res.append(alloc, .{ .top = &r.start });
@@ -731,6 +750,11 @@ pub const Instruction = union(enum) {
                 try res.append(alloc, .{ .top = &fl.instance });
             },
             .class_alloc => {},
+            .class_init => |*ci| {
+                for (ci.args) |*arg| {
+                    try res.append(alloc, .{ .top = arg });
+                }
+            },
             .closure_create => |*cc| {
                 for (cc.captures) |*capture| {
                     try res.append(alloc, .{ .top = capture });
@@ -879,6 +903,10 @@ pub const Instruction = union(enum) {
                     .captures = captures,
                 } };
             },
+            .hash => |h| .{ .hash = .{
+                .dst = try h.dst.clone(alloc),
+                .src = try h.src.clone(alloc),
+            } },
             .lir => |*lir| .{
                 .lir = try lir.clone(alloc),
             },

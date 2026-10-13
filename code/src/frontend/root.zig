@@ -11,6 +11,7 @@ pub const func = @import("passes/func.zig");
 pub const closure = @import("passes/closure.zig");
 pub const gpu = @import("passes/gpu.zig");
 pub const print = @import("passes/print.zig");
+pub const hash = @import("passes/hash.zig");
 pub const class = @import("passes/class.zig");
 pub const runtime = @import("runtime.zig");
 pub const generics = @import("passes/generics.zig");

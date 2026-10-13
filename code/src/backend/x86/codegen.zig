@@ -416,6 +416,18 @@ fn emitFunction(
                                         return error.UnsupportedCast;
                                     },
                                 },
+                                .char => switch (c.dst.type) {
+                                    .i64 => {
+                                        try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ reg8(src), dst });
+                                    },
+                                    else => {
+                                        std.debug.print(
+                                            "unsupported cast: {s} -> {s}\n",
+                                            .{ @tagName(c.src.type), @tagName(c.dst.type) },
+                                        );
+                                        return error.UnsupportedCast;
+                                    },
+                                },
                                 else => {
                                     std.debug.print(
                                         "unsupported cast: {s} -> {s}\n",
