@@ -8,7 +8,8 @@ const Instruction = @import("common").mir.Instruction;
 const TypeInfo = @import("common").types.TypeInfo;
 const ValueRef = @import("common").ir.ValueRef;
 
-/// sets default params
+/// support hashing instances and other types.
+/// other types cant be in `walk.zig` because of generics.
 pub fn rewrite(program: *Program, alloc: std.mem.Allocator) !void {
     try rewriteFunction(program, &program.main, alloc);
     for (program.functions.items) |*function| {
@@ -29,7 +30,6 @@ fn rewriteFunction(
             switch (instruction.*) {
                 .hash => |h| {
                     switch (h.src.type) {
-                        // FIXME: move into walk since we dont depend on generics directly
                         .instance => |instance| {
                             const class = &program.classes.items[instance.class_id].kind.record;
                             const method = class.findMethod("__hash__") orelse {

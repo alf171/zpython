@@ -19,10 +19,10 @@ class Uop[T]():
 
     # FIXME: clearer with dicts
     def toposort(self, capacity: i32) -> array[Uop[T]]:
-        order: array[Uop[T]] = [self] * capacity
+        order: array[Uop[T]] = array_empty(capacity)
         count = Uop._visit(self, order, 0)
         # copy to a result
-        result: array[Uop[T]] = [self] * count
+        result: array[Uop[T]] = array_empty(count)
         for i in range(count):
             result[i] = order[i]
         return result

@@ -69,7 +69,6 @@ pub const Instruction = union(enum) {
         src: TypedOperand,
         end: ?TypedOperand,
     },
-    // TODO: deprecate
     hash: struct {
         dst: TypedOperand,
         src: TypedOperand,

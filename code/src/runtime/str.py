@@ -37,7 +37,7 @@ class str:
         write(fd, self.data, count)
 
     def __print__(self, end:str = "\n") -> None:
-        write(1, self.data, len(self))
+        write(1, self, len(self))
         write(1, end, len(end))
 
     def __add__(self, other: str) -> str:

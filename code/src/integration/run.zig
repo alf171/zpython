@@ -9,7 +9,7 @@ const print = @import("frontend").print;
 const hash = @import("frontend").hash;
 const func = @import("frontend").func;
 const closure = @import("frontend").closure;
-const inline_ = @import("frontend").inline_;
+const @"inline" = @import("frontend").@"inline";
 const runtime = @import("frontend").runtime;
 const class = @import("frontend").class;
 const gpu = @import("frontend").gpu;
@@ -111,9 +111,9 @@ pub fn main(init: std.process.Init) !void {
     try class.lowerOperators(&ir_program, alloc);
     // storage depends on generics
     try class.lowerStorage(&ir_program, alloc);
-    try inline_.rewrite(&ir_program, alloc);
     try generics.rewrite(&ir_program, alloc);
     generics.dropTemplates(&ir_program, alloc);
+    try @"inline".rewrite(&ir_program, alloc);
     try gpu.rewrite(&ir_program, alloc);
     try print.rewrite(&ir_program, alloc);
     try hash.rewrite(&ir_program, alloc);
