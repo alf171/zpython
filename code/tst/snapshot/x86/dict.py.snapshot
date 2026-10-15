@@ -1,0 +1,26 @@
+running program: (OPTIM=true)
+
+
+fruits: dict[str, int] = { "apple": 3, "pear": 4, "pineapple": 1 }
+
+print(fruits["pineapple"])
+print(fruits["pear"])
+print(fruits["apple"])
+
+performance report: (ORIGIN=user)
+number of asm lines: 317
+mov count: 263
+memory load count: 6
+memory store count: 71
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
+call count: 38
+spill rounds: 0
+
+actual output:
+1
+4
+3
+[!!memory report!!]: allocs=24 frees=24 allocated_bytes=427 freed_bytes=427

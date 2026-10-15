@@ -1,9 +1,7 @@
 
-
 class Key:
     def __init__(self, val: int) -> None:
         self.val = val
-
 
     def __hash__(self) -> int:
         return self.val

@@ -46,7 +46,7 @@ const LoopCarry = @import("loop.zig").LoopCarry;
 
 const PyObject = c.PyObject;
 
-const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Unknown };
+const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Dict, Unknown };
 
 const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type, Hash, ArrayEmpty };
 
@@ -533,7 +533,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                         .dst = dst,
                         .elements = comp.elements,
                     } }, alloc);
-                    return try dst.clone(alloc);
+                    return try wrapString(dst, ir_builder, alloc);
                 },
             }
         },
@@ -541,87 +541,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
         .List => {
             const elements = c.PyObject_GetAttrString(stmt, "elts");
             std.debug.assert(elements != null);
-            const len = c.PyList_Size(elements);
-            var result: ArrayList(ValueRef) = .empty;
-            errdefer result.deinit(alloc);
-
-            const expected_elem_type: ?TypeInfo = if (expected_type) |t|
-                switch (t) {
-                    .instance => |instance| blk: {
-                        const class = ir_builder.getClassRecord(instance.class_id);
-                        const method = class.findMethod("__getitem__") orelse {
-                            return error.CantFindGetItem;
-                        };
-                        const function = ir_builder.getFunction(method.function_id) orelse {
-                            return error.CantFindFunction;
-                        };
-                        var bindings: TypeBindings = .init(alloc);
-                        defer bindings.deinit(alloc);
-
-                        try function.params[0].type.unify(t, &bindings, &ir_builder.program, alloc);
-                        break :blk try function.return_type.substitute(&bindings, alloc);
-                    },
-                    else => try t.getElementType().clone(alloc),
-                }
-            else
-                null;
-            defer if (expected_elem_type) |t| t.deinit(alloc);
-
-            for (0..@intCast(len)) |i| {
-                const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
-                std.debug.assert(elem != null);
-                // [conditional] use constant instead of an operand if we can
-                switch (getExprKind(elem)) {
-                    .Constant => {
-                        const value = c.PyObject_GetAttrString(elem, "value");
-
-                        const constant = try parseConstant(value, expected_elem_type, alloc);
-                        switch (constant) {
-                            .immediate => |imm| {
-                                try result.append(alloc, .{ .constant = imm });
-                            },
-                            .composite => |comp| {
-                                const dst: TypedOperand = .{
-                                    .operand = ir_builder.nextTemp(),
-                                    .type = comp.type,
-                                };
-                                try ir_builder.emit(.{ .array_literal = .{
-                                    .dst = dst,
-                                    .elements = comp.elements,
-                                } }, alloc);
-
-                                try result.append(alloc, .{ .top = try dst.clone(alloc) });
-                            },
-                        }
-                    },
-                    else => {
-                        const expr = try walkExpr(elem, ir_builder, expected_elem_type, alloc);
-                        try result.append(alloc, .{ .top = expr });
-                    },
-                }
-            }
-            const elem_type: TypeInfo = if (expected_elem_type) |e|
-                try e.clone(alloc)
-            else if (result.items.len == 0)
-                // cant infer type from element so push to later
-                .any
-            else
-                try result.items[0].toType(alloc);
-            const dst_type: TypeInfo = .{
-                .array = .{ .element = try elem_type.toOwnedPointer(alloc) },
-            };
-
-            const array: TypedOperand = .{
-                .operand = ir_builder.nextTemp(),
-                .type = dst_type,
-            };
-            try ir_builder.emit(.{ .array_literal = .{
-                .dst = array,
-                .elements = try result.toOwnedSlice(alloc),
-            } }, alloc);
+            const array = try walkArray(elements, ir_builder, expected_type, alloc);
             // early return if we should return an array
             if (expected_type != null and expected_type.? == .array) {
-                return try array.clone(alloc);
+                return array;
             }
             // otherwise wrap in a list
             const class = ir_builder.findClass("list") orelse return error.ClassNotLoaded;
@@ -645,7 +568,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 } },
             };
             const args = try alloc.alloc(TypedOperand, 1);
-            args[0] = try array.clone(alloc);
+            args[0] = array;
             try ir_builder.emit(.{ .class_init = .{
                 .dst = dst,
                 .class_id = class.id,
@@ -709,9 +632,6 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
 
             switch (value.type) {
                 .array => |array| {
-                    if (index.type != .i64 and index.type != .i32 and index.type != .any) {
-                        return error.ArrayIndexMustBeInt;
-                    }
                     const elem_type = array.element.*;
 
                     const dst: TypedOperand = .{
@@ -1249,6 +1169,51 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             }, alloc);
             return dst;
         },
+        // Dict(keys=[Constant(value='apple'), Constant(value='pear'), Constant(value='pineapple')], values=[Constant(value=3), Constant(value=4), Constant(value=1)])
+        .Dict => {
+            const keys_obj = c.PyObject_GetAttrString(stmt, "keys");
+            std.debug.assert(keys_obj != null);
+            const key_count = c.PyList_Size(keys_obj);
+            const values_obj = c.PyObject_GetAttrString(stmt, "values");
+            std.debug.assert(values_obj != null);
+            const value_count = c.PyList_Size(values_obj);
+            if (key_count != value_count) {
+                return error.InvalidDict;
+            }
+            const keys = try walkArray(keys_obj, ir_builder, null, alloc);
+            const values = try walkArray(values_obj, ir_builder, null, alloc);
+            std.debug.assert(keys.type == .array);
+            std.debug.assert(values.type == .array);
+            const class = ir_builder.findClass("dict") orelse return error.ClassNotLoaded;
+            const class_record = &class.kind.record;
+            const init_method = class_record.findMethod("__init__") orelse return error.CantFindInit;
+            const init_fn = ir_builder.getFunction(init_method.function_id) orelse return error.CantFindFunction;
+            var bindings: TypeBindings = .init(alloc);
+            defer bindings.deinit(alloc);
+            try TypeInfo.unify(init_fn.params[1].type, keys.type, &bindings, &ir_builder.program, alloc);
+            try TypeInfo.unify(init_fn.params[2].type, values.type, &bindings, &ir_builder.program, alloc);
+            const dst_args = try alloc.alloc(TypeInfo, class_record.type_params.len);
+            for (class_record.type_params, 0..) |type_param, i| {
+                const t = bindings.get(type_param.id) orelse return error.CantResolveType;
+                dst_args[i] = try t.clone(alloc);
+            }
+            const dst: TypedOperand = .{
+                .operand = ir_builder.nextTemp(),
+                .type = .{ .instance = .{
+                    .class_id = class.id,
+                    .args = dst_args,
+                } },
+            };
+            const args = try alloc.alloc(TypedOperand, 2);
+            args[0] = keys;
+            args[1] = values;
+            try ir_builder.emit(.{ .class_init = .{
+                .dst = dst,
+                .class_id = class.id,
+                .args = args,
+            } }, alloc);
+            return try dst.clone(alloc);
+        },
         .Unknown => {
             const name = getPyType(stmt);
             std.debug.print("unsupported expr type: {s}: ", .{name});
@@ -1256,6 +1221,89 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             return error.ExprUnknown;
         },
     }
+}
+
+fn walkArray(elements: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInfo, alloc: std.mem.Allocator) anyerror!TypedOperand {
+    const len = c.PyList_Size(elements);
+    var result: ArrayList(ValueRef) = .empty;
+    errdefer result.deinit(alloc);
+
+    const expected_elem_type: ?TypeInfo = if (expected_type) |t|
+        switch (t) {
+            .instance => |instance| blk: {
+                const class = ir_builder.getClassRecord(instance.class_id);
+                const method = class.findMethod("__getitem__") orelse {
+                    return error.CantFindGetItem;
+                };
+                const function = ir_builder.getFunction(method.function_id) orelse {
+                    return error.CantFindFunction;
+                };
+                var bindings: TypeBindings = .init(alloc);
+                defer bindings.deinit(alloc);
+
+                try function.params[0].type.unify(t, &bindings, &ir_builder.program, alloc);
+                break :blk try function.return_type.substitute(&bindings, alloc);
+            },
+            else => try t.getElementType().clone(alloc),
+        }
+    else
+        null;
+    defer if (expected_elem_type) |t| t.deinit(alloc);
+
+    for (0..@intCast(len)) |i| {
+        const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
+        std.debug.assert(elem != null);
+        // [conditional] use constant instead of an operand if we can
+        switch (getExprKind(elem)) {
+            .Constant => {
+                const value = c.PyObject_GetAttrString(elem, "value");
+
+                const constant = try parseConstant(value, expected_elem_type, alloc);
+                switch (constant) {
+                    .immediate => |imm| {
+                        try result.append(alloc, .{ .constant = imm });
+                    },
+                    .composite => |comp| {
+                        const dst: TypedOperand = .{
+                            .operand = ir_builder.nextTemp(),
+                            .type = comp.type,
+                        };
+                        try ir_builder.emit(.{ .array_literal = .{
+                            .dst = dst,
+                            .elements = comp.elements,
+                        } }, alloc);
+
+                        const string = try wrapString(dst, ir_builder, alloc);
+                        try result.append(alloc, .{ .top = string });
+                    },
+                }
+            },
+            else => {
+                const expr = try walkExpr(elem, ir_builder, expected_elem_type, alloc);
+                try result.append(alloc, .{ .top = expr });
+            },
+        }
+    }
+    const elem_type: TypeInfo = if (expected_elem_type) |e|
+        try e.clone(alloc)
+    else if (result.items.len == 0)
+        // cant infer type from element so push to later
+        .any
+    else
+        try result.items[0].toType(alloc);
+    const dst_type: TypeInfo = .{
+        .array = .{ .element = try elem_type.toOwnedPointer(alloc) },
+    };
+
+    const array: TypedOperand = .{
+        .operand = ir_builder.nextTemp(),
+        .type = dst_type,
+    };
+    try ir_builder.emit(.{ .array_literal = .{
+        .dst = array,
+        .elements = try result.toOwnedSlice(alloc),
+    } }, alloc);
+    return try array.clone(alloc);
 }
 
 // Expr(value=Call(func=Name(id="print"),args=[BinOp(...)]))
@@ -2610,6 +2658,29 @@ fn walkReturn(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     } }, alloc);
 }
 
+fn wrapString(array: TypedOperand, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!TypedOperand {
+    const class = ir_builder.findClass("str") orelse {
+        return error.CantFindStr;
+    };
+    const string: TypedOperand = .{
+        .operand = ir_builder.nextTemp(),
+        .type = .{ .instance = .{
+            .class_id = class.id,
+            .args = try alloc.alloc(TypeInfo, 0),
+        } },
+    };
+
+    const args = try alloc.alloc(TypedOperand, 1);
+    args[0] = try array.clone(alloc);
+
+    try ir_builder.emit(.{ .class_init = .{
+        .dst = string,
+        .class_id = class.id,
+        .args = args,
+    } }, alloc);
+    return try string.clone(alloc);
+}
+
 fn getBinOp(expr: *PyObject) !BinOp {
     const op_obj = c.PyObject_GetAttrString(expr, "op");
     std.debug.assert(op_obj != null);
@@ -2676,6 +2747,7 @@ fn getExprKind(stmt: *PyObject) ExprKind {
     if (std.mem.eql(u8, name, "BoolOp")) return .BoolOp;
     if (std.mem.eql(u8, name, "JoinedStr")) return .FString;
     if (std.mem.eql(u8, name, "Lambda")) return .Lambda;
+    if (std.mem.eql(u8, name, "Dict")) return .Dict;
     return .Unknown;
 }
 
