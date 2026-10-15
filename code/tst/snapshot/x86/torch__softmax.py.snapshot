@@ -10,18 +10,18 @@ print(y)
 print(y.sum(1))
 
 performance report: (ORIGIN=user)
-number of asm lines: 107
-mov count: 72
+number of asm lines: 119
+mov count: 80
 memory load count: 8
 memory store count: 21
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 12
+call count: 16
 spill rounds: 2
 
 actual output:
 0.52497 0.47502 0.73105 0.26894 
 1.00000 1.00000 
-[!!memory report!!]: allocs=131 frees=131 allocated_bytes=2458 freed_bytes=2458
+[!!memory report!!]: allocs=147 frees=147 allocated_bytes=2586 freed_bytes=2586

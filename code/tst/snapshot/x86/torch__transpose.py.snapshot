@@ -10,19 +10,19 @@ A[0, 1] = f32(99.0)
 print(B[1,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 137
-mov count: 95
+number of asm lines: 155
+mov count: 107
 memory load count: 9
 memory store count: 33
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 15
+call count: 21
 spill rounds: 3
 
 actual output:
 2.00000
 3.00000
 99.00000
-[!!memory report!!]: allocs=27 frees=27 allocated_bytes=476 freed_bytes=476
+[!!memory report!!]: allocs=33 frees=33 allocated_bytes=524 freed_bytes=524

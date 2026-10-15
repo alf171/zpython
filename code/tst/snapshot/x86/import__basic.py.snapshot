@@ -15,15 +15,15 @@ print(helper.two())
 print(two(1, 2.0))
 
 performance report: (ORIGIN=user)
-number of asm lines: 268
-mov count: 201
+number of asm lines: 322
+mov count: 237
 memory load count: 18
 memory store count: 74
 conditional jumps: 0
 unconditional jumps: 3
 comparisons: 0
 returns: 3
-call count: 19
+call count: 37
 spill rounds: 0
 
 actual output:
@@ -33,4 +33,4 @@ module
 2
 2
 3
-[!!memory report!!]: allocs=9 frees=9 allocated_bytes=119 freed_bytes=119
+[!!memory report!!]: allocs=18 frees=18 allocated_bytes=191 freed_bytes=191

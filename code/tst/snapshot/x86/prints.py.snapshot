@@ -13,16 +13,16 @@ print(d)
 print(e)
 
 performance report: (ORIGIN=user)
-number of asm lines: 472
-mov count: 440
-memory load count: 6
-memory store count: 144
+number of asm lines: 523
+mov count: 473
+memory load count: 7
+memory store count: 145
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 1
 returns: 1
-call count: 14
-spill rounds: 0
+call count: 30
+spill rounds: 1
 
 actual output:
 foobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz
@@ -30,4 +30,4 @@ foobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarba
 False
 TRUE
 1.25000
-[!!memory report!!]: allocs=11 frees=11 allocated_bytes=231 freed_bytes=231
+[!!memory report!!]: allocs=22 frees=22 allocated_bytes=319 freed_bytes=319

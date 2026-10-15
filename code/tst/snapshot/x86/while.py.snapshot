@@ -9,15 +9,15 @@ while x < 3:
 print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 59
-mov count: 30
+number of asm lines: 71
+mov count: 38
 memory load count: 6
 memory store count: 12
 conditional jumps: 1
 unconditional jumps: 4
 comparisons: 2
 returns: 1
-call count: 5
+call count: 9
 spill rounds: 0
 
 actual output:
@@ -25,4 +25,4 @@ actual output:
 2
 3
 3
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=40 freed_bytes=40
+[!!memory report!!]: allocs=8 frees=8 allocated_bytes=72 freed_bytes=72

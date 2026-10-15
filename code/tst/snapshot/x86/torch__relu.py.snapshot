@@ -11,18 +11,18 @@ D = C.relu()
 print(D[0,0])
 
 performance report: (ORIGIN=user)
-number of asm lines: 93
-mov count: 56
+number of asm lines: 105
+mov count: 64
 memory load count: 8
 memory store count: 22
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 11
+call count: 15
 spill rounds: 2
 
 actual output:
 0.00000
 1.00000
-[!!memory report!!]: allocs=44 frees=44 allocated_bytes=984 freed_bytes=984
+[!!memory report!!]: allocs=48 frees=48 allocated_bytes=1016 freed_bytes=1016

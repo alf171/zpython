@@ -9,17 +9,17 @@ x = f(5)
 print(x)
 
 performance report: (ORIGIN=user)
-number of asm lines: 54
-mov count: 18
+number of asm lines: 60
+mov count: 22
 memory load count: 12
 memory store count: 15
 conditional jumps: 0
 unconditional jumps: 2
 comparisons: 0
 returns: 2
-call count: 3
+call count: 5
 spill rounds: 0
 
 actual output:
 47
-[!!memory report!!]: allocs=1 frees=1 allocated_bytes=10 freed_bytes=10
+[!!memory report!!]: allocs=2 frees=2 allocated_bytes=18 freed_bytes=18

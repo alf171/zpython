@@ -9,15 +9,15 @@ print(int(-5.9))
 
 
 performance report: (ORIGIN=user)
-number of asm lines: 95
-mov count: 60
+number of asm lines: 119
+mov count: 76
 memory load count: 8
 memory store count: 20
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 9
+call count: 17
 spill rounds: 2
 
 actual output:
@@ -25,4 +25,4 @@ actual output:
 -3.00000
 5
 -5
-[!!memory report!!]: allocs=8 frees=8 allocated_bytes=80 freed_bytes=80
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=144 freed_bytes=144

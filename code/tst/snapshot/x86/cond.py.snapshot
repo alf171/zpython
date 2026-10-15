@@ -7,19 +7,19 @@ print(a == b)
 print(a != b)
 
 performance report: (ORIGIN=user)
-number of asm lines: 72
-mov count: 43
+number of asm lines: 90
+mov count: 55
 memory load count: 6
 memory store count: 15
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 3
 returns: 1
-call count: 7
+call count: 13
 spill rounds: 0
 
 actual output:
 True
 False
 True
-[!!memory report!!]: allocs=9 frees=9 allocated_bytes=111 freed_bytes=111
+[!!memory report!!]: allocs=18 frees=18 allocated_bytes=183 freed_bytes=183

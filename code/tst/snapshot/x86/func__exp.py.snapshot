@@ -7,18 +7,18 @@ zero: f32 = 0.0
 print(type(zero))
 
 performance report: (ORIGIN=user)
-number of asm lines: 70
-mov count: 45
+number of asm lines: 88
+mov count: 57
 memory load count: 7
 memory store count: 18
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 7
+call count: 13
 spill rounds: 1
 
 actual output:
 148.41315
 f32
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=42 freed_bytes=42
+[!!memory report!!]: allocs=8 frees=8 allocated_bytes=74 freed_bytes=74

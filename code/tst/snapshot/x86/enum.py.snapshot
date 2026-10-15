@@ -20,15 +20,15 @@ print(Color.GREEN == Color.BLUE)
 print(blue)
 
 performance report: (ORIGIN=user)
-number of asm lines: 110
-mov count: 62
+number of asm lines: 134
+mov count: 78
 memory load count: 12
 memory store count: 24
 conditional jumps: 0
 unconditional jumps: 2
 comparisons: 3
 returns: 2
-call count: 10
+call count: 18
 spill rounds: 0
 
 actual output:
@@ -36,4 +36,4 @@ True
 True
 False
 2
-[!!memory report!!]: allocs=10 frees=10 allocated_bytes=121 freed_bytes=121
+[!!memory report!!]: allocs=20 frees=20 allocated_bytes=201 freed_bytes=201

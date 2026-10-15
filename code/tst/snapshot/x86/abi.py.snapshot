@@ -8,17 +8,17 @@ def f(a: int, b: int, c: int, d: int, e:int, f: int) -> int:
 print(f(1,2,3,4,5,6))
 
 performance report: (ORIGIN=user)
-number of asm lines: 69
-mov count: 28
+number of asm lines: 75
+mov count: 32
 memory load count: 12
 memory store count: 15
 conditional jumps: 0
 unconditional jumps: 2
 comparisons: 0
 returns: 2
-call count: 4
+call count: 6
 spill rounds: 0
 
 actual output:
 21
-[!!memory report!!]: allocs=1 frees=1 allocated_bytes=10 freed_bytes=10
+[!!memory report!!]: allocs=2 frees=2 allocated_bytes=18 freed_bytes=18

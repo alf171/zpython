@@ -14,16 +14,16 @@ print(order[1] == B.uop)
 print(order[2] == C.uop)
 
 performance report: (ORIGIN=user)
-number of asm lines: 146
-mov count: 102
-memory load count: 15
-memory store count: 28
+number of asm lines: 180
+mov count: 126
+memory load count: 20
+memory store count: 30
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 3
 returns: 1
-call count: 16
-spill rounds: 1
+call count: 26
+spill rounds: 3
 
 actual output:
 5.00000
@@ -31,4 +31,4 @@ actual output:
 True
 True
 True
-[!!memory report!!]: allocs=46 frees=46 allocated_bytes=1057 freed_bytes=1057
+[!!memory report!!]: allocs=56 frees=56 allocated_bytes=1121 freed_bytes=1121

@@ -2,24 +2,23 @@ running program: (OPTIM=true)
 
 x = "foo"
 y = "bar"
-# FIXME: should become x + y?
-z = _concat__string_concat(x, y)
+z = x + y
 print(z)
 print(f"fstring print: {x} {y}")
 
 performance report: (ORIGIN=user)
-number of asm lines: 160
-mov count: 131
+number of asm lines: 196
+mov count: 155
 memory load count: 6
 memory store count: 42
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 13
+call count: 25
 spill rounds: 0
 
 actual output:
 foobar
 fstring print: foo bar
-[!!memory report!!]: allocs=14 frees=14 allocated_bytes=215 freed_bytes=215
+[!!memory report!!]: allocs=20 frees=20 allocated_bytes=259 freed_bytes=259

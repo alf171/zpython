@@ -19,17 +19,17 @@ C = A @ B
 print(C)
 
 performance report: (ORIGIN=user)
-number of asm lines: 153
-mov count: 115
+number of asm lines: 159
+mov count: 119
 memory load count: 10
 memory store count: 33
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 10
+call count: 12
 spill rounds: 4
 
 actual output:
 0.00000 -5.50000 4.75000 6.00000 4.87500 6.50000 -6.50000 0.00000 -1.25000 2.00000 -1.50000 -4.00000 
-[!!memory report!!]: allocs=61 frees=61 allocated_bytes=993 freed_bytes=993
+[!!memory report!!]: allocs=92 frees=92 allocated_bytes=1241 freed_bytes=1241

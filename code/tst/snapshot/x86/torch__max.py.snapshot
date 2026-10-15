@@ -10,15 +10,15 @@ z.print_shape()
 print(z)
 
 performance report: (ORIGIN=user)
-number of asm lines: 94
-mov count: 63
+number of asm lines: 106
+mov count: 71
 memory load count: 6
 memory store count: 19
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 12
+call count: 16
 spill rounds: 0
 
 actual output:
@@ -26,4 +26,4 @@ actual output:
 50.00000 30.00000 
 (2, 1)
 40.00000 50.00000 
-[!!memory report!!]: allocs=62 frees=62 allocated_bytes=968 freed_bytes=968
+[!!memory report!!]: allocs=86 frees=86 allocated_bytes=1160 freed_bytes=1160
