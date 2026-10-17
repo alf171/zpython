@@ -65,6 +65,13 @@ pub const LocalInfo = struct {
     }
 };
 
+const Side = enum { lhs, rhs };
+
+const OperatorCandidate = struct {
+    receiver: Side,
+    method: []const u8,
+};
+
 pub const BinOp = enum {
     add,
     sub,
@@ -85,6 +92,20 @@ pub const BinOp = enum {
             .matmul => "__matmul__",
             .div => "__truediv__",
             else => unreachable,
+        };
+    }
+
+    pub fn operatorCandidates(self: @This()) []const OperatorCandidate {
+        return switch (self) {
+            .add => &.{ .{ .receiver = .lhs, .method = "__add__" }, .{ .receiver = .rhs, .method = "__radd__" } },
+            .sub => &.{ .{ .receiver = .lhs, .method = "__sub__" }, .{ .receiver = .rhs, .method = "__rsub__" } },
+            .mul => &.{ .{ .receiver = .lhs, .method = "__mul__" }, .{ .receiver = .rhs, .method = "__rmul__" } },
+            .div => &.{ .{ .receiver = .lhs, .method = "__truediv__" }, .{ .receiver = .rhs, .method = "__rtruediv__" } },
+            .matmul => &.{ .{ .receiver = .lhs, .method = "__matmul__" }, .{ .receiver = .rhs, .method = "__rmatmul__" } },
+            else => |e| {
+                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                unreachable;
+            },
         };
     }
 
@@ -236,6 +257,7 @@ pub const CmpOp = enum {
     lte,
     gt,
     gte,
+    contains,
 
     pub fn symbol(self: @This()) []const u8 {
         return switch (self) {
@@ -256,6 +278,7 @@ pub const CmpOp = enum {
             .lte => "le",
             .gt => "gt",
             .gte => "ge",
+            else => unreachable,
         };
     }
 
@@ -267,6 +290,19 @@ pub const CmpOp = enum {
             .lte => "__le__",
             .gt => "__gt__",
             .gte => "__ge__",
+            .contains => "__contains__",
+        };
+    }
+
+    pub fn operatorCandidates(self: @This()) []const OperatorCandidate {
+        return switch (self) {
+            .eq => &.{ .{ .receiver = .lhs, .method = "__eq__" }, .{ .receiver = .rhs, .method = "__eq__" } },
+            .neq => &.{ .{ .receiver = .lhs, .method = "__ne__" }, .{ .receiver = .rhs, .method = "__ne__" } },
+            .lt => &.{ .{ .receiver = .lhs, .method = "__lt__" }, .{ .receiver = .rhs, .method = "__lt__" } },
+            .lte => &.{ .{ .receiver = .lhs, .method = "__le__" }, .{ .receiver = .rhs, .method = "__le__" } },
+            .gt => &.{ .{ .receiver = .lhs, .method = "__gt__" }, .{ .receiver = .rhs, .method = "__gt__" } },
+            .gte => &.{ .{ .receiver = .lhs, .method = "__ge__" }, .{ .receiver = .rhs, .method = "__ge__" } },
+            .contains => &.{.{ .receiver = .rhs, .method = "__contains__" }},
         };
     }
 };

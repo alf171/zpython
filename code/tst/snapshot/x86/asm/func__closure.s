@@ -1302,7 +1302,7 @@ _closure__make_L0:
 	movq $16, %rdi
 	callq arena_malloc
 	movq %rax, %rsi
-	leaq _closure____lambda_112(%rip), %rdi
+	leaq _closure____lambda_114(%rip), %rdi
 	movq %rdi, 0(%rsi)
 	movl %ebx, 8(%rsi)
 	movq %rsi, %rax
@@ -1317,7 +1317,7 @@ _closure__make_epilogue:
 	popq %rbp
 	retq
 # origin: user
-_closure____lambda_112:
+_closure____lambda_114:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -1326,11 +1326,11 @@ _closure____lambda_112:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_closure____lambda_112_L0:
+_closure____lambda_114_L0:
 	movslq 8(%rdi), %rdi
 	movq %rdi, %rax
-	jmp _closure____lambda_112_epilogue
-_closure____lambda_112_epilogue:
+	jmp _closure____lambda_114_epilogue
+_closure____lambda_114_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

@@ -1463,13 +1463,13 @@ _specialization__run_L0:
 	callq _str__str____print__
 	movq $4, %rdi
 	cvtsi2ssq %rdi, %xmm0
-	movq %xmm0, -32(%rbp)
+	movq %xmm0, -24(%rbp)
 	movq $12, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
 	movq $1, %rdi
 	movq %rdi, 0(%rbx)
-	movq -32(%rbp), %xmm0
+	movq -24(%rbp), %xmm0
 	movq $8, %rdi
 	movss %xmm0, (%rbx,%rdi)
 	movq $12, %rdi
@@ -1621,7 +1621,7 @@ _specialization__run_L0:
 	movq 0(%rdi), %rsi
 	movq $8, %rdi
 	movss (%rdi,%rsi), %xmm0
-	movq %xmm0, -24(%rbp)
+	movq %xmm0, -32(%rbp)
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
@@ -1639,7 +1639,7 @@ _specialization__run_L0:
 	movq %r12, %rdi
 	movq %rbx, %rsi
 	callq _str__str____init__
-	movq -24(%rbp), %xmm0
+	movq -32(%rbp), %xmm0
 	cvtss2sd %xmm0, %xmm0
 	movq %r12, %rsi
 	callq _print__print_float

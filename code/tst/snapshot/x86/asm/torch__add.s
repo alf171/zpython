@@ -67,10 +67,9 @@ main_L0:
 	callq _print__print_float
 	movq -64(%rbp), %rdi
 	movq 0(%rdi), %rdi
-	movq $16, %rsi
 	callq _uop__Uop__toposort__f32
 	movq %rax, %r12
-	movslq 0(%r12), %r14
+	movslq 8(%r12), %r14
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %r13
@@ -91,10 +90,11 @@ main_L0:
 	movslq %r14d, %rdi
 	movq %r15, %rsi
 	callq _print__print_int
+	movq 0(%r12), %rsi
 	movq $8, %rdi
-	movq (%rdi,%r12), %rsi
-	movq 0(%rbx), %rdi
-	cmpq %rdi, %rsi
+	movq (%rdi,%rsi), %rdi
+	movq 0(%rbx), %rsi
+	cmpq %rsi, %rdi
 	sete %r11b
 	movzbq %r11b, %r13
 	movq $10, %rdi
@@ -117,8 +117,9 @@ main_L0:
 	movq %r13, %rdi
 	movq %r14, %rsi
 	callq _print__print_bool
+	movq 0(%r12), %rsi
 	movq $16, %rdi
-	movq (%rdi,%r12), %rsi
+	movq (%rdi,%rsi), %rsi
 	movq -56(%rbp), %rdi
 	movq 0(%rdi), %rdi
 	cmpq %rdi, %rsi
@@ -144,8 +145,9 @@ main_L0:
 	movq %r13, %rdi
 	movq %r14, %rsi
 	callq _print__print_bool
+	movq 0(%r12), %rsi
 	movq $24, %rdi
-	movq (%rdi,%r12), %rsi
+	movq (%rdi,%rsi), %rsi
 	movq -64(%rbp), %rdi
 	movq 0(%rdi), %rdi
 	cmpq %rdi, %rsi
@@ -1525,64 +1527,93 @@ _uop__Uop__toposort__f32:
 	pushq %r14
 	pushq %r15
 _uop__Uop__toposort__f32_L0:
-	movq %rdi, %r13
-	movq %rsi, %rbx
+	movq %rdi, %r12
 	movq $8, %rdi
-	movq %rbx, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
 	callq arena_malloc
-	movq %rax, %r12
-	movq %rbx, 0(%r12)
-	movq %r13, %rdi
-	movq %r12, %rsi
-	movq $0, %rdx
-	callq _uop__Uop___visit__f32
 	movq %rax, %rbx
+	movq $0, %rdi
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %rbx, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
 	callq arena_malloc
-	movq %rax, %rcx
+	movq %rax, %r13
+	movq $0, %rdi
+	movq %rdi, 0(%r13)
+	movq $28, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	movq %r13, %rdx
+	callq _dict__dict____init____class_1_f32_bool
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq $0, %rdi
+	movq %rdi, 0(%r13)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
 	movq %rbx, %rdi
-	movq %rdi, 0(%rcx)
-	movq $0, %r8
-	movq %rbx, %r9
-	movq %r12, %rax
-	movq $0, %rdx
-	jmp _uop__Uop__toposort__f32_L1
-_uop__Uop__toposort__f32_L1:
-	cmpq %r9, %rdx
-	setl %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rdi
-	jne _uop__Uop__toposort__f32_L2
-	jmp _uop__Uop__toposort__f32_L3
-_uop__Uop__toposort__f32_L2:
-	movq %r8, %rbx
-	addq %rdx, %rbx
-	movq $8, %rdi
-	movq %rbx, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	movq (%rdi,%rax), %r10
-	movq $8, %rdi
-	movq %rbx, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	movq %r10, (%rcx,%rdi)
-	movq $1, %rdi
-	addq %rdi, %rdx
-	jmp _uop__Uop__toposort__f32_L1
-_uop__Uop__toposort__f32_L3:
-	movq %rcx, %rax
+	movq %r13, %rsi
+	callq _list__list____init____class_1_f32
+	movq %r12, %rdi
+	movq %r14, %rsi
+	movq %rbx, %rdx
+	callq _uop__Uop___visit__f32
+	movq %rbx, %rax
 	jmp _uop__Uop__toposort__f32_epilogue
 _uop__Uop__toposort__f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____len____class_1_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____len____class_1_f32_L0:
+	movslq 8(%rdi), %rdi
+	movq %rdi, %rax
+	jmp _list__list____len____class_1_f32_epilogue
+_list__list____len____class_1_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____getitem____class_1_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____getitem____class_1_f32_L0:
+	movq 0(%rdi), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%rdx), %rdi
+	movq %rdi, %rax
+	jmp _list__list____getitem____class_1_f32_epilogue
+_list__list____getitem____class_1_f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -1895,9 +1926,130 @@ _data__TensorData____getitem____f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
+_dict__dict____init____class_1_f32_bool:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_dict__dict____init____class_1_f32_bool_L0:
+	movq %rdi, %r14
+	movq %rsi, %r13
+	movq %rdx, %r12
+	movslq 0(%r13), %rsi
+	movq $2, %rdi
+	imulq %rdi, %rsi
+	movq $1, %rdi
+	movq %rsi, %rbx
+	addq %rdi, %rbx
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 0(%r14)
+	movq $8, %rdi
+	addq %rbx, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 8(%r14)
+	movq $8, %rdi
+	addq %rbx, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 16(%r14)
+	movq $0, %rdi
+	movl %edi, 24(%r14)
+	movq $0, %rax
+	movq %rbx, %r9
+	movq %r13, %r8
+	movq %r14, %rcx
+	movq %r12, %rdx
+	movq %rbx, %rdi
+	movq $0, %r12
+	jmp _dict__dict____init____class_1_f32_bool_L1
+_dict__dict____init____class_1_f32_bool_L1:
+	cmpq %r9, %r12
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict____init____class_1_f32_bool_L2
+	jmp _dict__dict____init____class_1_f32_bool_L3
+_dict__dict____init____class_1_f32_bool_L2:
+	movq %rax, %rbx
+	addq %r12, %rbx
+	movq $0, %r10
+	movq 16(%rcx), %rsi
+	movq $8, %rdi
+	addq %rbx, %rdi
+	movb %r10b, (%rsi,%rdi)
+	movq $1, %rdi
+	addq %rdi, %r12
+	jmp _dict__dict____init____class_1_f32_bool_L1
+_dict__dict____init____class_1_f32_bool_L3:
+	movslq 0(%r8), %rsi
+	movq $0, %rdi
+	movq %rdi, -8(%rbp)
+	movq %rsi, %r15
+	movq %r8, %r14
+	movq %rcx, %r13
+	movq %rdx, %r12
+	movq $0, %rbx
+	jmp _dict__dict____init____class_1_f32_bool_L4
+_dict__dict____init____class_1_f32_bool_L4:
+	cmpq %r15, %rbx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict____init____class_1_f32_bool_L5
+	jmp _dict__dict____init____class_1_f32_bool_L6
+_dict__dict____init____class_1_f32_bool_L5:
+	movq -8(%rbp), %rdi
+	movq %rdi, %rsi
+	addq %rbx, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movzbq (%rdi,%r12), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%r14), %rsi
+	movq %r13, %rdi
+	callq _dict__dict____setitem____class_1_f32_bool
+	movq $1, %rdi
+	addq %rbx, %rdi
+	movq %rdi, %rbx
+	jmp _dict__dict____init____class_1_f32_bool_L4
+_dict__dict____init____class_1_f32_bool_L6:
+	jmp _dict__dict____init____class_1_f32_bool_epilogue
+_dict__dict____init____class_1_f32_bool_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
+	popq %rbp
+	retq
+# origin: runtime
 _uop__Uop___visit__f32:
 	pushq %rbp
 	movq %rsp, %rbp
+	subq $16, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -1905,83 +2057,60 @@ _uop__Uop___visit__f32:
 	pushq %r14
 	pushq %r15
 _uop__Uop___visit__f32_L0:
-	movq %rdi, %rcx
-	movq %rsi, %r8
-	movq $0, %rbx
-	movq %rdx, %r10
-	movq $0, %r9
-	jmp _uop__Uop___visit__f32_L1
-_uop__Uop___visit__f32_L1:
-	cmpq %r10, %r9
-	setl %r11b
-	movzbq %r11b, %rdi
+	movq %rdi, %r12
+	movq %rsi, %r13
+	movq %rdx, %rbx
+	movq %r13, %rdi
+	movq %r12, %rsi
+	callq _dict__dict____contains____class_1_f32_bool
+	movq %rax, %rdi
 	cmpq $0, %rdi
-	jne _uop__Uop___visit__f32_L2
+	jne _uop__Uop___visit__f32_L1
+	jmp _uop__Uop___visit__f32_L2
+_uop__Uop___visit__f32_L1:
+	jmp _uop__Uop___visit__f32_epilogue
 	jmp _uop__Uop___visit__f32_L3
 _uop__Uop___visit__f32_L2:
-	movq %rbx, %rsi
-	addq %r9, %rsi
-	movq $8, %rdi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	movq (%rdi,%r8), %rdi
-	cmpq %rcx, %rdi
-	sete %r11b
-	movzbq %r11b, %rdi
-	cmpq $0, %rdi
-	jne _uop__Uop___visit__f32_L4
-	jmp _uop__Uop___visit__f32_L5
+	jmp _uop__Uop___visit__f32_L3
 _uop__Uop___visit__f32_L3:
-	movq 0(%rcx), %r15
+	movq 0(%r12), %r15
 	movslq 8(%r15), %rdi
-	movq %rdi, %r14
-	movq %r8, %r12
-	movq %rcx, %rbx
-	movq $0, %r13
-	jmp _uop__Uop___visit__f32_L7
+	movq %rdi, -8(%rbp)
+	movq %r13, %r14
+	movq %r12, %r13
+	movq %rbx, %r12
+	movq $0, %rbx
+	jmp _uop__Uop___visit__f32_L4
 _uop__Uop___visit__f32_L4:
-	movq %rdx, %rax
-	jmp _uop__Uop___visit__f32_epilogue
-	jmp _uop__Uop___visit__f32_L6
-_uop__Uop___visit__f32_L5:
-	jmp _uop__Uop___visit__f32_L6
-_uop__Uop___visit__f32_L6:
-	movq $1, %rdi
-	addq %rdi, %r9
-	jmp _uop__Uop___visit__f32_L1
-_uop__Uop___visit__f32_L7:
-	cmpq %r14, %r13
+	movq -8(%rbp), %rdi
+	cmpq %rdi, %rbx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _uop__Uop___visit__f32_L8
-	jmp _uop__Uop___visit__f32_L9
-_uop__Uop___visit__f32_L8:
-	movq 0(%r15), %rcx
+	jne _uop__Uop___visit__f32_L5
+	jmp _uop__Uop___visit__f32_L6
+_uop__Uop___visit__f32_L5:
+	movq 0(%r15), %rdx
 	movq $8, %rdi
-	movq %r13, %rsi
+	movq %rbx, %rsi
 	imulq %rdi, %rsi
 	movq $8, %rdi
 	addq %rsi, %rdi
-	movq (%rdi,%rcx), %rdi
-	movq %r12, %rsi
+	movq (%rdi,%rdx), %rdi
+	movq %r14, %rsi
+	movq %r12, %rdx
 	callq _uop__Uop___visit__f32
-	movq %rax, %rdx
 	movq $1, %rdi
-	addq %r13, %rdi
-	movq %rdi, %r13
-	jmp _uop__Uop___visit__f32_L7
-_uop__Uop___visit__f32_L9:
-	movq $8, %rdi
-	movq %rdx, %rsi
-	imulq %rdi, %rsi
-	movq $8, %rdi
-	addq %rsi, %rdi
-	movq %rbx, (%r12,%rdi)
-	movq $1, %rdi
-	addq %rdx, %rdi
-	movq %rdi, %rax
+	addq %rdi, %rbx
+	jmp _uop__Uop___visit__f32_L4
+_uop__Uop___visit__f32_L6:
+	movq %r14, %rdi
+	movq %r13, %rsi
+	movq $1, %rdx
+	callq _dict__dict____setitem____class_1_f32_bool
+	movq %r12, %rdi
+	movq %r13, %rsi
+	callq _list__list__append__class_1_f32
 	jmp _uop__Uop___visit__f32_epilogue
 _uop__Uop___visit__f32_epilogue:
 	popq %r15
@@ -1990,6 +2119,7 @@ _uop__Uop___visit__f32_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
+	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -2360,7 +2490,7 @@ _eval__evaluate__f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list____len____class_1_f32:
+_dict__dict____setitem____class_1_f32_bool:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2369,11 +2499,59 @@ _list__list____len____class_1_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list____len____class_1_f32_L0:
-	movslq 8(%rdi), %rdi
-	movq %rdi, %rax
-	jmp _list__list____len____class_1_f32_epilogue
-_list__list____len____class_1_f32_epilogue:
+_dict__dict____setitem____class_1_f32_bool_L0:
+	movq %rdi, %rbx
+	movq %rsi, %r13
+	movq %rdx, %r12
+	movslq 24(%rbx), %rsi
+	movq $1, %rdi
+	addq %rdi, %rsi
+	movq $10, %rdi
+	movq %rsi, %rdx
+	imulq %rdi, %rdx
+	movq 8(%rbx), %rdi
+	movslq 0(%rdi), %rsi
+	movq $7, %rdi
+	imulq %rsi, %rdi
+	cmpq %rdi, %rdx
+	setge %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict____setitem____class_1_f32_bool_L1
+	jmp _dict__dict____setitem____class_1_f32_bool_L2
+_dict__dict____setitem____class_1_f32_bool_L1:
+	movq %rbx, %rdi
+	callq _dict__dict___grow__class_1_f32_bool
+	jmp _dict__dict____setitem____class_1_f32_bool_L3
+_dict__dict____setitem____class_1_f32_bool_L2:
+	jmp _dict__dict____setitem____class_1_f32_bool_L3
+_dict__dict____setitem____class_1_f32_bool_L3:
+	movq %rbx, %rdi
+	movq %r13, %rsi
+	callq _dict__dict___get__class_1_f32_bool
+	movq %rax, %rcx
+	movq 0(%rbx), %rdx
+	movq $8, %rdi
+	movq %rcx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq %r13, (%rdx,%rdi)
+	movq 8(%rbx), %rsi
+	movq $8, %rdi
+	addq %rcx, %rdi
+	movb %r12b, (%rsi,%rdi)
+	movq $1, %rdx
+	movq 16(%rbx), %rsi
+	movq $8, %rdi
+	addq %rcx, %rdi
+	movb %dl, (%rsi,%rdi)
+	movslq 24(%rbx), %rsi
+	movq $1, %rdi
+	addq %rsi, %rdi
+	movl %edi, 24(%rbx)
+	jmp _dict__dict____setitem____class_1_f32_bool_epilogue
+_dict__dict____setitem____class_1_f32_bool_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2383,7 +2561,7 @@ _list__list____len____class_1_f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list____getitem____class_1_f32:
+_list__list__append__class_1_f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2392,16 +2570,38 @@ _list__list____getitem____class_1_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list____getitem____class_1_f32_L0:
-	movq 0(%rdi), %rdx
+_list__list__append__class_1_f32_L0:
+	movq %rdi, %r12
+	movq %rsi, %rbx
+	movslq 8(%r12), %rsi
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list__append__class_1_f32_L1
+	jmp _list__list__append__class_1_f32_L2
+_list__list__append__class_1_f32_L1:
+	movq %r12, %rdi
+	callq _list__list___grow__class_1_f32
+	jmp _list__list__append__class_1_f32_L3
+_list__list__append__class_1_f32_L2:
+	jmp _list__list__append__class_1_f32_L3
+_list__list__append__class_1_f32_L3:
+	movslq 8(%r12), %rsi
+	movq 0(%r12), %rdx
 	movq $8, %rdi
 	imulq %rdi, %rsi
 	movq $8, %rdi
 	addq %rsi, %rdi
-	movq (%rdi,%rdx), %rdi
-	movq %rdi, %rax
-	jmp _list__list____getitem____class_1_f32_epilogue
-_list__list____getitem____class_1_f32_epilogue:
+	movq %rbx, (%rdx,%rdi)
+	movslq 8(%r12), %rsi
+	movq $1, %rdi
+	addq %rsi, %rdi
+	movl %edi, 8(%r12)
+	jmp _list__list__append__class_1_f32_epilogue
+_list__list__append__class_1_f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -3219,6 +3419,300 @@ _data__TensorData__transpose__f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
+_dict__dict___grow__class_1_f32_bool:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $32, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_dict__dict___grow__class_1_f32_bool_L0:
+	movq %rdi, %r14
+	movq 0(%r14), %r13
+	movq 8(%r14), %r12
+	movq 16(%r14), %rdi
+	movq %rdi, -8(%rbp)
+	movslq 0(%r13), %r15
+	movq $2, %rdi
+	movq %r15, %rsi
+	imulq %rdi, %rsi
+	movq $1, %rdi
+	movq %rsi, %rbx
+	addq %rdi, %rbx
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 0(%r14)
+	movq $8, %rdi
+	addq %rbx, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 8(%r14)
+	movq $8, %rdi
+	addq %rbx, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, %rdi
+	movq %rdi, 0(%rsi)
+	movq %rsi, 16(%r14)
+	movq $0, %rdi
+	movq %rdi, 24(%r14)
+	movq $0, %r9
+	movq %rbx, %r8
+	movq %rbx, %rdi
+	movq %r15, %rax
+	movq %r13, %r10
+	movq %r14, %rcx
+	movq %r12, %rdx
+	movq -8(%rbp), %rsi
+	movq $0, %r13
+	jmp _dict__dict___grow__class_1_f32_bool_L1
+_dict__dict___grow__class_1_f32_bool_L1:
+	cmpq %r8, %r13
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict___grow__class_1_f32_bool_L2
+	jmp _dict__dict___grow__class_1_f32_bool_L3
+_dict__dict___grow__class_1_f32_bool_L2:
+	movq %r9, %r14
+	addq %r13, %r14
+	movq $0, %r12
+	movq 16(%rcx), %rbx
+	movq $8, %rdi
+	addq %r14, %rdi
+	movb %r12b, (%rbx,%rdi)
+	movq $1, %rdi
+	addq %rdi, %r13
+	jmp _dict__dict___grow__class_1_f32_bool_L1
+_dict__dict___grow__class_1_f32_bool_L3:
+	movq $0, %rdi
+	movq %rdi, -16(%rbp)
+	movq %rax, -24(%rbp)
+	movq %r10, %r15
+	movq %rcx, %r14
+	movq %rdx, %r13
+	movq %rsi, %r12
+	movq $0, %rbx
+	jmp _dict__dict___grow__class_1_f32_bool_L4
+_dict__dict___grow__class_1_f32_bool_L4:
+	movq -24(%rbp), %rdi
+	cmpq %rdi, %rbx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict___grow__class_1_f32_bool_L5
+	jmp _dict__dict___grow__class_1_f32_bool_L6
+_dict__dict___grow__class_1_f32_bool_L5:
+	movq -16(%rbp), %rdi
+	movq %rdi, %rsi
+	addq %rbx, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movzbq (%rdi,%r12), %rdi
+	cmpq $0, %rdi
+	jne _dict__dict___grow__class_1_f32_bool_L7
+	jmp _dict__dict___grow__class_1_f32_bool_L8
+_dict__dict___grow__class_1_f32_bool_L6:
+	jmp _dict__dict___grow__class_1_f32_bool_epilogue
+_dict__dict___grow__class_1_f32_bool_L7:
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movzbq (%rdi,%r13), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%r15), %rsi
+	movq %r14, %rdi
+	callq _dict__dict____setitem____class_1_f32_bool
+	jmp _dict__dict___grow__class_1_f32_bool_L9
+_dict__dict___grow__class_1_f32_bool_L8:
+	jmp _dict__dict___grow__class_1_f32_bool_L9
+_dict__dict___grow__class_1_f32_bool_L9:
+	movq $1, %rdi
+	addq %rbx, %rdi
+	movq %rdi, %rbx
+	jmp _dict__dict___grow__class_1_f32_bool_L4
+_dict__dict___grow__class_1_f32_bool_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $32, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_dict__dict___get__class_1_f32_bool:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_dict__dict___get__class_1_f32_bool_L0:
+	movq %rdi, %rcx
+	movq %rsi, %r8
+	movq 8(%rcx), %rdi
+	movslq 0(%rdi), %rdx
+	pushq %rax
+	pushq %rdx
+	movq %rdx, %r11
+	movq %r8, %rax
+	cqto
+	idivq %r11
+	movq %rdx, %r11
+	popq %rdx
+	popq %rax
+	movq %r11, %r9
+	jmp _dict__dict___get__class_1_f32_bool_L1
+_dict__dict___get__class_1_f32_bool_L1:
+	movq 16(%rcx), %rsi
+	movq $8, %rdi
+	addq %r9, %rdi
+	movzbq (%rdi,%rsi), %rdi
+	cmpq $0, %rdi
+	jne _dict__dict___get__class_1_f32_bool_L2
+	jmp _dict__dict___get__class_1_f32_bool_L3
+_dict__dict___get__class_1_f32_bool_L2:
+	movq 0(%rcx), %rax
+	movq $8, %rdi
+	movq %r9, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%rax), %rdi
+	cmpq %r8, %rdi
+	sete %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _dict__dict___get__class_1_f32_bool_L4
+	jmp _dict__dict___get__class_1_f32_bool_L5
+_dict__dict___get__class_1_f32_bool_L3:
+	movq %r9, %rax
+	jmp _dict__dict___get__class_1_f32_bool_epilogue
+_dict__dict___get__class_1_f32_bool_L4:
+	movq %r9, %rax
+	jmp _dict__dict___get__class_1_f32_bool_epilogue
+	jmp _dict__dict___get__class_1_f32_bool_L6
+_dict__dict___get__class_1_f32_bool_L5:
+	jmp _dict__dict___get__class_1_f32_bool_L6
+_dict__dict___get__class_1_f32_bool_L6:
+	movq $1, %rdi
+	addq %r9, %rdi
+	pushq %rax
+	pushq %rdx
+	movq %rdx, %r11
+	movq %rdi, %rax
+	cqto
+	idivq %r11
+	movq %rdx, %r11
+	popq %rdx
+	popq %rax
+	movq %r11, %r9
+	jmp _dict__dict___get__class_1_f32_bool_L1
+_dict__dict___get__class_1_f32_bool_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list___grow__class_1_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list___grow__class_1_f32_L0:
+	movq %rdi, %r12
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rsi
+	movq $8, %rdi
+	cmpq %rdi, %rsi
+	setl %r11b
+	movzbq %r11b, %rdx
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rsi
+	movq $2, %rdi
+	imulq %rsi, %rdi
+	cmpq $0, %rdx
+movq $8, %r11
+	movq %rdi, %rbx
+	cmovne %r11, %rbx
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	callq arena_malloc
+	movq %rax, %r8
+	movq %rbx, 0(%r8)
+	movslq 8(%r12), %r9
+	movq $0, %rcx
+	movq %r12, %rax
+	movq $0, %rdx
+	jmp _list__list___grow__class_1_f32_L1
+_list__list___grow__class_1_f32_L1:
+	cmpq %r9, %rdx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list___grow__class_1_f32_L2
+	jmp _list__list___grow__class_1_f32_L3
+_list__list___grow__class_1_f32_L2:
+	movq %rcx, %rbx
+	addq %rdx, %rbx
+	movq 0(%rax), %r10
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%r10), %r10
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq %r10, (%r8,%rdi)
+	movq $1, %rdi
+	addq %rdi, %rdx
+	jmp _list__list___grow__class_1_f32_L1
+_list__list___grow__class_1_f32_L3:
+	movq %r8, 0(%rax)
+	jmp _list__list___grow__class_1_f32_epilogue
+_list__list___grow__class_1_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
 _data__TensorData___view__f32:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -3395,6 +3889,36 @@ _list__list____mul____char_L3:
 	movq %r12, %rax
 	jmp _list__list____mul____char_epilogue
 _list__list____mul____char_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_dict__dict____contains____class_1_f32_bool:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_dict__dict____contains____class_1_f32_bool_L0:
+	movq %rdi, %rbx
+	movq %rbx, %rdi
+	callq _dict__dict___get__class_1_f32_bool
+	movq %rax, %rdx
+	movq 16(%rbx), %rsi
+	movq $8, %rdi
+	addq %rdx, %rdi
+	movzbq (%rdi,%rsi), %rdi
+	movq %rdi, %rax
+	jmp _dict__dict____contains____class_1_f32_bool_epilogue
+_dict__dict____contains____class_1_f32_bool_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

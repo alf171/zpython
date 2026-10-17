@@ -743,6 +743,7 @@ fn condForCmp(op: common.ir.CmpOp, reg_type: RegisterType) []const u8 {
             .lte => "setle",
             .gt => "setg",
             .gte => "setge",
+            else => unreachable,
         },
         .f => switch (op) {
             .eq => "sete",
@@ -751,6 +752,7 @@ fn condForCmp(op: common.ir.CmpOp, reg_type: RegisterType) []const u8 {
             .lte => "setbe",
             .gt => "seta",
             .gte => "setae",
+            else => unreachable,
         },
         else => unreachable,
     };

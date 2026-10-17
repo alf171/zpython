@@ -1782,8 +1782,8 @@ _matmul__matmul_L2:
 	movq %rdi, -24(%rbp)
 	movq %rdx, -32(%rbp)
 	movq %rsi, %rcx
-	movq %r8, %r12
-	movq %rbx, %rdx
+	movq %r8, %rdx
+	movq %rbx, %r12
 	movq %r9, %rsi
 	movq $0, %rbx
 	jmp _matmul__matmul_L4
@@ -1931,7 +1931,7 @@ _matmul__matmul_L5:
 	movq -24(%rbp), %rdi
 	movq %rdi, %r13
 	addq %rbx, %r13
-	movq 0(%r12), %r8
+	movq 0(%rdx), %r8
 	movq $8, %rdi
 	movq (%rdi,%r8), %rdi
 	movslq 8(%rdi), %r8
@@ -1948,8 +1948,8 @@ _matmul__matmul_L6:
 	movq $1, %rdi
 	addq %r10, %rdi
 	movq %rcx, %rsi
-	movq %r12, %r8
-	movq %rdx, %rbx
+	movq %rdx, %r8
+	movq %r12, %rbx
 	movq %rdi, %r10
 	jmp _matmul__matmul_L1
 _matmul__matmul_L7:
@@ -1964,8 +1964,7 @@ _matmul__matmul_L8:
 	movq -40(%rbp), %rdi
 	movq %rdi, %r15
 	addq %r12, %r15
-	movq -56(%rbp), %rdi
-	movq 0(%rdi), %r13
+	movq 0(%rdx), %r13
 	movq $8, %rdi
 	movq %rsi, %r14
 	imulq %rdi, %r14
@@ -1999,7 +1998,8 @@ _matmul__matmul_L8:
 	movq %rdi, %r12
 	jmp _matmul__matmul_L7
 _matmul__matmul_L9:
-	movq 0(%rdx), %r13
+	movq -56(%rbp), %rdi
+	movq 0(%rdi), %r13
 	movq $8, %rdi
 	movq %rsi, %r12
 	imulq %rdi, %r12

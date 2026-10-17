@@ -7,16 +7,16 @@ B = Tensor.fill((3,3), three)
 
 C = A + B
 print(C[0, 0])
-order = C.uop.toposort(16)
+order = C.uop.toposort()
 print(len(order))
 print(order[0] == A.uop)
 print(order[1] == B.uop)
 print(order[2] == C.uop)
 
 performance report: (ORIGIN=user)
-number of asm lines: 180
-mov count: 126
-memory load count: 20
+number of asm lines: 182
+mov count: 128
+memory load count: 23
 memory store count: 30
 conditional jumps: 0
 unconditional jumps: 1
@@ -31,4 +31,4 @@ actual output:
 True
 True
 True
-[!!memory report!!]: allocs=56 frees=56 allocated_bytes=1121 freed_bytes=1121
+[!!memory report!!]: allocs=69 frees=69 allocated_bytes=1271 freed_bytes=1271

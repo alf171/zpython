@@ -13,7 +13,7 @@ main:
 main_L0:
 	movq $2, %rdi
 	movq $3, %rsi
-	callq _lambda____lambda_111
+	callq _lambda____lambda_113
 	movq %rax, %r12
 	movq $10, %rdi
 	callq arena_malloc
@@ -1287,7 +1287,7 @@ _str__str____add___epilogue:
 	popq %rbp
 	retq
 # origin: user
-_lambda____lambda_111:
+_lambda____lambda_113:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -1296,13 +1296,13 @@ _lambda____lambda_111:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_lambda____lambda_111_L0:
+_lambda____lambda_113_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rdi
 	addq %rdx, %rdi
 	movq %rdi, %rax
-	jmp _lambda____lambda_111_epilogue
-_lambda____lambda_111_epilogue:
+	jmp _lambda____lambda_113_epilogue
+_lambda____lambda_113_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

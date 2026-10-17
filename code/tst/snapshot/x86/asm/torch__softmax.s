@@ -2105,9 +2105,9 @@ _data__TensorData____print____f32_L2:
 	addq %r12, %rdx
 	movslq 12(%r13), %rsi
 	movq $0, %rdi
-	movq %rdi, -48(%rbp)
+	movq %rdi, -40(%rbp)
 	movq %rsi, -56(%rbp)
-	movq %rbx, -40(%rbp)
+	movq %rbx, -48(%rbp)
 	movq %rdx, -64(%rbp)
 	movq $0, %rbx
 	jmp _data__TensorData____print____f32_L4
@@ -2139,7 +2139,7 @@ _data__TensorData____print____f32_L4:
 	jne _data__TensorData____print____f32_L5
 	jmp _data__TensorData____print____f32_L6
 _data__TensorData____print____f32_L5:
-	movq -48(%rbp), %rdi
+	movq -40(%rbp), %rdi
 	movq %rdi, %rdx
 	addq %rbx, %rdx
 	leaq -16(%rbp), %rsi
@@ -2176,7 +2176,7 @@ _data__TensorData____print____f32_L5:
 _data__TensorData____print____f32_L6:
 	movq $1, %rdi
 	addq %rdi, %r12
-	movq -40(%rbp), %rbx
+	movq -48(%rbp), %rbx
 	jmp _data__TensorData____print____f32_L1
 _data__TensorData____print____f32_epilogue:
 	popq %r15

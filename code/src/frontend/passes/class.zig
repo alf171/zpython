@@ -4,6 +4,12 @@ const Program = @import("common").program.Program;
 const Function = @import("common").function.Function;
 const Instruction = @import("common").mir.Instruction;
 const TypedOperand = @import("common").alloc.TypedOperand;
+const Method = @import("common").class.Method;
+
+pub const ResolvedOperator = struct {
+    method: *Method,
+    arguments: ArrayList(TypedOperand),
+};
 
 pub fn lowerCalls(program: *Program, alloc: std.mem.Allocator) !void {
     try lowerCall(program, &program.main, false, alloc);
@@ -177,48 +183,66 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                 },
                 .lir => |lir| switch (lir) {
                     .binop => |bop| {
-                        const instance = switch (bop.lhs.type) {
-                            .instance => |id| id,
-                            else => {
-                                try new_instructions.append(alloc, instruction.*);
-                                continue;
-                            },
-                        };
-                        const class = &program.classes.items[instance.class_id];
-                        switch (class.kind) {
-                            .@"enum" => {
-                                try new_instructions.append(alloc, instruction.*);
-                                continue;
-                            },
-                            else => {},
-                        }
-                        const method_name = switch (bop.op) {
-                            .bop => |b| b.toClassBuiltin(),
-                            .cmp => |cmp| cmp.toClassBuiltin(),
-                        };
-                        const method = class.kind.record.findMethod(method_name) orelse {
-                            // use the class default
+                        if (bop.lhs.type != .instance and bop.rhs.type != .instance) {
                             try new_instructions.append(alloc, instruction.*);
                             continue;
-                        };
-                        var arguments: ArrayList(TypedOperand) = .empty;
-                        errdefer {
-                            for (arguments.items) |*arg| {
-                                arg.type.deinit(alloc);
-                            }
-                            arguments.deinit(alloc);
                         }
+                        const op_candidate = switch (bop.op) {
+                            .bop => |b| b.operatorCandidates(),
+                            .cmp => |cmp| cmp.operatorCandidates(),
+                        };
+                        // rhs can be an instance too, for example __radd__
+                        var resolved: ?ResolvedOperator = blk: {
+                            for (op_candidate) |canadidate| {
+                                const receiver = switch (canadidate.receiver) {
+                                    .lhs => bop.lhs,
+                                    .rhs => bop.rhs,
+                                };
+                                const argument = switch (canadidate.receiver) {
+                                    .lhs => bop.rhs,
+                                    .rhs => bop.lhs,
+                                };
+                                const instance = switch (receiver.type) {
+                                    .instance => |id| id,
+                                    else => continue,
+                                };
+                                const class = &program.classes.items[instance.class_id];
+                                switch (class.kind) {
+                                    .@"enum" => continue,
+                                    else => {},
+                                }
+                                const method = class.kind.record.findMethod(canadidate.method) orelse {
+                                    continue;
+                                };
+                                var arguments: ArrayList(TypedOperand) = .empty;
+                                errdefer {
+                                    for (arguments.items) |*arg| {
+                                        arg.type.deinit(alloc);
+                                    }
+                                    arguments.deinit(alloc);
+                                }
 
-                        // replace + with __add__(self, other)
-                        try arguments.append(alloc, try bop.lhs.clone(alloc));
-                        try arguments.append(alloc, try bop.rhs.clone(alloc));
+                                // replace + with __add__(self, other)
+                                try arguments.append(alloc, try receiver.clone(alloc));
+                                try arguments.append(alloc, try argument.clone(alloc));
+                                break :blk .{
+                                    .method = method,
+                                    .arguments = arguments,
+                                };
+                            }
+                            break :blk null;
+                        };
+                        if (resolved == null) {
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
+                        }
                         try new_instructions.append(alloc, .{
                             .function_call = .{
                                 .dst = try bop.dst.clone(alloc),
                                 .callee = .{
-                                    .direct = try alloc.dupe(u8, method.function_label),
+                                    .direct = try alloc.dupe(u8, resolved.?.method.function_label),
                                 },
-                                .args = try arguments.toOwnedSlice(alloc),
+                                .args = try resolved.?.arguments.toOwnedSlice(alloc),
                             },
                         });
 

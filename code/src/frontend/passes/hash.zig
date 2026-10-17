@@ -33,7 +33,14 @@ fn rewriteFunction(
                         .instance => |instance| {
                             const class = &program.classes.items[instance.class_id].kind.record;
                             const method = class.findMethod("__hash__") orelse {
-                                return error.CantFindHashFunction;
+                                if (class.findMethod("__eq__") != null) return error.UnhashableType;
+
+                                try new_instructions.append(alloc, .{ .lir = .{ .move = .{
+                                    .dst = try h.dst.clone(alloc),
+                                    .src = .{ .top = try h.src.clone(alloc) },
+                                } } });
+                                instruction.deinit(alloc);
+                                continue;
                             };
                             const f = program.findFunction(method.function_label) orelse {
                                 return error.CantFindFunc;

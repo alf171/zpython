@@ -17,24 +17,19 @@ class Uop[T]():
         self.shape: tuple[i32, i32] = shape
         self.axis: i32 = axis
 
-    # FIXME: clearer with dicts
-    def toposort(self, capacity: i32) -> array[Uop[T]]:
-        order: array[Uop[T]] = array_empty(capacity)
-        count = Uop._visit(self, order, 0)
-        # copy to a result
-        result: array[Uop[T]] = array_empty(count)
-        for i in range(count):
-            result[i] = order[i]
-        return result
+    def toposort(self) -> list[Uop[T]]:
+        visited: dict[Uop[T], bool] = {}
+        order: list[Uop[T]] = []
+        Uop._visit(self, visited, order)
+        return order
 
     @staticmethod
-    def _visit[U](self: Uop[U], order: array[Uop[U]], count: i32) -> i32:
-        for i in range(count):
-            if order[i] == self:
-                return count
+    def _visit[U](self: Uop[U], visited: dict[Uop[U], bool], order: list[Uop[U]]) -> None:
+        if self in visited:
+            return
 
         for source in self.src:
-            count = Uop._visit(source, order, count)
+            Uop._visit(source, visited, order)
 
-        order[count] = self
-        return count + 1
+        visited[self] = True
+        order.append(self)

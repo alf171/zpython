@@ -541,7 +541,29 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
         .List => {
             const elements = c.PyObject_GetAttrString(stmt, "elts");
             std.debug.assert(elements != null);
-            const array = try walkArray(elements, ir_builder, expected_type, alloc);
+            const expected_elem_type: ?TypeInfo = if (expected_type) |t|
+                switch (t) {
+                    .instance => |instance| blk: {
+                        const class = ir_builder.getClassRecord(instance.class_id);
+                        const method = class.findMethod("__getitem__") orelse {
+                            return error.CantFindGetItem;
+                        };
+                        const function = ir_builder.getFunction(method.function_id) orelse {
+                            return error.CantFindFunction;
+                        };
+                        var bindings: TypeBindings = .init(alloc);
+                        defer bindings.deinit(alloc);
+
+                        try function.params[0].type.unify(t, &bindings, &ir_builder.program, alloc);
+                        break :blk try function.return_type.substitute(&bindings, alloc);
+                    },
+                    else => try t.getElementType().clone(alloc),
+                }
+            else
+                null;
+            defer if (expected_elem_type) |t| t.deinit(alloc);
+
+            const array = try walkArray(elements, ir_builder, expected_elem_type, alloc);
             // early return if we should return an array
             if (expected_type != null and expected_type.? == .array) {
                 return array;
@@ -1180,8 +1202,19 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             if (key_count != value_count) {
                 return error.InvalidDict;
             }
-            const keys = try walkArray(keys_obj, ir_builder, null, alloc);
-            const values = try walkArray(values_obj, ir_builder, null, alloc);
+            var expected_key_type: ?TypeInfo = null;
+            var expected_value_type: ?TypeInfo = null;
+            if (expected_type) |t| {
+                const instance = switch (t) {
+                    .instance => |instance| instance,
+                    else => return error.TypeMismatch,
+                };
+                if (instance.args.len != 2) return error.TypeMismatch;
+                expected_key_type = instance.args[0];
+                expected_value_type = instance.args[1];
+            }
+            const keys = try walkArray(keys_obj, ir_builder, expected_key_type, alloc);
+            const values = try walkArray(values_obj, ir_builder, expected_value_type, alloc);
             std.debug.assert(keys.type == .array);
             std.debug.assert(values.type == .array);
             const class = ir_builder.findClass("dict") orelse return error.ClassNotLoaded;
@@ -1223,32 +1256,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
     }
 }
 
-fn walkArray(elements: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInfo, alloc: std.mem.Allocator) anyerror!TypedOperand {
+fn walkArray(elements: *PyObject, ir_builder: *IrBuilder, expected_elem_type: ?TypeInfo, alloc: std.mem.Allocator) anyerror!TypedOperand {
     const len = c.PyList_Size(elements);
     var result: ArrayList(ValueRef) = .empty;
     errdefer result.deinit(alloc);
-
-    const expected_elem_type: ?TypeInfo = if (expected_type) |t|
-        switch (t) {
-            .instance => |instance| blk: {
-                const class = ir_builder.getClassRecord(instance.class_id);
-                const method = class.findMethod("__getitem__") orelse {
-                    return error.CantFindGetItem;
-                };
-                const function = ir_builder.getFunction(method.function_id) orelse {
-                    return error.CantFindFunction;
-                };
-                var bindings: TypeBindings = .init(alloc);
-                defer bindings.deinit(alloc);
-
-                try function.params[0].type.unify(t, &bindings, &ir_builder.program, alloc);
-                break :blk try function.return_type.substitute(&bindings, alloc);
-            },
-            else => try t.getElementType().clone(alloc),
-        }
-    else
-        null;
-    defer if (expected_elem_type) |t| t.deinit(alloc);
 
     for (0..@intCast(len)) |i| {
         const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
@@ -2721,6 +2732,7 @@ fn getCompareOp(expr: *PyObject) !CmpOp {
 
     if (std.mem.eql(u8, name, "Eq")) return .eq;
     if (std.mem.eql(u8, name, "Is")) return .eq;
+    if (std.mem.eql(u8, name, "In")) return .contains;
     if (std.mem.eql(u8, name, "NotEq")) return .neq;
     if (std.mem.eql(u8, name, "Lt")) return .lt;
     if (std.mem.eql(u8, name, "LtE")) return .lte;

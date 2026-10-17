@@ -23,11 +23,17 @@ class dict[K, V]:
     # @inline
     def __setitem__(self, key: K, value: V) -> None:
         # at 70% occupancy, expand our dictionary
+        if (self.size + 1) * 10 >= len(self.values) * 7:
+            self._grow()
         index = self._get(key)
         self.keys[index] = key
         self.values[index] = value
         self.occupied[index] = True
         self.size += 1
+
+    def __contains__(self, key: K) -> bool:
+        index = self._get(key)
+        return self.occupied[index]
 
     # @inline
     def _get(self, key: K) -> int:
@@ -40,6 +46,25 @@ class dict[K, V]:
             index = (index + 1) % lv
         # empty spot found
         return index
+
+    def _grow(self) -> None:
+        # save state
+        old_keys = self.keys
+        old_values = self.values
+        old_occupied = self.occupied
+        old_capacity = len(old_keys)
+        # new state
+        capacity = old_capacity * 2 + 1
+        # FIXME: type shouldnt be required here
+        self.keys: array[K] = array_empty(capacity)
+        self.values: array[V] = array_empty(capacity)
+        self.occupied: array[bool] = array_empty(capacity)
+        self.size = 0
+        for i in range(capacity):
+            self.occupied[i] = False
+        for i in range(old_capacity):
+            if old_occupied[i]:
+                self[old_keys[i]] = old_values[i]
 
     def __print__(self, end:str="\n") -> None:
         pass

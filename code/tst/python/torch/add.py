@@ -5,7 +5,7 @@ B = Tensor.fill((3,3), three)
 
 C = A + B
 print(C[0, 0])
-order = C.uop.toposort(16)
+order = C.uop.toposort()
 print(len(order))
 print(order[0] == A.uop)
 print(order[1] == B.uop)
