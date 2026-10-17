@@ -122,7 +122,7 @@ test "spill reg function" {
     const instruction: Instruction = .{ .lir = .{ .binop = .{
         .dst = .{ .operand = A, .type = .any },
         .lhs = .{ .operand = A, .type = .any },
-        .op = .add,
+        .op = .{ .bop = .add },
         .rhs = .{ .operand = B, .type = .any },
     } } };
     try function.blocks.items[0].instructions.append(alloc, instruction);
@@ -143,7 +143,7 @@ test "spill reg function" {
     try std.testing.expectEqualDeep(Instruction{ .lir = .{ .binop = .{
         .dst = .{ .operand = .{ .temp = .{ .id = 3, .function_id = 0 } }, .type = .any },
         .lhs = .{ .operand = .{ .temp = .{ .id = 2, .function_id = 0 } }, .type = .any },
-        .op = .add,
+        .op = .{ .bop = .add },
         .rhs = .{ .operand = .{ .temp = .{ .id = 1, .function_id = 0 } }, .type = .any },
     } } }, new_instructions[1]);
     try std.testing.expectEqualDeep(Instruction{ .lir = .{ .move = .{

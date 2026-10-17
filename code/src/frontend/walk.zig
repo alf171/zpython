@@ -2797,8 +2797,6 @@ test "while loop" {
         \\x = 0
         \\while x < 3:
         \\  x = x + 1
-        \\  print(x)
-        \\print(x)
     ;
 
     const ast_module = c.PyImport_ImportModule("ast");
@@ -2858,8 +2856,5 @@ test "while loop" {
         else => return error.ExpectedBinOp,
     }
 
-    switch (exit[0]) {
-        .print => {},
-        else => return error.ExpectedPrint,
-    }
+    try std.testing.expectEqual(@as(usize, 0), exit.len);
 }

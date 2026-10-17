@@ -144,7 +144,7 @@ test "range behaves lazily" {
     try block0.instructions.append(alloc, .{
         .len = .{
             .dst = .{ .operand = n, .type = .i64 },
-            .value = try range.clone(alloc),
+            .src = try range.clone(alloc),
         },
     });
     const i = program.main.nextTemp();
@@ -175,7 +175,7 @@ test "range behaves lazily" {
     // n <- sub end, start
     try std.testing.expect(rewritten.instructions.items[2] == .lir);
     try std.testing.expect(rewritten.instructions.items[2].lir == .binop);
-    try std.testing.expectEqual(.sub, rewritten.instructions.items[2].lir.binop.op);
+    try std.testing.expectEqual(.sub, rewritten.instructions.items[2].lir.binop.op.bop);
     // index <- 1
     try std.testing.expect(rewritten.instructions.items[3] == .lir);
     try std.testing.expect(rewritten.instructions.items[3].lir == .move);
@@ -183,5 +183,5 @@ test "range behaves lazily" {
     // x <- add start, index
     try std.testing.expect(rewritten.instructions.items[4] == .lir);
     try std.testing.expect(rewritten.instructions.items[4].lir == .binop);
-    try std.testing.expectEqual(.add, rewritten.instructions.items[4].lir.binop.op);
+    try std.testing.expectEqual(.add, rewritten.instructions.items[4].lir.binop.op.bop);
 }
