@@ -9,8 +9,8 @@ const Writer = std.Io.Writer;
 const Operand = @import("common").alloc.Operand;
 
 /// merge either src or dest into later if live_out and degree let's us do so
-pub fn run(graph: *igraph.IGraph, register_file: RegisterFile, alloc: std.mem.Allocator) !void {
-    while (try checkForPossibleMerges(graph.*, register_file, alloc)) |pair| {
+pub fn run(graph: *igraph.IGraph, register_file: RegisterFile) !void {
+    while (try checkForPossibleMerges(graph.*, register_file)) |pair| {
         try graph.mergeNodes(pair.nodeA, pair.nodeB);
     }
 }
@@ -27,7 +27,7 @@ pub const MergePair = struct {
 };
 
 // deterministic for merges using lowest id
-fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile, alloc: std.mem.Allocator) !?MergePair {
+fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile) !?MergePair {
     var best: ?MergePair = null;
     var node_it = graph.nodes.valueIterator();
     while (node_it.next()) |node| {
@@ -42,7 +42,7 @@ fn checkForPossibleMerges(graph: igraph.IGraph, register_file: RegisterFile, all
                 continue;
             }
 
-            if (try canCoalesce(graph, node.*, move_node, register_file, alloc)) {
+            if (try canCoalesce(graph, node.*, move_node, register_file)) {
                 const canidate: MergePair = .{ .nodeA = node.val, .nodeB = move_id.* };
                 if (best == null or canidate.pairLess(best.?)) {
                     best = canidate;
@@ -59,36 +59,27 @@ fn canCoalesce(
     a: igraph.Node,
     b: igraph.Node,
     register_file: RegisterFile,
-    alloc: std.mem.Allocator,
 ) !bool {
-    var seen = std.AutoHashMap(Operand, void).init(alloc);
-    defer seen.deinit();
-    try seen.put(a.val, {});
-    try seen.put(b.val, {});
-
     var count: usize = 0;
     var it = a.neighbors.keyIterator();
     while (it.next()) |nbor_id| {
-        if (seen.contains(nbor_id.*)) continue;
         const nbor = graph.nodes.get(nbor_id.*) orelse {
             return error.CantFindNode;
         };
         if (nbor.cur_degree >= register_file.legalCount(nbor.forbidden_colors)) {
             count += 1;
         }
-        try seen.put(nbor_id.*, {});
     }
 
     var it2 = b.neighbors.keyIterator();
     while (it2.next()) |nbor_id| {
-        if (seen.contains(nbor_id.*)) continue;
+        if (a.neighbors.contains(nbor_id.*)) continue;
         const nbor = graph.nodes.get(nbor_id.*) orelse {
             return error.CantFindNode;
         };
         if (nbor.cur_degree >= register_file.legalCount(nbor.forbidden_colors)) {
             count += 1;
         }
-        try seen.put(nbor_id.*, {});
     }
 
     const usable_count = register_file.legalCount(a.forbidden_colors | b.forbidden_colors);
@@ -141,7 +132,6 @@ test "reject coalesce" {
             .type = .gp,
             .forbidden_mask = 0,
         },
-        alloc,
     );
     try std.testing.expect(!can_coalesce);
 }

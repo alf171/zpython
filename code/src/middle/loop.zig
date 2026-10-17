@@ -36,7 +36,7 @@ pub fn run(
 ) !RunResult {
     if (should_coalesce) {
         timer.begin(.middle_coalesce, io);
-        try coalesce.run(graph, register_file, alloc);
+        try coalesce.run(graph, register_file);
         timer.finish(.middle_coalesce, io);
     }
     timer.begin(.middle_color, io);
@@ -86,7 +86,7 @@ pub fn run(
         timer.finish(.middle_igraph, io);
         if (should_coalesce) {
             timer.begin(.middle_coalesce, io);
-            try coalesce.run(&new_graph, register_file, alloc);
+            try coalesce.run(&new_graph, register_file);
             timer.finish(.middle_coalesce, io);
         }
         timer.begin(.middle_color, io);
