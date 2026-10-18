@@ -16,7 +16,7 @@ pub fn classify(program: Program, alloc: std.mem.Allocator) !RegisterClasses {
     return res;
 }
 
-fn classifyFunction(
+pub fn classifyFunction(
     function: Function,
     classes: *RegisterClasses,
 ) !void {

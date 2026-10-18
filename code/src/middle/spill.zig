@@ -36,7 +36,7 @@ pub fn spillRegInIr(program: *IrProgram, spilled: Operand, alloc: std.mem.Alloca
     }
 }
 
-fn spillRegInFunction(
+pub fn spillRegInFunction(
     function: *Function,
     spilled: Operand,
     alloc: std.mem.Allocator,

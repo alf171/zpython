@@ -7,13 +7,30 @@ const AllocProgram = common.alloc.AllocProgram;
 const AllocBlock = common.alloc.AllocBlock;
 const AllocLine = common.alloc.AllocLine;
 const RegisterOperands = common.alloc.RegisterOperands;
-const Function = common.ir.Function;
-const FunctionKind = common.ir.FunctionKind;
+const Function = common.function.Function;
 const Program = common.program.Program;
 const TypedOperand = common.alloc.TypedOperand;
 const RegisterClasses = @import("common").register.RegisterClasses;
 
 /// generate the necessary information such that we do register selection eventually
+pub fn buildFunction(function: Function, reg_classes: *const RegisterClasses, alloc: std.mem.Allocator) !AllocProgram {
+    var res: AllocProgram = .{
+        .lines = .empty,
+        .blocks = .empty,
+    };
+    var instruction_index: usize = 0;
+    try appendBlocks(
+        function.blocks.items,
+        &res,
+        &instruction_index,
+        function.id,
+        reg_classes,
+        alloc,
+    );
+    return res;
+}
+
+/// used to generate our initial alloc program
 pub fn build(program: Program, reg_classes: *const RegisterClasses, alloc: std.mem.Allocator) !AllocProgram {
     var res: AllocProgram = .{
         .lines = .empty,

@@ -37,6 +37,7 @@ const dead = middle.dead;
 const peephole = middle.peephole;
 const FunctionType = @import("common").function.FunctionType;
 const TimerMetrics = @import("common").timer.TimerMetrics;
+const RegisterClass = @import("common").register.RegisterClass;
 
 const underline_code = "\x1b[4m";
 const reset_code = "\x1b[0m";
@@ -120,13 +121,13 @@ pub fn main(init: std.process.Init) !void {
     try lazy.rewrite(&ir_program, alloc);
     try array.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);
-
     if (std_lib_enabled) {
         try runtime.injectCleanup(&ir_program, alloc);
     }
 
     // phi cleanup
     try phi.eliminatePhi(&ir_program, alloc);
+    timer.finish(.frontend_total, io);
 
     const host_platform = target.host.getPlatform();
     try precolor.apply(&ir_program, host_platform.abi, alloc);
@@ -150,68 +151,65 @@ pub fn main(init: std.process.Init) !void {
         try ir_program.print();
     }
 
+    timer.begin(.middle_total, io);
+
+    // setup register specifics
     timer.begin(.middle_reg_class, io);
     var reg_classes = try reg_class.classify(ir_program, alloc);
-    timer.finish(.middle_reg_class, io);
     defer reg_classes.deinit();
-    timer.finish(.frontend_total, io);
-
-    timer.begin(.middle_total, io);
-    timer.begin(.middle_reg_alloc_build, io);
-    var alloc_program = try reg_alloc.build(ir_program, &reg_classes, alloc);
-    timer.finish(.middle_reg_alloc_build, io);
-    defer alloc_program.deinit(alloc);
-
-    timer.begin(.middle_liveness, io);
-    try live.calculateLiveOut(&alloc_program, alloc);
-    timer.finish(.middle_liveness, io);
+    timer.finish(.middle_reg_class, io);
 
     // run optimzation passes
     if (should_optim) {
-        timer.begin(.middle_dead, io);
-        try dead.run(&ir_program, &alloc_program, alloc);
-        timer.finish(.middle_dead, io);
-        alloc_program.deinit(alloc);
-        reg_classes.deinit();
+        timer.begin(.middle_reg_alloc_build, io);
+        var dca_program = try reg_alloc.build(ir_program, &reg_classes, alloc);
+        defer dca_program.deinit(alloc);
+        timer.finish(.middle_reg_alloc_build, io);
 
-        timer.begin(.middle_reg_class, io);
-        reg_classes = try reg_class.classify(ir_program, alloc);
-        timer.finish(.middle_reg_class, io);
+        timer.begin(.middle_liveness, io);
+        try live.calculateLiveOut(&dca_program, alloc);
+        timer.finish(.middle_liveness, io);
+
+        timer.begin(.middle_dead, io);
+        try dead.run(&ir_program, &dca_program, alloc);
+        timer.finish(.middle_dead, io);
+    }
+
+    const register_files = host_platform.abi.registerFiles();
+    // generate interference graph
+    var host_colors: color.ColoredGraph = .initEmpty(alloc);
+    defer host_colors.deinit();
+    var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
+    // FIXME: move this logic somewhere
+    for (0..ir_program.functions.items.len + 1) |i| {
+        const function = if (i == 0) &ir_program.main else &ir_program.functions.items[i - 1];
+        if (function.kind != .host) continue;
 
         timer.begin(.middle_reg_alloc_build, io);
-        alloc_program = try reg_alloc.build(ir_program, &reg_classes, alloc);
+        var alloc_program = try reg_alloc.buildFunction(function.*, &reg_classes, alloc);
         timer.finish(.middle_reg_alloc_build, io);
+        defer alloc_program.deinit(alloc);
+
         timer.begin(.middle_liveness, io);
         try live.calculateLiveOut(&alloc_program, alloc);
         timer.finish(.middle_liveness, io);
-    }
 
-    // setup register specifics
-    const register_files = host_platform.abi.registerFiles();
-    // generate interference graph
-    var host_colors = color.ColoredGraph.initEmpty(alloc);
-    defer host_colors.deinit();
-    var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
-    for (register_files) |register_file| {
-        timer.begin(.middle_igraph, io);
-        var graph = try igraph.createIgraph(alloc_program.lines, register_file, alloc);
-        timer.finish(.middle_igraph, io);
-        defer graph.deinit();
-        var result = try loop.run(
-            &ir_program,
-            &graph,
-            &alloc_program,
-            register_file,
-            should_optim,
-            &timer,
-            io,
-            alloc,
-        );
-        defer result.graph.deinit();
-        try host_colors.absorb(&result.graph);
+        for (register_files) |register_file| {
+            var result = try loop.run(
+                function,
+                &alloc_program,
+                register_file,
+                should_optim,
+                &timer,
+                io,
+                alloc,
+            );
+            defer result.graph.deinit();
+            try host_colors.absorb(&result.graph);
 
-        inline for (std.meta.tags(FunctionType)) |function_type| {
-            spill_rounds.getPtr(function_type).* += result.spill_rounds.get(function_type);
+            inline for (std.meta.tags(FunctionType)) |function_type| {
+                spill_rounds.getPtr(function_type).* += result.spill_rounds.get(function_type);
+            }
         }
     }
 
@@ -232,23 +230,30 @@ pub fn main(init: std.process.Init) !void {
         .gfx1103 => {
             const device_platform = target.device.getPlatform();
 
-            for (device_platform.abi.registerFiles()) |register_file| {
-                timer.begin(.middle_igraph, io);
-                var graph = try igraph.createIgraph(alloc_program.lines, register_file, alloc);
-                timer.finish(.middle_igraph, io);
-                defer graph.deinit();
-                var result = try loop.run(
-                    &ir_program,
-                    &graph,
-                    &alloc_program,
-                    register_file,
-                    should_optim,
-                    &timer,
-                    io,
-                    alloc,
-                );
-                defer result.graph.deinit();
-                try device_colors.absorb(&result.graph);
+            for (ir_program.functions.items) |*function| {
+                if (function.kind != .gpu_kernel) continue;
+                timer.begin(.middle_reg_alloc_build, io);
+                var function_alloc = try reg_alloc.buildFunction(function.*, &reg_classes, alloc);
+                defer function_alloc.deinit(alloc);
+                timer.finish(.middle_reg_alloc_build, io);
+
+                timer.begin(.middle_liveness, io);
+                try live.calculateLiveOut(&function_alloc, alloc);
+                timer.finish(.middle_liveness, io);
+
+                for (device_platform.abi.registerFiles()) |register_file| {
+                    var result = try loop.run(
+                        function,
+                        &function_alloc,
+                        register_file,
+                        should_optim,
+                        &timer,
+                        io,
+                        alloc,
+                    );
+                    defer result.graph.deinit();
+                    try device_colors.absorb(&result.graph);
+                }
             }
             // FIXME: apply_colors only once
             try apply_colors.run(&ir_program, &device_colors, device_platform.abi, alloc);

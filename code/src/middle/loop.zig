@@ -13,6 +13,7 @@ const AllocProgram = @import("common").alloc.AllocProgram;
 const IrProgram = @import("common").program.Program;
 const Function = @import("common").function.Function;
 const FunctionType = @import("common").function.FunctionType;
+const RegisterClasses = @import("common").register.RegisterClasses;
 const RegisterFile = @import("common").register.RegisterFile;
 const TimerMetrics = @import("common").timer.TimerMetrics;
 const Writer = std.Io.Writer;
@@ -25,96 +26,66 @@ pub const RunResult = struct {
 /// feedback loop of program (lines of IR) -> inteference graph -> colored graph
 /// if we spill, create a new IR lines and repeat
 pub fn run(
-    ir_program: *IrProgram,
-    graph: *igraph.IGraph,
-    init_program: *AllocProgram,
+    function: *Function,
+    alloc_program: *AllocProgram,
     register_file: RegisterFile,
     should_coalesce: bool,
     timer: *TimerMetrics,
     io: std.Io,
     alloc: Allocator,
 ) !RunResult {
-    if (should_coalesce) {
-        timer.begin(.middle_coalesce, io);
-        try coalesce.run(graph, register_file);
-        timer.finish(.middle_coalesce, io);
-    }
-    timer.begin(.middle_color, io);
-    var graph_attempt = try color.colorGraph(graph, register_file, alloc);
-    timer.finish(.middle_color, io);
-    var color_attemps = std.EnumArray(FunctionType, usize).initFill(0);
-
-    var program = init_program;
-
-    while (graph_attempt == .spill_register) {
-        const spilled = graph_attempt.spill_register;
-        const function = switch (spilled) {
-            .temp => |t| try getFunctionFromIdx(ir_program, t.function_id),
-            else => return error.BadSpill,
-        };
-        // std.debug.print("spilling {s} register in function {s}\n", .{
-        //     @tagName(register_file.type),
-        //     function.name,
-        // });
-        color_attemps.getPtr(function.origin).* += 1;
-
-        // spill in ir
-        timer.begin(.middle_spill_reg, io);
-        try spill.spillRegInIr(ir_program, graph_attempt.spill_register, alloc);
-        timer.finish(.middle_spill_reg, io);
-        // select register types
-        timer.begin(.middle_reg_class, io);
-        var reg_classes = try reg_class.classify(ir_program.*, alloc);
-        timer.finish(.middle_reg_class, io);
-        defer reg_classes.deinit();
-        // rebuild alloc according to our spill
-        timer.begin(.middle_reg_alloc_build, io);
-        var new_program = try reg_alloc.build(ir_program.*, &reg_classes, alloc);
-        errdefer new_program.deinit(alloc);
-        timer.finish(.middle_reg_alloc_build, io);
-
-        timer.begin(.middle_liveness, io);
-        try live.calculateLiveOut(&new_program, alloc);
-        timer.finish(.middle_liveness, io);
+    var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
+    while (true) {
         timer.begin(.middle_igraph, io);
-        var new_graph = try igraph.createIgraph(
-            new_program.lines,
+        var graph = try igraph.createIgraph(
+            alloc_program.lines,
             register_file,
             alloc,
         );
-        errdefer new_graph.deinit();
+        defer graph.deinit();
         timer.finish(.middle_igraph, io);
+
         if (should_coalesce) {
             timer.begin(.middle_coalesce, io);
-            try coalesce.run(&new_graph, register_file);
+            try coalesce.run(&graph, register_file);
             timer.finish(.middle_coalesce, io);
         }
         timer.begin(.middle_color, io);
-        const new_graph_attempt = try color.colorGraph(&new_graph, register_file, alloc);
+        const attempt = try color.colorGraph(&graph, register_file, alloc);
         timer.finish(.middle_color, io);
-        // commit replacements
-        program.deinit(alloc);
-        program.* = new_program;
-        graph.deinit();
-        graph.* = new_graph;
-        graph_attempt = new_graph_attempt;
-    }
-
-    // return graph_attempt.graph;
-    return .{
-        .graph = graph_attempt.graph,
-        .spill_rounds = color_attemps,
-    };
-}
-
-fn getFunctionFromIdx(program: *const IrProgram, function_idx: usize) !*const Function {
-    if (program.main.id == function_idx) return &program.main;
-    for (program.functions.items) |*function| {
-        if (function.id == function_idx) {
-            return function;
+        switch (attempt) {
+            .graph => |colored| {
+                return .{
+                    .graph = colored,
+                    .spill_rounds = spill_rounds,
+                };
+            },
+            .spill_register => |spilled| {
+                spill_rounds.getPtr(function.origin).* += 1;
+                // spill in ir
+                timer.begin(.middle_spill_reg, io);
+                try spill.spillRegInFunction(function, spilled, alloc);
+                timer.finish(.middle_spill_reg, io);
+                // select register types
+                timer.begin(.middle_reg_class, io);
+                var reg_classes: RegisterClasses = .init(alloc);
+                defer reg_classes.deinit();
+                try reg_class.classifyFunction(function.*, &reg_classes);
+                timer.finish(.middle_reg_class, io);
+                // rebuild alloc according to our spill
+                timer.begin(.middle_reg_alloc_build, io);
+                var rebuild = try reg_alloc.buildFunction(function.*, &reg_classes, alloc);
+                errdefer rebuild.deinit(alloc);
+                timer.finish(.middle_reg_alloc_build, io);
+                timer.begin(.middle_liveness, io);
+                try live.calculateLiveOut(&rebuild, alloc);
+                timer.finish(.middle_liveness, io);
+                // update state
+                alloc_program.deinit(alloc);
+                alloc_program.* = rebuild;
+            },
         }
     }
-    return error.CantFindFunction;
 }
 
 test "test" {
