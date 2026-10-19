@@ -205,7 +205,6 @@ _concat__string_concat_epilogue:
 _print___print_int_helper:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $16, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -247,9 +246,11 @@ _print___print_int_helper_L3:
 	popq %rdx
 	popq %rax
 	movq %r11, %rdi
-	addq %rbx, %rdi
-	leaq -8(%rbp), %rsi
-	movq %rdi, 0(%rsi)
+	addq %rdi, %rbx
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, 0(%rsi)
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
@@ -261,7 +262,6 @@ _print___print_int_helper_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime

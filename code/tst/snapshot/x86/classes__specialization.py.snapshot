@@ -52,4 +52,4 @@ Box[f32]
 3.00000
 4.00000
 1
-[!!memory report!!]: allocs=42 frees=42 allocated_bytes=438 freed_bytes=438
+[!!memory report!!]: allocs=57 frees=57 allocated_bytes=558 freed_bytes=558

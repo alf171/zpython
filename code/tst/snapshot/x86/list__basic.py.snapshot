@@ -34,4 +34,4 @@ actual output:
 [1, 2, 0, 4]
 8 8 8 8 8 16 
 [1, 2, 0, 4, 5, 6, 7, 8, 9]
-[!!memory report!!]: allocs=152 frees=152 allocated_bytes=1560 freed_bytes=1560
+[!!memory report!!]: allocs=179 frees=179 allocated_bytes=1776 freed_bytes=1776

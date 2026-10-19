@@ -33,4 +33,4 @@ module
 2
 2
 3
-[!!memory report!!]: allocs=18 frees=18 allocated_bytes=191 freed_bytes=191
+[!!memory report!!]: allocs=21 frees=21 allocated_bytes=215 freed_bytes=215

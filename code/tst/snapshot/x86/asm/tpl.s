@@ -4,7 +4,6 @@
 main:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $48, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -38,15 +37,17 @@ main_L0:
 	movb %dil, (%r12,%rsi)
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %r13
-	movq %r13, %rdi
+	movq %rax, %r14
+	movq %r14, %rdi
 	movq %r12, %rsi
 	callq _str__str____init__
-	movq $1, %rdi
-	leaq -24(%rbp), %r12
+	movq $1, %r13
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r12
 	movq %rbx, 0(%r12)
-	movq %r13, 8(%r12)
-	movb %dil, 16(%r12)
+	movq %r14, 8(%r12)
+	movb %r13b, 16(%r12)
 	movq $22, %r13
 	movq $15, %rdi
 	callq arena_malloc
@@ -80,11 +81,13 @@ main_L0:
 	movq %r14, %rdi
 	movq %rbx, %rsi
 	callq _str__str____init__
-	movq $0, %rdi
-	leaq -48(%rbp), %rbx
+	movq $0, %r15
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
 	movq %r13, 0(%rbx)
 	movq %r14, 8(%rbx)
-	movb %dil, 16(%rbx)
+	movb %r15b, 16(%rbx)
 	movq $0, %rdi
 	movq (%rdi,%r12), %r14
 	movq $10, %rdi
@@ -329,7 +332,6 @@ main_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $48, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -465,7 +467,6 @@ _concat__string_concat_epilogue:
 _print___print_int_helper:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $16, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -507,9 +508,11 @@ _print___print_int_helper_L3:
 	popq %rdx
 	popq %rax
 	movq %r11, %rdi
-	addq %rbx, %rdi
-	leaq -8(%rbp), %rsi
-	movq %rdi, 0(%rsi)
+	addq %rdi, %rbx
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, 0(%rsi)
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
@@ -521,7 +524,6 @@ _print___print_int_helper_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime

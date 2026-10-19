@@ -45,4 +45,4 @@ actual output:
 895
 1310
 1775
-[!!memory report!!]: allocs=46 frees=46 allocated_bytes=870 freed_bytes=870
+[!!memory report!!]: allocs=63 frees=63 allocated_bytes=1006 freed_bytes=1006

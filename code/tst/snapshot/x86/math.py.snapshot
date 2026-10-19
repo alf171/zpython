@@ -1,0 +1,61 @@
+running program: (OPTIM=true)
+
+x = 11
+y = 5
+# add
+print(x + y)
+# sub
+print(x - y)
+# mul
+print(x * y)
+# FIXME: should be 2.2 not 2
+print(x / y)
+# floor div
+print(x // y)
+# mod
+print(x % y)
+# exp
+print(exp(float(x)))
+# exp2
+print(exp2(f32(x)))
+# left shift
+print(x << 3)
+# right shift
+print(x >> 2)
+# log_e
+print(log(f32(x)))
+# cos
+print(cos(f32(x)))
+# sqrt
+print(sqrt(float(x)))
+# rand i32
+print(rand())
+
+performance report: (ORIGIN=user)
+number of asm lines: 360
+mov count: 250
+memory load count: 17
+memory store count: 59
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
+call count: 62
+spill rounds: 5
+
+actual output:
+16
+6
+55
+2
+2
+1
+59874.14171
+2048.00000
+88
+2
+2.39789
+0.00442
+3.31662
+1804289383
+[!!memory report!!]: allocs=96 frees=96 allocated_bytes=806 freed_bytes=806

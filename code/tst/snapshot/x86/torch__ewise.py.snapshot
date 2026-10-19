@@ -13,18 +13,18 @@ swallowing exception from exp(bool, i32)
 swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
-number of asm lines: 101
-mov count: 64
+number of asm lines: 107
+mov count: 72
 memory load count: 6
 memory store count: 20
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 15
+call count: 19
 spill rounds: 0
 
 actual output:
 6
 1
-[!!memory report!!]: allocs=44 frees=44 allocated_bytes=996 freed_bytes=996
+[!!memory report!!]: allocs=70 frees=70 allocated_bytes=1844 freed_bytes=1844

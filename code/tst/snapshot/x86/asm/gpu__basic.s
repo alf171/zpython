@@ -4,7 +4,6 @@
 main:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $208, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -14,54 +13,64 @@ main:
 main_L0:
 	movq $48, %rdi
 	callq arena_malloc
-	movq %rax, %r12
+	movq %rax, %rbx
 	movq $5, %rdi
-	movq %rdi, 0(%r12)
+	movq %rdi, 0(%rbx)
 	movq $8, %rsi
 	movq $0, %rdi
-	movq %rdi, (%r12,%rsi)
+	movq %rdi, (%rbx,%rsi)
 	movq $16, %rsi
 	movq $0, %rdi
-	movq %rdi, (%r12,%rsi)
+	movq %rdi, (%rbx,%rsi)
 	movq $24, %rsi
 	movq $0, %rdi
-	movq %rdi, (%r12,%rsi)
+	movq %rdi, (%rbx,%rsi)
 	movq $32, %rsi
 	movq $0, %rdi
-	movq %rdi, (%r12,%rsi)
+	movq %rdi, (%rbx,%rsi)
 	movq $40, %rsi
 	movq $0, %rdi
-	movq %rdi, (%r12,%rsi)
+	movq %rdi, (%rbx,%rsi)
 	movq $12, %rdi
 	callq arena_malloc
-	movq %rax, %rbx
-	movq %rbx, %rdi
-	movq %r12, %rsi
+	movq %rax, %r13
+	movq %r13, %rdi
+	movq %rbx, %rsi
 	callq _list__list____init____i64
-	movslq 8(%rbx), %rcx
-	movq $1, %rsi
-	movq $1, %rdi
-	leaq -24(%rbp), %rdx
-	movl %ecx, 0(%rdx)
-	movq %rsi, 8(%rdx)
-	movq %rdi, 16(%rdx)
-	leaq -40(%rbp), %rsi
+	movslq 8(%r13), %r15
+	movq $1, %r14
+	movq $1, %rbx
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movl %r15d, 0(%r12)
+	movq %r14, 8(%r12)
+	movq %rbx, 16(%r12)
+	movq $16, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%rsi)
+	movq %rdi, 0(%rbx)
 	movq $8, %rdi
-	movq %rdi, 8(%rsi)
-	leaq -64(%rbp), %rcx
+	movq %rdi, 8(%rbx)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %r14
 	movq $12, %rdi
-	movq %rdi, 0(%rcx)
+	movq %rdi, 0(%r14)
 	movq $1, %rdi
-	movq %rdi, 8(%rcx)
-	movq %rsi, 16(%rcx)
-	leaq -88(%rbp), %rsi
-	movq %rbx, 0(%rsi)
+	movq %rdi, 8(%r14)
+	movq %rbx, 16(%r14)
+	movq $24, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq %r13, 0(%rbx)
 	movq $12, %rdi
-	movq %rdi, 8(%rsi)
-	movq %rcx, 16(%rsi)
-	leaq -208(%rbp), %rcx
+	movq %rdi, 8(%rbx)
+	movq %r14, 16(%rbx)
+	movq $120, %rdi
+	callq arena_malloc
+	movq %rax, %rcx
 	movq $95, %rdi
 	movb %dil, 0(%rcx)
 	movq $98, %rdi
@@ -92,28 +101,29 @@ main_L0:
 	movb %dil, 104(%rcx)
 	movq $0, %rdi
 	movb %dil, 112(%rcx)
-	movq %rsi, %rdi
+	movq %rbx, %rdi
 	movq $1, %rsi
+	movq %r12, %rdx
 	callq gpu_launch
 	movq $10, %rdi
 	callq arena_malloc
-	movq %rax, %r12
+	movq %rax, %rbx
 	movq $2, %rdi
-	movq %rdi, 0(%r12)
+	movq %rdi, 0(%rbx)
 	movq $8, %rsi
 	movq $10, %rdi
-	movb %dil, (%r12,%rsi)
+	movb %dil, (%rbx,%rsi)
 	movq $9, %rsi
 	movq $0, %rdi
-	movb %dil, (%r12,%rsi)
+	movb %dil, (%rbx,%rsi)
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %r13
+	movq %rax, %r12
+	movq %r12, %rdi
+	movq %rbx, %rsi
+	callq _str__str____init__
 	movq %r13, %rdi
 	movq %r12, %rsi
-	callq _str__str____init__
-	movq %rbx, %rdi
-	movq %r13, %rsi
 	callq _list__list____print____i64
 	callq arena_free
 	jmp main_epilogue
@@ -125,7 +135,6 @@ main_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $208, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -261,7 +270,6 @@ _concat__string_concat_epilogue:
 _print___print_int_helper:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $16, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -303,9 +311,11 @@ _print___print_int_helper_L3:
 	popq %rdx
 	popq %rax
 	movq %r11, %rdi
-	addq %rbx, %rdi
-	leaq -8(%rbp), %rsi
-	movq %rdi, 0(%rsi)
+	addq %rdi, %rbx
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, 0(%rsi)
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
@@ -317,7 +327,6 @@ _print___print_int_helper_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime

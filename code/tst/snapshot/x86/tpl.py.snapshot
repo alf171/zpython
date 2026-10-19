@@ -22,15 +22,15 @@ print(len(t1))
 print(len(t1))
 
 performance report: (ORIGIN=user)
-number of asm lines: 328
-mov count: 257
+number of asm lines: 330
+mov count: 261
 memory load count: 12
 memory store count: 60
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 51
+call count: 53
 spill rounds: 0
 
 actual output:
@@ -45,4 +45,4 @@ False
 300
 3
 3
-[!!memory report!!]: allocs=34 frees=34 allocated_bytes=329 freed_bytes=329
+[!!memory report!!]: allocs=51 frees=51 allocated_bytes=497 freed_bytes=497

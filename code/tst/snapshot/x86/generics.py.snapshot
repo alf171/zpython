@@ -62,4 +62,4 @@ False
 bar
 True
 42
-[!!memory report!!]: allocs=40 frees=40 allocated_bytes=444 freed_bytes=444
+[!!memory report!!]: allocs=47 frees=47 allocated_bytes=500 freed_bytes=500

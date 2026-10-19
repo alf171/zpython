@@ -8,17 +8,17 @@ print(len(y))
 
 performance report: (ORIGIN=user)
 number of asm lines: 72
-mov count: 44
+mov count: 46
 memory load count: 6
 memory store count: 16
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 9
+call count: 10
 spill rounds: 0
 
 actual output:
 2
 4
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=36 freed_bytes=36
+[!!memory report!!]: allocs=7 frees=7 allocated_bytes=84 freed_bytes=84

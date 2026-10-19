@@ -21,4 +21,4 @@ spill rounds: 1
 actual output:
 148.41315
 f32
-[!!memory report!!]: allocs=8 frees=8 allocated_bytes=74 freed_bytes=74
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=138 freed_bytes=138

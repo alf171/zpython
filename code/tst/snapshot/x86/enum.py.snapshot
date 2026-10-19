@@ -36,4 +36,4 @@ True
 True
 False
 2
-[!!memory report!!]: allocs=20 frees=20 allocated_bytes=201 freed_bytes=201
+[!!memory report!!]: allocs=21 frees=21 allocated_bytes=209 freed_bytes=209

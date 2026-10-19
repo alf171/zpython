@@ -157,7 +157,6 @@ _concat__string_concat_epilogue:
 _print___print_int_helper:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $16, %rsp
 	subq $8, %rsp
 	pushq %rbx
 	pushq %r12
@@ -199,9 +198,11 @@ _print___print_int_helper_L3:
 	popq %rdx
 	popq %rax
 	movq %r11, %rdi
-	addq %rbx, %rdi
-	leaq -8(%rbp), %rsi
-	movq %rdi, 0(%rsi)
+	addq %rdi, %rbx
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %rsi
+	movq %rbx, 0(%rsi)
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
@@ -213,7 +214,6 @@ _print___print_int_helper_epilogue:
 	popq %r12
 	popq %rbx
 	addq $8, %rsp
-	addq $16, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -1463,13 +1463,13 @@ _specialization__run_L0:
 	callq _str__str____print__
 	movq $4, %rdi
 	cvtsi2ssq %rdi, %xmm0
-	movq %xmm0, -24(%rbp)
+	movq %xmm0, -32(%rbp)
 	movq $12, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
 	movq $1, %rdi
 	movq %rdi, 0(%rbx)
-	movq -24(%rbp), %xmm0
+	movq -32(%rbp), %xmm0
 	movq $8, %rdi
 	movss %xmm0, (%rbx,%rdi)
 	movq $12, %rdi
@@ -1621,7 +1621,7 @@ _specialization__run_L0:
 	movq 0(%rdi), %rsi
 	movq $8, %rdi
 	movss (%rdi,%rsi), %xmm0
-	movq %xmm0, -32(%rbp)
+	movq %xmm0, -24(%rbp)
 	movq $10, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
@@ -1639,7 +1639,7 @@ _specialization__run_L0:
 	movq %r12, %rdi
 	movq %rbx, %rsi
 	callq _str__str____init__
-	movq -32(%rbp), %xmm0
+	movq -24(%rbp), %xmm0
 	cvtss2sd %xmm0, %xmm0
 	movq %r12, %rsi
 	callq _print__print_float

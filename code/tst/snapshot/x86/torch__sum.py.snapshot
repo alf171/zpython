@@ -11,14 +11,14 @@ print(z)
 
 performance report: (ORIGIN=user)
 number of asm lines: 106
-mov count: 71
+mov count: 73
 memory load count: 6
 memory store count: 19
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 16
+call count: 17
 spill rounds: 0
 
 actual output:
@@ -26,4 +26,4 @@ actual output:
 40.00000 60.00000 
 (2, 1)
 30.00000 70.00000 
-[!!memory report!!]: allocs=86 frees=86 allocated_bytes=1160 freed_bytes=1160
+[!!memory report!!]: allocs=163 frees=163 allocated_bytes=3464 freed_bytes=3464

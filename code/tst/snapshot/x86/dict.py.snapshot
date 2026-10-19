@@ -27,4 +27,4 @@ actual output:
 3
 False
 True
-[!!memory report!!]: allocs=40 frees=40 allocated_bytes=592 freed_bytes=592
+[!!memory report!!]: allocs=43 frees=43 allocated_bytes=616 freed_bytes=616
