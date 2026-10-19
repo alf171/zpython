@@ -62,10 +62,23 @@ fn rewriteFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     instruction.deinit(alloc);
                 },
                 .tuple_literal => |tl| {
-                    try new_instructions.append(alloc, .{ .lir = .{ .stack_alloc = .{
-                        .dst = try tl.dst.clone(alloc),
-                        .bytes = tl.elements.len * 8,
+                    const bytes: TypedOperand = .{
+                        .operand = function.nextTemp(),
+                        .type = .i64,
+                    };
+                    try new_instructions.append(alloc, .{ .lir = .{ .move = .{
+                        .dst = bytes,
+                        .src = .{ .constant = .{ .i64 = @intCast(tl.elements.len * 8) } },
                     } } });
+                    const args = try alloc.alloc(TypedOperand, 1);
+                    args[0] = bytes;
+                    try new_instructions.append(alloc, .{
+                        .function_call = .{
+                            .dst = try tl.dst.clone(alloc),
+                            .callee = .{ .direct = try alloc.dupe(u8, "arena_malloc") },
+                            .args = args,
+                        },
+                    });
 
                     for (tl.elements, 0..) |element, i| {
                         const src = switch (element) {
