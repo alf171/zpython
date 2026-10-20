@@ -15,6 +15,7 @@ const ModuleStatus = struct {
 
 pub const ModuleBuilder = struct {
     runtime_modules: ArrayList(ModuleId),
+    runtime_root: ?[]const u8,
     modules: ArrayList(LoadedModule),
     imports: ArrayList(ArrayList(ImportEdge)),
     dependencies: ArrayList(ArrayList(ModuleId)),
@@ -23,6 +24,7 @@ pub const ModuleBuilder = struct {
     pub fn init(alloc: std.mem.Allocator) @This() {
         return .{
             .runtime_modules = .empty,
+            .runtime_root = null,
             .modules = .empty,
             .imports = .empty,
             .dependencies = .empty,
@@ -121,6 +123,7 @@ pub const ModuleBuilder = struct {
     }
 
     pub fn loadRuntime(self: *@This(), root_path: []const u8, io: std.Io, alloc: std.mem.Allocator) !void {
+        self.runtime_root = root_path;
         const dir = try std.Io.Dir.cwd().openDir(io, root_path, .{ .iterate = true });
         defer dir.close(io);
 

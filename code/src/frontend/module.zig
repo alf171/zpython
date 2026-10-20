@@ -265,9 +265,7 @@ pub fn loadModule(
                         std.debug.assert(raw_alias != null);
                         break :blk std.mem.span(raw_alias);
                     };
-                    const imported_path = try resolveImportPath(import_root, module_name, alloc);
-                    defer alloc.free(imported_path);
-                    const import_id = try loadModule(builder, imported_path, import_root, origin, io, alloc);
+                    const import_id = try loadImportModule(builder, module_name, import_root, origin, io, alloc);
 
                     try builder.addDependency(id, import_id, alloc);
                     try builder.addFunctionImport(id, import_id, func_name, alias, alloc);
@@ -278,6 +276,33 @@ pub fn loadModule(
     }
     builder.modules_by_path.getPtr(path).?.state = .loaded;
     return id;
+}
+
+pub fn loadImportModule(
+    builder: *ModuleBuilder,
+    module_name: []const u8,
+    import_root: []const u8,
+    origin: FunctionType,
+    io: std.Io,
+    alloc: std.mem.Allocator,
+) anyerror!ModuleId {
+    const path = try resolveImportPath(import_root, module_name, alloc);
+    defer alloc.free(path);
+
+    std.Io.Dir.cwd().access(io, path, .{}) catch |err| {
+        if (err != error.FileNotFound) return err;
+
+        if (builder.runtime_root) |root| {
+            const runtime_path = try resolveImportPath(root, module_name, alloc);
+            defer alloc.free(runtime_path);
+            if (builder.modules_by_path.get(runtime_path)) |module| {
+                return module.id;
+            }
+        }
+        return error.ModuleNotFound;
+    };
+
+    return try loadModule(builder, path, import_root, origin, io, alloc);
 }
 
 /// normalize from python syntax to os file path
