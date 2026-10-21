@@ -1,5 +1,7 @@
 running program: (OPTIM=true)
 
+from random import randn
+
 x = 11
 y = 5
 # add
@@ -8,8 +10,9 @@ print(x + y)
 print(x - y)
 # mul
 print(x * y)
-# FIXME: should be 2.2 not 2
-print(x / y)
+# FIXME: cast shouldnt required
+# a rewrite layer should handle pythonic scenarios here
+print(f32(x) / f32(y))
 # floor div
 print(x // y)
 # mod
@@ -28,26 +31,30 @@ print(log(f32(x)))
 print(cos(f32(x)))
 # sqrt
 print(sqrt(float(x)))
+# seed randomness
+srand(42)
 # rand i32
 print(rand())
+# rand f32
+print(randn())
 
 performance report: (ORIGIN=user)
-number of asm lines: 360
-mov count: 250
-memory load count: 17
-memory store count: 59
+number of asm lines: 388
+mov count: 269
+memory load count: 18
+memory store count: 64
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 62
-spill rounds: 5
+call count: 68
+spill rounds: 7
 
 actual output:
 16
 6
 55
-2
+2.20000
 2
 1
 59874.14171
@@ -57,5 +64,6 @@ actual output:
 2.39789
 0.00442
 3.31662
-1804289383
-[!!memory report!!]: allocs=96 frees=96 allocated_bytes=806 freed_bytes=806
+71876166
+-0.54265
+[!!memory report!!]: allocs=113 frees=113 allocated_bytes=950 freed_bytes=950

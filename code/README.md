@@ -51,6 +51,8 @@ The goal of this project is to learn more about compilers from a lower level. Pr
 - [ ] [code sinking](https://llvm.org/docs/Passes.html#sink-code-sinking)
 - [0.5] dictionaries, resizing arrays (define in runtime?)
 - [ ] linear or affine types for heap allocations
+- [ ] [llvm docs](https://llvm.org/docs/CodeGenerator.html#handling-two-address-instructions)
+  - two address instruction handling in llvm
 
 ### Assembler/Linker
 - [ ] remove clang on linux/x86
@@ -78,7 +80,7 @@ The goal of this project is to learn more about compilers from a lower level. Pr
   - [ ] backwards pass
   - [ ] move to uops approach for grads
   - [ ] mnist model: `Input (784) -> Linear (784->128) -> ReLU -> Linear (128->10) -> Softmax`
-  - [ ] operator fusion (profile profile profile!)
+  - [ ] operator fusion (profile!)
 3. [Optional] read/write weights to a file
 4. build some models (ideas under)
   - 1k param: linear classifier of sorts?

@@ -228,8 +228,30 @@ fn emitFunction(
                                             try out.print(alloc, "\t{s} %{s}, %{s}\n", .{ mult_inst, rhs, dst });
                                         }
                                     },
+                                    .div => {
+                                        switch (binop.dst.type) {
+                                            .f64 => {
+                                                try out.print(alloc, "\tsubq $8, %rsp\n", .{});
+                                                try out.print(alloc, "\tmovsd %{s}, (%rsp)\n", .{rhs});
+                                                try out.print(alloc, "\tmovsd %{s}, %{s}\n", .{ lhs, dst });
+                                                try out.print(alloc, "\tdivsd (%rsp), %{s}\n", .{dst});
+                                                try out.print(alloc, "\taddq $8, %rsp\n", .{});
+                                            },
+                                            .f32 => {
+                                                try out.print(alloc, "\tsubq $4, %rsp\n", .{});
+                                                try out.print(alloc, "\tmovss %{s}, (%rsp)\n", .{rhs});
+                                                try out.print(alloc, "\tmovss %{s}, %{s}\n", .{ lhs, dst });
+                                                try out.print(alloc, "\tdivss (%rsp), %{s}\n", .{dst});
+                                                try out.print(alloc, "\taddq $4, %rsp\n", .{});
+                                            },
+                                            else => |e| {
+                                                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                                unreachable;
+                                            },
+                                        }
+                                    },
                                     // FIXME: floor_div is wrong for neg values
-                                    .div, .floor_div => {
+                                    .floor_div => {
                                         try out.print(alloc, "\tpushq %rax\n", .{});
                                         try out.print(alloc, "\tmovq %{s}, %rax\n", .{lhs});
                                         try out.print(alloc, "\tcqto\n", .{});
@@ -351,7 +373,18 @@ fn emitFunction(
                                     },
                                     else => try out.print(alloc, "\tnegq %{s}\n", .{dst}),
                                 },
-                                .exp2 => return error.NotImpl,
+                                .sqrt => switch (u.dst.type) {
+                                    .f64 => try out.print(alloc, "\tsqrtsd %{s}, %{s}\n", .{ src, dst }),
+                                    .f32 => try out.print(alloc, "\tsqrtss %{s}, %{s}\n", .{ src, dst }),
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        unreachable;
+                                    },
+                                },
+                                else => |e| {
+                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                    return error.NotImpl;
+                                },
                             }
                         },
                         .cast => |c| {

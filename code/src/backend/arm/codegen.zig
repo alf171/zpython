@@ -356,7 +356,7 @@ fn emitFunction(
                                         try out.print(alloc, "\tneg {s}, {s}\n", .{ dst, src });
                                     },
                                 },
-                                .exp2 => return error.NotImpl,
+                                else => return error.NotImpl,
                             }
                         },
                         .cast => |c| {

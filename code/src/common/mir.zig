@@ -64,6 +64,46 @@ pub const FunctionCallInst = struct {
     args: []TypedOperand,
 };
 
+/// TODO: move print, write, hash into here
+///
+/// ops with defered resolution
+pub const Intrinsic = enum {
+    exp,
+    exp2,
+    log,
+    cos,
+    rand,
+    srand,
+
+    pub fn libSymbol(self: @This(), t: ?TypeInfo) !?[]const u8 {
+        return switch (self) {
+            // libm
+            .exp => switch (t.?) {
+                .f64 => "exp",
+                .f32 => "expf",
+                else => return error.InvalidExp,
+            },
+            .exp2 => switch (t.?) {
+                .f64 => "exp2",
+                .f32 => "exp2f",
+                else => return error.InvalidExp2,
+            },
+            .log => switch (t.?) {
+                .f64 => "log",
+                .f32 => "logf",
+                else => return error.InvalidLog,
+            },
+            .cos => switch (t.?) {
+                .f64 => "cos",
+                .f32 => "cosf",
+                else => return error.InvalidCos,
+            },
+            .rand => "rand",
+            .srand => "srand",
+        };
+    }
+};
+
 pub const Instruction = union(enum) {
     print: struct {
         src: TypedOperand,
@@ -179,6 +219,11 @@ pub const Instruction = union(enum) {
         dst: TypedOperand,
         // x=0, y=1, z=2
         axis: ValueRef,
+    },
+    instrinsic_call: struct {
+        op: Intrinsic,
+        dst: ?TypedOperand,
+        args: []TypedOperand,
     },
     // deglate to LIR impl
     lir: LirInstruction,
@@ -297,6 +342,13 @@ pub const Instruction = union(enum) {
             .hash => |h| {
                 h.dst.deinit(alloc);
                 h.src.deinit(alloc);
+            },
+            .instrinsic_call => |ic| {
+                if (ic.dst) |d| d.deinit(alloc);
+                for (ic.args) |arg| {
+                    arg.deinit(alloc);
+                }
+                alloc.free(ic.args);
             },
             .class_alloc => |ca| {
                 ca.dst.deinit(alloc);

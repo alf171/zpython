@@ -36,6 +36,7 @@ const CmpOp = @import("common").ir.CmpOp;
 const Program = @import("common").program.Program;
 const PhiInput = @import("common").mir.PhiInput;
 const UnaryOp = @import("common").ir.UnaryOp;
+const Intrinsic = @import("common").mir.Intrinsic;
 
 const IrBuilder = @import("ir_builder.zig").IrBuilder;
 const LocalValues = @import("ir_builder.zig").LocalValues;
@@ -48,7 +49,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Dict, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Type, Hash, ArrayEmpty };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Log, Cos, Sqrt, Rand, SRand, Type, Hash, ArrayEmpty };
 
 const BoolOp = enum { And, Or };
 
@@ -1664,25 +1665,7 @@ fn walkNamedCall(
 
                 return try dst.clone(alloc);
             },
-            .Exp => {
-                std.debug.assert(c.PyList_Size(args) == 1);
-                const arg = c.PyList_GetItem(args, 0);
-                std.debug.assert(arg != null);
-                const callee_args = try alloc.alloc(TypedOperand, 1);
-                callee_args[0] = try walkExpr(arg, ir_builder, null, alloc);
-                const dst: TypedOperand = .{
-                    .operand = ir_builder.nextTemp(),
-                    .type = .f64,
-                };
-                // this pattern only works on the cpu
-                try ir_builder.emit(.{ .function_call = .{
-                    .dst = dst,
-                    .callee = .{ .direct = try alloc.dupe(u8, "exp") },
-                    .args = callee_args,
-                } }, alloc);
-                return try dst.clone(alloc);
-            },
-            .Exp2 => {
+            .Exp, .Log, .Cos, .SRand => |intrin| {
                 std.debug.assert(c.PyList_Size(args) == 1);
                 const arg = c.PyList_GetItem(args, 0);
                 std.debug.assert(arg != null);
@@ -1691,9 +1674,52 @@ fn walkNamedCall(
                     .operand = ir_builder.nextTemp(),
                     .type = try callee_arg.type.clone(alloc),
                 };
+                const op: Intrinsic = switch (intrin) {
+                    .Exp => .exp,
+                    .Log => .log,
+                    .Cos => .cos,
+                    .SRand => .srand,
+                    else => unreachable,
+                };
+                const c_args = try alloc.alloc(TypedOperand, 1);
+                c_args[0] = callee_arg;
+                try ir_builder.emit(.{ .instrinsic_call = .{
+                    .dst = dst,
+                    .op = op,
+                    .args = c_args,
+                } }, alloc);
+                return try dst.clone(alloc);
+            },
+            .Rand => {
+                std.debug.assert(c.PyList_Size(args) == 0);
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = .i32,
+                };
+                try ir_builder.emit(.{ .instrinsic_call = .{
+                    .dst = dst,
+                    .op = .rand,
+                    .args = &.{},
+                } }, alloc);
+                return try dst.clone(alloc);
+            },
+            .Sqrt, .Exp2 => |uop| {
+                std.debug.assert(c.PyList_Size(args) == 1);
+                const arg = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg != null);
+                const callee_arg = try walkExpr(arg, ir_builder, null, alloc);
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = try callee_arg.type.clone(alloc),
+                };
+                const op: UnaryOp = switch (uop) {
+                    .Sqrt => .sqrt,
+                    .Exp2 => .exp2,
+                    else => unreachable,
+                };
                 try ir_builder.emit(.{ .lir = .{ .unaryop = .{
                     .dst = dst,
-                    .op = .exp2,
+                    .op = op,
                     .src = callee_arg,
                 } } }, alloc);
                 return try dst.clone(alloc);
@@ -2776,6 +2802,11 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "max")) return .Max;
     if (std.mem.eql(u8, name, "exp")) return .Exp;
     if (std.mem.eql(u8, name, "exp2")) return .Exp2;
+    if (std.mem.eql(u8, name, "log")) return .Log;
+    if (std.mem.eql(u8, name, "cos")) return .Cos;
+    if (std.mem.eql(u8, name, "sqrt")) return .Sqrt;
+    if (std.mem.eql(u8, name, "rand")) return .Rand;
+    if (std.mem.eql(u8, name, "srand")) return .SRand;
     if (std.mem.eql(u8, name, "type")) return .Type;
     if (std.mem.eql(u8, name, "hash")) return .Hash;
     if (std.mem.eql(u8, name, "array_empty")) return .ArrayEmpty;
