@@ -131,6 +131,7 @@ pub const ConstValue = union(enum) {
     f64: f64,
     f32: f32,
     char: u8,
+    none,
 
     pub fn print(self: @This()) void {
         switch (self) {
@@ -138,6 +139,7 @@ pub const ConstValue = union(enum) {
             .bool => |b| std.debug.print("{}", .{b}),
             .f64, .f32 => |f| std.debug.print("{}", .{f}),
             .char => |c| std.debug.print("{}", .{c}),
+            .none => std.debug.print("none", .{}),
         }
     }
 
@@ -158,6 +160,7 @@ pub const ConstValue = union(enum) {
             .f64 => .f64,
             .f32 => .f32,
             .char => .char,
+            .none => .none,
         };
     }
 
@@ -167,7 +170,7 @@ pub const ConstValue = union(enum) {
             .i32 => |v| @intCast(v),
             .bool => |v| @intFromBool(v),
             .char => |v| @intCast(v),
-            .f64, .f32 => return error.BadState,
+            .f64, .f32, .none => return error.BadState,
         };
     }
 
@@ -179,6 +182,7 @@ pub const ConstValue = union(enum) {
             .f32 => |f| f == 0.0,
             .bool => |b| !b,
             .char => |c| c == 0,
+            .none => false,
         };
     }
     pub fn isOne(self: @This()) bool {
@@ -189,6 +193,7 @@ pub const ConstValue = union(enum) {
             .f32 => |f| f == 1.0,
             .bool => |b| b,
             .char => |c| c == 1,
+            .none => false,
         };
     }
 
@@ -262,6 +267,8 @@ pub const CmpOp = enum {
     gt,
     gte,
     contains,
+    is,
+    is_not,
 
     pub fn symbol(self: @This()) []const u8 {
         return switch (self) {
@@ -286,7 +293,7 @@ pub const CmpOp = enum {
         };
     }
 
-    pub fn toClassBuiltin(self: @This()) []const u8 {
+    pub fn toClassBuiltin(self: @This()) ?[]const u8 {
         return switch (self) {
             .eq => "__eq__",
             .neq => "__ne__",
@@ -295,6 +302,8 @@ pub const CmpOp = enum {
             .gt => "__gt__",
             .gte => "__ge__",
             .contains => "__contains__",
+            // operations cant be overwritten
+            .is, .is_not => null,
         };
     }
 
@@ -307,6 +316,8 @@ pub const CmpOp = enum {
             .gt => &.{ .{ .receiver = .lhs, .method = "__gt__" }, .{ .receiver = .rhs, .method = "__gt__" } },
             .gte => &.{ .{ .receiver = .lhs, .method = "__ge__" }, .{ .receiver = .rhs, .method = "__ge__" } },
             .contains => &.{.{ .receiver = .rhs, .method = "__contains__" }},
+            // operations cant be overwritten
+            .is, .is_not => &.{},
         };
     }
 };

@@ -19,8 +19,8 @@ pub const TypeBindings = struct {
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
         var it = self.bindings.valueIterator();
-        while (it.next()) |_type| {
-            _type.deinit(alloc);
+        while (it.next()) |t| {
+            t.deinit(alloc);
         }
         self.bindings.deinit();
     }
@@ -66,7 +66,7 @@ pub const ClassInstance = struct {
 // use a pointer on element type for recursive purposes
 // things like range dont know their size at comptime
 pub const TypeInfo = union(enum) {
-    void,
+    none,
     i64,
     i32,
     f64,
@@ -98,6 +98,9 @@ pub const TypeInfo = union(enum) {
     @"enum": ClassId,
     type_variable: TypeVarId,
     module: ModuleId,
+    @"union": struct {
+        members: []const TypeInfo,
+    },
     any,
 
     pub fn deinit(self: @This(), alloc: std.mem.Allocator) void {
@@ -135,7 +138,17 @@ pub const TypeInfo = union(enum) {
                 }
                 alloc.free(instance.args);
             },
-            else => {},
+            .@"union" => |u| {
+                for (u.members) |member| {
+                    member.deinit(alloc);
+                }
+                alloc.free(u.members);
+            },
+            .char, .i32, .i64, .f32, .f64, .none, .bool, .type_variable, .any, .@"enum", .ptr, .module => {},
+            // else => |e| {
+            //     std.debug.print("cant handle {s}\n", .{@tagName(e)});
+            //     unreachable;
+            // },
         }
     }
 
@@ -192,7 +205,14 @@ pub const TypeInfo = union(enum) {
                     .args = args,
                 } };
             },
-            .void, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr, .module, .@"enum" => return self,
+            .@"union" => |u| {
+                var members = try alloc.alloc(TypeInfo, u.members.len);
+                for (u.members, 0..) |member, i| {
+                    members[i] = try member.clone(alloc);
+                }
+                return .{ .@"union" = .{ .members = members } };
+            },
+            .none, .i64, .i32, .bool, .char, .f64, .f32, .any, .type_variable, .ptr, .module, .@"enum" => return self,
             // else => |e| {
             //     std.debug.print("clone does support {s}\n", .{@tagName(e)});
             //     return error.NotImpl;
@@ -444,7 +464,7 @@ pub const TypeInfo = union(enum) {
             .f32 => try alloc.dupe(u8, "f32"),
             .module => try alloc.dupe(u8, "module"),
             .any => try alloc.dupe(u8, "any"),
-            .void => try alloc.dupe(u8, "void"),
+            .none => try alloc.dupe(u8, "none"),
             .@"enum" => try alloc.dupe(u8, "enum"),
             .tuple => |t| blk: {
                 var out: std.ArrayList(u8) = .empty;

@@ -1,0 +1,31 @@
+running program: (OPTIM=true)
+
+
+ints: list[i32] = [0, 1, 2]
+print(type(ints))
+floats: list[f32] = [0, 1, 2]
+print(type(floats))
+
+infer_ints = [0, 1, 2]
+print(type(infer_ints))
+infer_floats = [0.0, 1.0, 2.0]
+print(type(infer_floats))
+
+performance report: (ORIGIN=user)
+number of asm lines: 345
+mov count: 288
+memory load count: 6
+memory store count: 78
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 0
+returns: 1
+call count: 41
+spill rounds: 0
+
+actual output:
+list[i32]
+list[f32]
+list[i64]
+list[f64]
+[!!memory report!!]: allocs=24 frees=24 allocated_bytes=328 freed_bytes=328

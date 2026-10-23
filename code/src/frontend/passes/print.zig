@@ -116,6 +116,13 @@ fn rewriteFunction(program: *const Program, function: *Function, alloc: std.mem.
                                 .args = args,
                             } });
                         },
+                        .none => {
+                            try new_instructions.append(alloc, .{ .function_call = .{
+                                .dst = null,
+                                .callee = .{ .direct = try alloc.dupe(u8, "_print__print_none") },
+                                .args = args,
+                            } });
+                        },
                         else => |e| {
                             std.debug.print("dont support print of type {s}\n", .{@tagName(e)});
                             return error.UnsupportedPrint;

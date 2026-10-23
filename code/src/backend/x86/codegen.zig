@@ -96,6 +96,7 @@ fn emitFunction(
                                             try out.print(alloc, "\tmovl ${d}, %{s}\n", .{ bits, reg32(gp_scratch_reg) });
                                             try out.print(alloc, "\tmovd %{s}, %{s}\n", .{ reg32(gp_scratch_reg), dst });
                                         },
+                                        .none => try out.print(alloc, "\tmovq $0, %{s}\n", .{dst}),
                                     }
                                 },
                                 .top => |src_top| {
@@ -770,13 +771,16 @@ fn emitMovUnsigned(out: *ArrayList(u8), dst: []const u8, value: u64, alloc: std.
 fn condForCmp(op: common.ir.CmpOp, reg_type: RegisterType) []const u8 {
     return switch (reg_type) {
         .gp => switch (op) {
-            .eq => "sete",
-            .neq => "setne",
+            .eq, .is => "sete",
+            .neq, .is_not => "setne",
             .lt => "setl",
             .lte => "setle",
             .gt => "setg",
             .gte => "setge",
-            else => unreachable,
+            else => |e| {
+                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                unreachable;
+            },
         },
         .f => switch (op) {
             .eq => "sete",

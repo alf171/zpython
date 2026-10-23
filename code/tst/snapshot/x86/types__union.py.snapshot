@@ -1,0 +1,36 @@
+running program: (OPTIM=true)
+
+
+a: str | None = "foo"
+print(type(a))
+print(a)
+print(a is None)
+print(a is not None)
+b: str | None = None
+print(type(b))
+print(b)
+print(b is None)
+print(b is not None)
+
+performance report: (ORIGIN=user)
+number of asm lines: 268
+mov count: 202
+memory load count: 6
+memory store count: 46
+conditional jumps: 0
+unconditional jumps: 1
+comparisons: 4
+returns: 1
+call count: 42
+spill rounds: 0
+
+actual output:
+str
+foo
+False
+True
+none
+None
+True
+False
+[!!memory report!!]: allocs=40 frees=40 allocated_bytes=398 freed_bytes=398

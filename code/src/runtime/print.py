@@ -1,7 +1,7 @@
 def _print_int_helper(d: int) -> None:
     ten = 10
     ascii_zero = 48
-    prev = d / ten
+    prev = d // ten
 
     if (prev != 0):
         _print_int_helper(prev)
@@ -64,3 +64,6 @@ def print_float(f: float, end: str = "\n") -> None:
 
     if len(end) > 0:
         write(1, end, len(end))
+
+def print_none(n: None, end: str = "\n") -> None:
+    print_string("None", end)

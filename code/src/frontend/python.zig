@@ -607,7 +607,7 @@ pub fn parseTypeAnnotation(
     } else if (std.mem.eql(u8, kind, "Constant")) {
         const value_obj = c.PyObject_GetAttrString(annotation, "value");
         if (value_obj == c.Py_None()) {
-            return .void;
+            return .none;
         }
         if (!std.mem.eql(u8, getPyType(value_obj), "str")) {
             return error.ExpectedString;
@@ -621,6 +621,16 @@ pub fn parseTypeAnnotation(
             .class_id = class.id,
             .args = try alloc.alloc(TypeInfo, 0),
         } };
+    } else if (std.mem.eql(u8, kind, "BinOp")) {
+        const left_obj = c.PyObject_GetAttrString(annotation, "left");
+        std.debug.assert(left_obj != null);
+        const right_obj = c.PyObject_GetAttrString(annotation, "right");
+        std.debug.assert(right_obj != null);
+        var members = try alloc.alloc(TypeInfo, 2);
+        errdefer alloc.free(members);
+        members[0] = try parseTypeAnnotation(left_obj, irBuilder, alloc);
+        members[1] = try parseTypeAnnotation(right_obj, irBuilder, alloc);
+        return .{ .@"union" = .{ .members = members } };
     }
     std.debug.print("kind not supported {s}\n", .{kind});
     return error.NotImpl;

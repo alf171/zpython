@@ -28,7 +28,7 @@ class str:
     def __hash__(self) -> int:
         res: int = 0
         for i in range(len(self.data) - 1):
-            # replace with 2**31 - 1
+            # FIXME: replace with 2**31 - 1
             res = (res * 31 + int(self.data[i])) % (2147483647)
         return res
 

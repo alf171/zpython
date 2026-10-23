@@ -164,10 +164,10 @@ fn emitFunction(
                                             std.debug.assert(scratch_reg[0] == 'x');
                                             try out.print(alloc, "\tfmov s{s}, w{s}\n", .{ dst[1..], scratch_reg[1..] });
                                         },
-                                        // else => |e| {
-                                        //     std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                        //     return error.NotImpl;
-                                        // },
+                                        else => |e| {
+                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                            return error.NotImpl;
+                                        },
                                     }
                                 },
                                 .top => |src_top| {

@@ -506,7 +506,16 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             std.debug.assert(value_obj != null);
             // <variable> = None
             if (value_obj == c.Py_None()) {
-                return .{ .operand = .unknown, .type = .void };
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = .none,
+                };
+                try ir_builder.emit(.{ .lir = .{ .move = .{
+                    .dst = dst,
+                    .src = .{ .constant = .none },
+                } } }, alloc);
+
+                return try dst.clone(alloc);
             }
             const parsed_constant = try parseConstant(value_obj, expected_type, alloc);
             switch (parsed_constant) {
@@ -831,7 +840,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     const class = ir_builder.getClass(instance.class_id);
                     switch (class.kind) {
                         .record => {
-                            const func = op.toClassBuiltin();
+                            const func = op.toClassBuiltin() orelse break :blk .bool;
                             const method = class.kind.record.findMethod(func) orelse {
                                 if (rhs.type != .instance) {
                                     return error.InvalidComparisonForDefault;
@@ -1146,7 +1155,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             const body = try walkExpr(body_obj, ir_builder, callable.returns.*, alloc);
             // handle null case as no return!
             try ir_builder.emit(.{ .function_return = .{
-                .value = if (body.type != .void) body else null,
+                .value = if (body.type != .none) body else null,
             } }, alloc);
 
             ir_builder.leaveFunction(function_context);
@@ -1501,7 +1510,7 @@ fn walkNamedCall(
                         return error.UnsupportedWriteType;
                     },
                 }
-                return .{ .operand = .unknown, .type = .void };
+                return .{ .operand = .unknown, .type = .none };
             },
             .Len => {
                 std.debug.assert(c.PyList_Size(args) == 1);
@@ -1865,7 +1874,7 @@ fn walkNamedCall(
     if (ir_builder.getLocal(name_slice) catch null) |local_id| {
         if (ir_builder.currentScope().local_values.map.get(local_id)) |callee| {
             if (callee.type == .callable) {
-                const maybe_dst: ?TypedOperand = if (callee.type.callable.returns.* == .void)
+                const maybe_dst: ?TypedOperand = if (callee.type.callable.returns.* == .none)
                     null
                 else
                     .{
@@ -1882,7 +1891,7 @@ fn walkNamedCall(
                 }, alloc);
 
                 if (maybe_dst) |dst| return dst;
-                return TypedOperand{ .operand = .unknown, .type = .void };
+                return TypedOperand{ .operand = .unknown, .type = .none };
             }
         }
     }
@@ -2049,7 +2058,7 @@ fn walkMethodCall(
                         .field_index = field_index,
                     } }, alloc);
                     const callable = dst.type.callable;
-                    const result: ?TypedOperand = if (callable.returns.* != .void) .{
+                    const result: ?TypedOperand = if (callable.returns.* != .none) .{
                         .operand = ir_builder.nextTemp(),
                         .type = try callable.returns.*.clone(alloc),
                     } else null;
@@ -2627,7 +2636,7 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
         },
         else => false,
     };
-    if (!termianted and function.return_type == .void) {
+    if (!termianted and function.return_type == .none) {
         try ir_builder.emit(.{ .function_return = .{ .value = null } }, alloc);
     }
 }
@@ -2655,13 +2664,13 @@ fn emitResolvedCall(
                 .work_items = work_items,
             },
         }, alloc);
-        return TypedOperand{ .operand = .unknown, .type = .void };
+        return .{ .operand = .unknown, .type = .none };
     }
     var bindings: TypeBindings = .init(alloc);
     defer bindings.deinit(alloc);
     const return_type = try bindings.inferReturnType(&ir_builder.program, function, arguments.items, alloc);
 
-    const maybe_dst: ?TypedOperand = if (function.return_type != .void)
+    const maybe_dst: ?TypedOperand = if (function.return_type != .none)
         .{
             .operand = ir_builder.nextTemp(),
             .type = return_type,
@@ -2677,7 +2686,7 @@ fn emitResolvedCall(
     }, alloc);
 
     if (maybe_dst) |dst| return try dst.clone(alloc);
-    return .{ .operand = .unknown, .type = .void };
+    return .{ .operand = .unknown, .type = .none };
 }
 
 // Return(value=BinOp(left=Name(id='x', ctx=Load()), op=Add(), right=Name(id='y', ctx=Load())))
@@ -2757,9 +2766,10 @@ fn getCompareOp(expr: *PyObject) !CmpOp {
     const name = getPyType(ops_obj);
 
     if (std.mem.eql(u8, name, "Eq")) return .eq;
-    if (std.mem.eql(u8, name, "Is")) return .eq;
+    if (std.mem.eql(u8, name, "Is")) return .is;
     if (std.mem.eql(u8, name, "In")) return .contains;
     if (std.mem.eql(u8, name, "NotEq")) return .neq;
+    if (std.mem.eql(u8, name, "IsNot")) return .is_not;
     if (std.mem.eql(u8, name, "Lt")) return .lt;
     if (std.mem.eql(u8, name, "LtE")) return .lte;
     if (std.mem.eql(u8, name, "Gt")) return .gt;
