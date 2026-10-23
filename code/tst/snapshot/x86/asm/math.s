@@ -1156,6 +1156,57 @@ _print__print_float_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
+_print__print_none:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_print__print_none_L0:
+	movq %rsi, %r12
+	movq $13, %rdi
+	callq arena_malloc
+	movq %rax, %rbx
+	movq $5, %rdi
+	movq %rdi, 0(%rbx)
+	movq $8, %rsi
+	movq $78, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $9, %rsi
+	movq $111, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $10, %rsi
+	movq $110, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $11, %rsi
+	movq $101, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $12, %rsi
+	movq $0, %rdi
+	movb %dil, (%rbx,%rsi)
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq %r13, %rdi
+	movq %rbx, %rsi
+	callq _str__str____init__
+	movq %r13, %rdi
+	movq %r12, %rsi
+	callq _print__print_string
+	jmp _print__print_none_epilogue
+_print__print_none_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
 _tensor__Tensor__randn:
 	pushq %rbp
 	movq %rsp, %rbp

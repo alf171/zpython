@@ -16,6 +16,7 @@ from kernels import sum_rows as _sum_rows_gpu
 from kernels import sum_cols as _sum_cols_gpu
 from kernels import max_rows as _max_rows_gpu
 from kernels import max_cols as _max_cols_gpu
+from random import randn
 
 class TensorData[T]:
     def __init__(self, data: array[T], shape: tuple[i32, i32]) -> None:
@@ -89,6 +90,14 @@ class TensorData[T]:
         data: array[U] = array_empty(count)
         for i in range(count):
             data[i] = value
+        return TensorData(data, shape)
+
+    @staticmethod
+    def randn(shape: tuple[i32, i32]) -> TensorData[f32]:
+        count: int = shape[0] * shape[1]
+        data: array[f32] = array_empty(count)
+        for i in range(count):
+            data[i] = randn()
         return TensorData(data, shape)
 
     def __add__(self, other: TensorData[T]) -> TensorData[T]:

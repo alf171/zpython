@@ -35,6 +35,7 @@ const parallel_copies = middle.parallel_copies;
 const copy = middle.copy;
 const dead = middle.dead;
 const peephole = middle.peephole;
+const math = middle.math;
 const FunctionType = @import("common").function.FunctionType;
 const TimerMetrics = @import("common").timer.TimerMetrics;
 const RegisterClass = @import("common").register.RegisterClass;
@@ -121,6 +122,7 @@ pub fn main(init: std.process.Init) !void {
     try lazy.rewrite(&ir_program, alloc);
     try array.rewrite(&ir_program, alloc);
     try tuple.rewrite(&ir_program, alloc);
+    try math.rewrite(&ir_program, alloc);
     if (std_lib_enabled) {
         try runtime.injectCleanup(&ir_program, alloc);
     }

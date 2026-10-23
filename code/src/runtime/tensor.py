@@ -32,6 +32,12 @@ class Tensor[T]:
         uop: Uop[U] = Uop([], [data], Ops.BUFFER, shape, 0)
         return Tensor._init(uop)
 
+    @staticmethod
+    def randn(shape: tuple[i32, i32]) -> Tensor[f32]:
+        data = TensorData.randn(shape)
+        uop: Uop[f32] = Uop([], [data], Ops.BUFFER, shape, 0)
+        return Tensor._init(uop)
+
     def realize(self) -> TensorData[T]:
         return evaluate(self.uop)
 
@@ -41,7 +47,8 @@ class Tensor[T]:
         return res
 
     def transpose(self) -> Tensor[T]:
-        uop = Uop([self.uop], [], Ops.TRANSPOSE, self.uop.shape, 0)
+        shape = (self.uop.shape[1], self.uop.shape[0])
+        uop = Uop([self.uop], [], Ops.TRANSPOSE, shape, 0)
         return Tensor._init(uop)
 
     def __getitem__(self, idxs: tuple[i32, i32]) -> T:
@@ -108,7 +115,8 @@ class Tensor[T]:
         return res
 
     def __matmul__(self, other: Tensor[T]) -> Tensor[T]:
-        uop = Uop([self.uop, other.uop], [], Ops.MATMUL, self.uop.shape, 0)
+        shape = (self.uop.shape[0], other.uop.shape[1])
+        uop = Uop([self.uop, other.uop], [], Ops.MATMUL, shape, 0)
         res = Tensor._init(uop)
         return res
 
@@ -123,12 +131,14 @@ class Tensor[T]:
         return res
 
     def sum(self, axis: i32) -> Tensor[T]:
-        uop = Uop([self.uop], [], Ops.SUM, self.uop.shape, axis)
+        shape = (self.uop.shape[0], 1) if axis == 1 else (1, self.uop.shape[1])
+        uop = Uop([self.uop], [], Ops.SUM, shape, axis)
         res = Tensor._init(uop)
         return res
 
     def max(self, axis: i32) -> Tensor[T]:
-        uop = Uop([self.uop], [], Ops.MAX, self.uop.shape, axis)
+        shape = (self.uop.shape[0], 1) if axis == 1 else (1, self.uop.shape[1])
+        uop = Uop([self.uop], [], Ops.MAX, shape, axis)
         res = Tensor._init(uop)
         return res
 

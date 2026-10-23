@@ -9,6 +9,7 @@ pub const phi = @import("phi.zig");
 pub const parallel_copies = @import("parallel_copies.zig");
 pub const apply_colors = @import("apply_colors.zig");
 pub const identity = @import("identity.zig");
+pub const math = @import("math.zig");
 pub const copy = @import("optim/copy.zig");
 pub const dead = @import("optim/dead.zig");
 pub const peephole = @import("optim/peephole.zig");
