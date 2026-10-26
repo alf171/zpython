@@ -457,7 +457,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     const class = ir_builder.getClass(instance.class_id);
                     const func = op.toClassBuiltin();
                     const method = class.kind.record.findMethod(func) orelse {
-                        std.debug.print("cant find method {s}\n", .{func});
+                        std.debug.print("cant find method `{s}` on class `{s}`\n", .{ func, class.name });
                         return error.CantFindMethod;
                     };
                     const function = ir_builder.getFunction(method.function_id) orelse {
