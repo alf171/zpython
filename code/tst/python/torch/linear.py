@@ -9,10 +9,6 @@ b = Tensor(b_data, (1,2))
 layer = Linear(w, b)
 y = layer.forward(x)
 print(y)
-
-one: f32 = 1.0
-seed = Tensor.fill((1,2), one)
-y.backward(seed.view)
 print(x.grad)
 print(w.grad)
 print(b.grad)
