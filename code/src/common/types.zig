@@ -546,6 +546,17 @@ pub const TypeInfo = union(enum) {
 
                 return try std.fmt.allocPrint(alloc, "array[{s}]", .{elem});
             },
+            .@"union" => |u| {
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                for (u.members, 0..) |member, i| {
+                    if (i != 0) try out.append(alloc, '|');
+                    const member_string = try member.toDisplayName(program, alloc);
+                    defer alloc.free(member_string);
+                    try out.appendSlice(alloc, member_string);
+                }
+                return try out.toOwnedSlice(alloc);
+            },
             .instance => |instance| {
                 const class = program.classes.items[instance.class_id];
                 var out: std.ArrayList(u8) = .empty;
