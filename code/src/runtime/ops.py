@@ -11,5 +11,7 @@ class Ops(Enum):
     EXP = 8
     SUM = 9
     MAX = 10
-    BROADCAST = 11
-    TRANSPOSE = 12
+    POW = 11
+    BROADCAST = 12
+    TRANSPOSE = 13
+    WHERE = 14

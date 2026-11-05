@@ -228,6 +228,14 @@ pub const TypeInfo = union(enum) {
             .@"enum" => 8,
             .i32, .f32 => 4,
             .bool, .char => 1,
+            .none => 0,
+            .@"union" => |u| {
+                var max: usize = 0;
+                for (u.members) |member| {
+                    max = @max(max, try sizeOfType(member));
+                }
+                return max;
+            },
             .type_variable => return error.GenericsNotLoweredProperly,
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
@@ -433,7 +441,7 @@ pub const TypeInfo = union(enum) {
                 }
                 return false;
             },
-            .i64, .i32, .f64, .f32, .char, .bool => false,
+            .i64, .i32, .f64, .f32, .char, .bool, .@"enum", .none, .any => false,
             .callable => |c| {
                 for (c.params) |param| {
                     if (param.containsGenericVariable(wanted)) return true;
@@ -446,7 +454,6 @@ pub const TypeInfo = union(enum) {
                 }
                 return false;
             },
-            .@"enum" => false,
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;

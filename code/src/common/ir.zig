@@ -82,6 +82,7 @@ pub const BinOp = enum {
     lshift,
     rshift,
     matmul,
+    pow,
     unknown,
 
     pub fn toClassBuiltin(self: @This()) []const u8 {
@@ -91,6 +92,7 @@ pub const BinOp = enum {
             .mul => "__mul__",
             .matmul => "__matmul__",
             .div => "__truediv__",
+            .pow => "__pow__",
             else => unreachable,
         };
     }
@@ -102,6 +104,7 @@ pub const BinOp = enum {
             .mul => &.{ .{ .receiver = .lhs, .method = "__mul__" }, .{ .receiver = .rhs, .method = "__rmul__" } },
             .div => &.{ .{ .receiver = .lhs, .method = "__truediv__" }, .{ .receiver = .rhs, .method = "__rtruediv__" } },
             .matmul => &.{ .{ .receiver = .lhs, .method = "__matmul__" }, .{ .receiver = .rhs, .method = "__rmatmul__" } },
+            .pow => &.{ .{ .receiver = .lhs, .method = "__pow__" }, .{ .receiver = .rhs, .method = "__rpow__" } },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;
@@ -267,6 +270,7 @@ pub const CmpOp = enum {
     gt,
     gte,
     contains,
+    not_contains,
     is,
     is_not,
 
@@ -278,6 +282,7 @@ pub const CmpOp = enum {
             .lte => "<=",
             .gt => ">",
             .gte => ">=",
+            else => unreachable,
         };
     }
 
@@ -301,7 +306,7 @@ pub const CmpOp = enum {
             .lte => "__le__",
             .gt => "__gt__",
             .gte => "__ge__",
-            .contains => "__contains__",
+            .contains, .not_contains => "__contains__",
             // operations cant be overwritten
             .is, .is_not => null,
         };
@@ -315,7 +320,7 @@ pub const CmpOp = enum {
             .lte => &.{ .{ .receiver = .lhs, .method = "__le__" }, .{ .receiver = .rhs, .method = "__le__" } },
             .gt => &.{ .{ .receiver = .lhs, .method = "__gt__" }, .{ .receiver = .rhs, .method = "__gt__" } },
             .gte => &.{ .{ .receiver = .lhs, .method = "__ge__" }, .{ .receiver = .rhs, .method = "__ge__" } },
-            .contains => &.{.{ .receiver = .rhs, .method = "__contains__" }},
+            .contains, .not_contains => &.{.{ .receiver = .rhs, .method = "__contains__" }},
             // operations cant be overwritten
             .is, .is_not => &.{},
         };

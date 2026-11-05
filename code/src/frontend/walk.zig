@@ -97,12 +97,23 @@ pub fn walkStmt(raw_stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allo
         .Import, .ImportFrom => {},
         .AugAssign => try walkAugAssignment(raw_stmt, ir_builder, alloc),
         .ClassDef => try walkClassDef(raw_stmt, ir_builder, alloc),
+        .Continue => try walkContinue(ir_builder, alloc),
         else => {
             std.debug.print("unsupported statement type: {s}: ", .{getPyType(raw_stmt)});
             printAstDump(raw_stmt);
             return error.UnsupportedStatement;
         },
     }
+}
+
+fn walkContinue(ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
+    const context = ir_builder.currentLoop();
+    if (context == null) {
+        return error.InvalidContinue;
+    }
+    try ir_builder.emit(.{ .lir = .{ .jump = .{
+        .target = context.?.continue_target,
+    } } }, alloc);
 }
 
 /// class got declared in module
@@ -817,7 +828,7 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 }, alloc);
                 return try function_dst.clone(alloc);
             }
-            std.debug.print("cant find local {s}\n", .{name});
+            std.debug.print("cant find local `{s}`\n", .{name});
             return error.CantFindLocal;
         },
         // Compare(left=Constant(1),ops=[Lt()],comparators=[Constant(2)])
@@ -843,6 +854,11 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                             const func = op.toClassBuiltin() orelse break :blk .bool;
                             const method = class.kind.record.findMethod(func) orelse {
                                 if (rhs.type != .instance) {
+                                    const lhs_name = try lhs.type.toDisplayName(&ir_builder.program, alloc);
+                                    defer alloc.free(lhs_name);
+                                    const rhs_name = try rhs.type.toDisplayName(&ir_builder.program, alloc);
+                                    defer alloc.free(rhs_name);
+                                    std.debug.print("operator `{s}` is not supported between `{s}` and `{s}`\n", .{ op.symbol(), lhs_name, rhs_name });
                                     return error.InvalidComparisonForDefault;
                                 }
                                 // the deafult comparison ops return bools
@@ -932,7 +948,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 if (ir_builder.findClass(std.mem.span(value))) |class| {
                     switch (class.kind) {
                         .@"enum" => |*info| {
-                            const member = info.findMember(name) orelse return error.CantFindEnumMember;
+                            const member = info.findMember(name) orelse {
+                                std.debug.print("cant find {s}\n", .{name});
+                                return error.CantFindEnumMember;
+                            };
 
                             const dst: TypedOperand = .{
                                 .operand = ir_builder.nextTemp(),
@@ -1269,7 +1288,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
 fn walkArray(elements: *PyObject, ir_builder: *IrBuilder, expected_elem_type: ?TypeInfo, alloc: std.mem.Allocator) anyerror!TypedOperand {
     const len = c.PyList_Size(elements);
     var result: ArrayList(ValueRef) = .empty;
-    errdefer result.deinit(alloc);
+    errdefer {
+        for (result.items) |i| i.deinit(alloc);
+        result.deinit(alloc);
+    }
 
     for (0..@intCast(len)) |i| {
         const elem = c.PyList_GetItem(elements, @as(isize, @intCast(i)));
@@ -1390,8 +1412,9 @@ fn walkNamedCall(
                 }
                 switch (src.type) {
                     .instance => {
-                        const class = ir_builder.getClassRecord(src.type.instance.class_id);
-                        const method = class.findMethod("__print__") orelse {
+                        const class = ir_builder.getClass(src.type.instance.class_id);
+                        const method = class.kind.record.findMethod("__print__") orelse {
+                            std.debug.print("cant find __print__ for {s}\n", .{class.name});
                             return error.CantFindPrint;
                         };
                         const f_args = if (end) |e| blk: {
@@ -2023,7 +2046,10 @@ fn walkMethodCall(
                     std.debug.print("cant find method {s}\n", .{method_name});
                     return error.CantFindMethod;
                 };
-                if (!method_info.is_static) return error.ExpectedInstance;
+                if (!method_info.is_static) {
+                    std.debug.print("{s} is not static\n", .{method_name});
+                    return error.ExpectedInstance;
+                }
                 const method = ir_builder.getFunction(method_info.function_id) orelse {
                     return error.CantFindFunction;
                 };
@@ -2035,23 +2061,23 @@ fn walkMethodCall(
         // FIXME: cleanup this code now that it handles fields of type callable now too
         const method = switch (receiver_expr.?.type) {
             .instance => |inst| module_blk: {
-                const class = ir_builder.getClassRecord(inst.class_id);
-                if (class.findMethod(method_name)) |method_info| {
+                const class = ir_builder.getClass(inst.class_id);
+                if (class.kind.record.findMethod(method_name)) |method_info| {
                     self = receiver_expr.?;
                     receiver_expr = null;
                     break :module_blk ir_builder.getFunction(method_info.function_id) orelse {
                         return error.CantFindFunction;
                     };
-                } else if (class.findField(method_name)) |field| {
+                } else if (class.kind.record.findField(method_name)) |field| {
                     if (field.type != .callable) {
                         std.debug.print("cant invoke {s}\n", .{method_name});
                         return error.UncallableField;
                     }
                     const dst: TypedOperand = .{
                         .operand = ir_builder.nextTemp(),
-                        .type = try class.resolveFieldType(field, inst, alloc),
+                        .type = try class.kind.record.resolveFieldType(field, inst, alloc),
                     };
-                    const field_index = class.findFieldIdx(method_name) orelse return error.CantFindField;
+                    const field_index = class.kind.record.findFieldIdx(method_name) orelse return error.CantFindField;
                     try ir_builder.emit(.{ .field_load = .{
                         .dst = dst,
                         .instance = receiver_expr.?,
@@ -2086,7 +2112,7 @@ fn walkMethodCall(
                     }, alloc);
                     return if (result) |r| try r.clone(alloc) else .{ .operand = .unknown, .type = .any };
                 }
-                std.debug.print("cant find method {s}\n", .{method_name});
+                std.debug.print("cant find method `{s}` on class `{s}`\n", .{ method_name, class.name });
                 return error.CantFindMethod;
             },
             .module => |module_id| {
@@ -2329,7 +2355,7 @@ pub fn walkWhile(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocat
         }
     };
 
-    try walkLoop(ir_builder, .{ .expr = test_ }, LoopBody{ .stmt_list = body }, &.{}, callback.loop, orelse_, alloc);
+    try walkLoop(ir_builder, .{ .expr = test_ }, .{ .stmt_list = body }, &.{}, callback.loop, orelse_, alloc);
 }
 
 // arr = [...] # range
@@ -2741,6 +2767,7 @@ fn getBinOp(expr: *PyObject) !BinOp {
     if (std.mem.eql(u8, name, "LShift")) return .lshift;
     if (std.mem.eql(u8, name, "RShift")) return .rshift;
     if (std.mem.eql(u8, name, "MatMult")) return .matmul;
+    if (std.mem.eql(u8, name, "Pow")) return .pow;
 
     std.debug.panic("unsupported binop: {s}", .{name});
     return error.NotFound;
@@ -2768,6 +2795,7 @@ fn getCompareOp(expr: *PyObject) !CmpOp {
     if (std.mem.eql(u8, name, "Eq")) return .eq;
     if (std.mem.eql(u8, name, "Is")) return .is;
     if (std.mem.eql(u8, name, "In")) return .contains;
+    if (std.mem.eql(u8, name, "NotIn")) return .not_contains;
     if (std.mem.eql(u8, name, "NotEq")) return .neq;
     if (std.mem.eql(u8, name, "IsNot")) return .is_not;
     if (std.mem.eql(u8, name, "Lt")) return .lt;

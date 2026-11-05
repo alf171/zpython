@@ -49,7 +49,7 @@ pub const LoopCarry = struct {
 };
 
 pub fn walkLoop(
-    irBuilder: *IrBuilder,
+    ir_builder: *IrBuilder,
     condition: LoopCondition,
     body: LoopBody,
     carries: []LoopCarry,
@@ -57,21 +57,21 @@ pub fn walkLoop(
     orelse_: ?*PyObject,
     alloc: std.mem.Allocator,
 ) !void {
-    var before_values = try irBuilder.currentScope().local_values.clone(alloc);
+    var before_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer before_values.deinit(alloc);
 
-    const condition_block = try irBuilder.newBlock(alloc);
-    const body_block = try irBuilder.newBlock(alloc);
-    const exit_block = try irBuilder.newBlock(alloc);
+    const condition_block = try ir_builder.newBlock(alloc);
+    const body_block = try ir_builder.newBlock(alloc);
+    const exit_block = try ir_builder.newBlock(alloc);
 
-    const entry_block = irBuilder.current_block;
-    try irBuilder.emit(Instruction{ .lir = .{ .jump = .{
+    const entry_block = ir_builder.current_block;
+    try ir_builder.emit(Instruction{ .lir = .{ .jump = .{
         .target = condition_block,
     } } }, alloc);
-    try irBuilder.addSuccessor(entry_block, condition_block, alloc);
+    try ir_builder.addSuccessor(entry_block, condition_block, alloc);
 
-    irBuilder.setCurrentBlock(condition_block);
-    irBuilder.currentScope().local_values.clear(alloc);
+    ir_builder.setCurrentBlock(condition_block);
+    ir_builder.currentScope().local_values.clear(alloc);
     var loop_values: LocalValues = .init(alloc);
     defer loop_values.deinit(alloc);
     var loop_phis: ArrayList(LoopPhi) = .init(alloc);
@@ -91,14 +91,14 @@ pub fn walkLoop(
         inputs[1] = undefined;
 
         const dst: TypedOperand = .{
-            .operand = irBuilder.nextTemp(),
+            .operand = ir_builder.nextTemp(),
             .type = try before_val.type.clone(alloc),
         };
-        try irBuilder.emit(.{ .phi = .{
+        try ir_builder.emit(.{ .phi = .{
             .dst = dst,
             .inputs = inputs,
         } }, alloc);
-        try irBuilder.currentScope().putLocalValues(local, try dst.clone(alloc), alloc);
+        try ir_builder.currentScope().putLocalValues(local, try dst.clone(alloc), alloc);
         try loop_values.map.put(local, try dst.clone(alloc));
         try loop_phis.append(.{
             .local = local,
@@ -116,10 +116,10 @@ pub fn walkLoop(
         };
         inputs[1] = undefined;
         const dst = TypedOperand{
-            .operand = irBuilder.nextTemp(),
+            .operand = ir_builder.nextTemp(),
             .type = try carry.initial.type.clone(alloc),
         };
-        try irBuilder.emit(Instruction{ .phi = .{
+        try ir_builder.emit(Instruction{ .phi = .{
             .dst = dst,
             .inputs = inputs,
         } }, alloc);
@@ -129,15 +129,15 @@ pub fn walkLoop(
     }
 
     const condition_expr = switch (condition) {
-        .expr => |cond| try walkExpr(cond, irBuilder, null, alloc),
+        .expr => |cond| try walkExpr(cond, ir_builder, null, alloc),
         .compare => |comp| blk: {
             const dst: TypedOperand = .{
-                .operand = irBuilder.nextTemp(),
+                .operand = ir_builder.nextTemp(),
                 .type = .bool,
             };
-            const lhs = irBuilder.currentScope().local_values.map.get(comp.local) orelse return error.LocalNotFound;
-            const rhs = irBuilder.currentScope().local_values.map.get(comp.rhs_local) orelse return error.LocalNotFound;
-            try irBuilder.emit(.{ .lir = .{ .binop = .{
+            const lhs = ir_builder.currentScope().local_values.map.get(comp.local) orelse return error.LocalNotFound;
+            const rhs = ir_builder.currentScope().local_values.map.get(comp.rhs_local) orelse return error.LocalNotFound;
+            try ir_builder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
                 .lhs = lhs,
                 .op = .{ .cmp = comp.cmp },
@@ -147,11 +147,11 @@ pub fn walkLoop(
         },
         .operand_compare => |comp| blk: {
             const dst: TypedOperand = .{
-                .operand = irBuilder.nextTemp(),
+                .operand = ir_builder.nextTemp(),
                 .type = .bool,
             };
             const lhs = carries[comp.carry_index].current;
-            try irBuilder.emit(.{ .lir = .{ .binop = .{
+            try ir_builder.emit(.{ .lir = .{ .binop = .{
                 .dst = dst,
                 .lhs = lhs,
                 .op = .{ .cmp = comp.cmp },
@@ -161,26 +161,33 @@ pub fn walkLoop(
         },
     };
 
-    try irBuilder.emit(Instruction{ .lir = .{
+    try ir_builder.emit(.{ .lir = .{
         .branch = .{
             .condition = condition_expr,
             .then_block = body_block,
             .else_block = exit_block,
         },
     } }, alloc);
-    try irBuilder.addSuccessor(condition_block, body_block, alloc);
-    try irBuilder.addSuccessor(condition_block, exit_block, alloc);
+    try ir_builder.addSuccessor(condition_block, body_block, alloc);
+    try ir_builder.addSuccessor(condition_block, exit_block, alloc);
 
     // body block
-    irBuilder.setCurrentBlock(body_block);
+    ir_builder.setCurrentBlock(body_block);
     // naively restore since we dont support walrus
-    try irBuilder.currentScope().restoreLocalValues(&loop_values, alloc);
+    try ir_builder.currentScope().restoreLocalValues(&loop_values, alloc);
 
-    // crux
-    try bodyCallback(body, carries, irBuilder, alloc);
+    {
+        try ir_builder.loop_stack.append(alloc, .{
+            .continue_target = condition_block,
+            .break_target = exit_block,
+        });
+        defer _ = ir_builder.loop_stack.pop();
+        // crux
+        try bodyCallback(body, carries, ir_builder, alloc);
+    }
 
-    const backedge_block = irBuilder.current_block;
-    var body_values = try irBuilder.currentScope().local_values.clone(alloc);
+    const backedge_block = ir_builder.current_block;
+    var body_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer body_values.deinit(alloc);
     for (loop_phis.items) |loop_phi| {
         const value = body_values.map.get(loop_phi.local) orelse loop_phi.dst;
@@ -198,16 +205,16 @@ pub fn walkLoop(
         };
     }
 
-    try irBuilder.emit(Instruction{ .lir = .{
+    try ir_builder.emit(Instruction{ .lir = .{
         .jump = .{ .target = condition_block },
     } }, alloc);
-    try irBuilder.addSuccessor(backedge_block, condition_block, alloc);
+    try ir_builder.addSuccessor(backedge_block, condition_block, alloc);
 
     // exit block
-    irBuilder.setCurrentBlock(exit_block);
+    ir_builder.setCurrentBlock(exit_block);
     // naively restore since we dont support walrus
-    try irBuilder.currentScope().restoreLocalValues(&loop_values, alloc);
+    try ir_builder.currentScope().restoreLocalValues(&loop_values, alloc);
     if (orelse_) |orelse_val| {
-        try walkStmtList(orelse_val, irBuilder, alloc);
+        try walkStmtList(orelse_val, ir_builder, alloc);
     }
 }

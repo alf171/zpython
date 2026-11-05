@@ -31,9 +31,12 @@ fn rewriteFunction(
                 .hash => |h| {
                     switch (h.src.type) {
                         .instance => |instance| {
-                            const class = &program.classes.items[instance.class_id].kind.record;
-                            const method = class.findMethod("__hash__") orelse {
-                                if (class.findMethod("__eq__") != null) return error.UnhashableType;
+                            const class = &program.classes.items[instance.class_id];
+                            const method = class.kind.record.findMethod("__hash__") orelse {
+                                if (class.kind.record.findMethod("__eq__") != null) {
+                                    std.debug.print("unhashable type {s}\n", .{class.name});
+                                    return error.UnhashableType;
+                                }
 
                                 try new_instructions.append(alloc, .{ .lir = .{ .move = .{
                                     .dst = try h.dst.clone(alloc),

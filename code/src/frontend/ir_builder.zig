@@ -150,11 +150,17 @@ pub const ResolvedLocal = struct {
     local: LocalId,
 };
 
+pub const LoopContext = struct {
+    continue_target: BlockId,
+    break_target: BlockId,
+};
+
 pub const IrBuilder = struct {
     program: Program,
     current_block: BlockId,
     current_function: ?usize,
     current_class: ?ClassId,
+    loop_stack: ArrayList(LoopContext),
     // `current_scope` and `scopes` handles closure
     current_scope: ScopeId,
     scopes: ArrayList(LocalScope),
@@ -176,6 +182,7 @@ pub const IrBuilder = struct {
             .current_function = null,
             .current_block = 0,
             .current_class = null,
+            .loop_stack = .empty,
             .current_scope = 0,
             .scopes = scopes,
             .function_closure_env = null,
@@ -193,6 +200,7 @@ pub const IrBuilder = struct {
             scope.deinit(alloc);
         }
         self.scopes.deinit(alloc);
+        self.loop_stack.deinit(alloc);
     }
 
     pub fn currentBlocks(self: *@This()) *ArrayList(BasicBlock) {
@@ -399,15 +407,20 @@ pub const IrBuilder = struct {
         self.current_scope = context.scope;
         self.active_param_types = context.active_param_types;
     }
+
+    pub fn currentLoop(self: *const @This()) ?LoopContext {
+        if (self.loop_stack.items.len == 0) return null;
+        return self.loop_stack.items[self.loop_stack.items.len - 1];
+    }
 };
 
 test "create ir builder" {
     const alloc = std.testing.allocator;
-    var irBuilder = try IrBuilder.init(.user, 0, "__init__", alloc);
-    defer irBuilder.deinit(alloc);
-    defer irBuilder.program.deinit(alloc);
+    var ir_builder = try IrBuilder.init(.user, 0, "__init__", alloc);
+    defer ir_builder.deinit(alloc);
+    defer ir_builder.program.deinit(alloc);
 
-    const block = try irBuilder.newBlock(alloc);
+    const block = try ir_builder.newBlock(alloc);
     try std.testing.expectEqual(@as(BlockId, 1), block);
-    try std.testing.expectEqual(@as(BlockId, 0), irBuilder.current_block);
+    try std.testing.expectEqual(@as(BlockId, 0), ir_builder.current_block);
 }

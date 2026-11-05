@@ -38,6 +38,7 @@ pub const StmtKind = enum {
     ImportFrom,
     AugAssign,
     ClassDef,
+    Continue,
     Unknown,
 };
 
@@ -63,6 +64,7 @@ pub fn getStmtKind(stmt: *PyObject) StmtKind {
     if (std.mem.eql(u8, name, "ImportFrom")) return .ImportFrom;
     if (std.mem.eql(u8, name, "AugAssign")) return .AugAssign;
     if (std.mem.eql(u8, name, "ClassDef")) return .ClassDef;
+    if (std.mem.eql(u8, name, "Continue")) return .Continue;
     return .Unknown;
 }
 

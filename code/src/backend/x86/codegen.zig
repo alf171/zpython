@@ -633,7 +633,7 @@ fn emitStoreConstant(
     alloc: std.mem.Allocator,
 ) !void {
     switch (type_) {
-        .i64, .array, .instance, .tuple, .callable, .@"enum" => try out.print(alloc, "\tmovq %{s}, {d}(%{s})\n", .{ src, offset, dst }),
+        .i64, .array, .instance, .tuple, .callable, .@"enum", .none => try out.print(alloc, "\tmovq %{s}, {d}(%{s})\n", .{ src, offset, dst }),
         .i32 => try out.print(alloc, "\tmovl %{s}, {d}(%{s})\n", .{ reg32(src), offset, dst }),
         .char, .bool => try out.print(alloc, "\tmovb %{s}, {d}(%{s})\n", .{ reg8(src), offset, dst }),
         else => |e| {
