@@ -2720,10 +2720,14 @@ fn emitResolvedCall(
 fn walkReturn(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) !void {
     const value = c.PyObject_GetAttrString(stmt, "value");
     std.debug.assert(value != null);
+
+    const expected_type = try ir_builder.currentFunction().return_type.clone(alloc);
+    defer expected_type.deinit(alloc);
+
     const return_top = if (value == c.Py_None())
         null
     else
-        try walkExpr(value, ir_builder, null, alloc);
+        try walkExpr(value, ir_builder, expected_type, alloc);
 
     try ir_builder.emit(.{ .function_return = .{
         .value = return_top,
