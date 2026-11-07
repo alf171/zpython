@@ -24,4 +24,4 @@ y3 = layer2.forward(y2)
 # softmax
 softmax = Softmax[f32]()
 probs = softmax.forward(y3)
-print(probs)
+print(probs.sum(1))

@@ -26,20 +26,20 @@ y3 = layer2.forward(y2)
 # softmax
 softmax = Softmax[f32]()
 probs = softmax.forward(y3)
-print(probs)
+print(probs.sum(1))
 
 performance report: (ORIGIN=user)
-number of asm lines: 169
-mov count: 97
+number of asm lines: 172
+mov count: 99
 memory load count: 13
 memory store count: 25
 conditional jumps: 0
 unconditional jumps: 2
 comparisons: 0
 returns: 2
-call count: 28
+call count: 29
 spill rounds: 1
 
 actual output:
-0.02791 0.07516 0.01568 0.04388 0.14129 0.14312 0.07069 0.16941 0.05234 0.26048 
-[!!memory report!!]: allocs=786 frees=786 allocated_bytes=681635 freed_bytes=681635
+0.99999 
+[!!memory report!!]: allocs=820 frees=820 allocated_bytes=267055 freed_bytes=267055

@@ -39,4 +39,4 @@ True True True False
 False True True True 
 False True True False 
 True False False True 
-[!!memory report!!]: allocs=340 frees=340 allocated_bytes=5866 freed_bytes=5866
+[!!memory report!!]: allocs=348 frees=348 allocated_bytes=6354 freed_bytes=6354

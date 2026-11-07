@@ -27,4 +27,4 @@ spill rounds: 0
 actual output:
 6
 1
-[!!memory report!!]: allocs=70 frees=70 allocated_bytes=1844 freed_bytes=1844
+[!!memory report!!]: allocs=74 frees=74 allocated_bytes=1972 freed_bytes=1972

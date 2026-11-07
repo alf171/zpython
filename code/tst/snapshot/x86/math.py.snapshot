@@ -10,6 +10,8 @@ print(x + y)
 print(x - y)
 # mul
 print(x * y)
+# pow
+print(f32(x) ** f32(y))
 # FIXME: cast shouldnt required
 # a rewrite layer should handle pythonic scenarios here
 print(f32(x) / f32(y))
@@ -39,21 +41,22 @@ print(rand())
 print(randn())
 
 performance report: (ORIGIN=user)
-number of asm lines: 388
-mov count: 269
-memory load count: 18
-memory store count: 64
+number of asm lines: 413
+mov count: 286
+memory load count: 19
+memory store count: 68
 conditional jumps: 0
 unconditional jumps: 1
 comparisons: 0
 returns: 1
-call count: 68
-spill rounds: 7
+call count: 73
+spill rounds: 8
 
 actual output:
 16
 6
 55
+161051.00000
 2.20000
 2
 1
@@ -66,4 +69,4 @@ actual output:
 3.31662
 71876166
 -0.54265
-[!!memory report!!]: allocs=113 frees=113 allocated_bytes=950 freed_bytes=950
+[!!memory report!!]: allocs=128 frees=128 allocated_bytes=1074 freed_bytes=1074

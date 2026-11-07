@@ -9,6 +9,16 @@ b = Tensor(b_data, (1,2))
 layer = Linear(w, b)
 y = layer.forward(x)
 print(y)
-print(x.grad)
-print(w.grad)
-print(b.grad)
+one: f32 = 1.0
+y.backward(Tensor.fill((1, 2), one))
+
+# weirdly enough accepts a nullable Tensor
+def print_union(grad: Tensor[f32]) -> None:
+    if grad is None:
+        print(None)
+    else:
+        print(grad)
+
+print_union(x.grad)
+print_union(w.grad)
+print_union(b.grad)

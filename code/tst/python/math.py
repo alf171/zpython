@@ -9,7 +9,7 @@ print(x - y)
 # mul
 print(x * y)
 # pow
-print(x ** y)
+print(f32(x) ** f32(y))
 # FIXME: cast shouldnt required
 # a rewrite layer should handle pythonic scenarios here
 print(f32(x) / f32(y))

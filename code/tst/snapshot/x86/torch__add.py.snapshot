@@ -9,9 +9,9 @@ C = A + B
 print(C[0, 0])
 order = C.uop.toposort()
 print(len(order))
-print(order[0] == A.uop)
-print(order[1] == B.uop)
-print(order[2] == C.uop)
+print(order[0] is A.uop)
+print(order[1] is B.uop)
+print(order[2] is C.uop)
 
 performance report: (ORIGIN=user)
 number of asm lines: 188
@@ -31,4 +31,4 @@ actual output:
 True
 True
 True
-[!!memory report!!]: allocs=89 frees=89 allocated_bytes=1759 freed_bytes=1759
+[!!memory report!!]: allocs=92 frees=92 allocated_bytes=1855 freed_bytes=1855
