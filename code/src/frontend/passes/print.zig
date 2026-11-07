@@ -80,6 +80,29 @@ fn rewriteFunction(program: *const Program, function: *Function, alloc: std.mem.
                                 .args = args,
                             } });
                         },
+                        // HACK: union will just run the instance's print
+                        // FIXME: ADD A TYPE PASS TO REMOVE UNIONs
+                        .@"union" => |u| {
+                            var instance: ?TypeInfo = null;
+                            for (u.members) |member| {
+                                if (member == .instance) {
+                                    instance = member;
+                                }
+                            }
+                            if (instance == null) {
+                                return error.UnsupportUnionPrint;
+                            }
+                            // repeat code
+                            const class = &program.classes.items[instance.?.instance.class_id].kind.record;
+                            const method = class.findMethod("__print__") orelse {
+                                return error.CantPrintWithoutStr;
+                            };
+                            try new_instructions.append(alloc, .{ .function_call = .{
+                                .dst = null,
+                                .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
+                                .args = args,
+                            } });
+                        },
                         .array => |l| {
                             if (l.element.* == .char) {
                                 try new_instructions.append(alloc, .{ .function_call = .{

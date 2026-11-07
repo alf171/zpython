@@ -617,6 +617,16 @@ fn emitLoadConstant(
         .i64, .array, .callable, .instance, .tuple, .@"enum" => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .i32 => try out.print(alloc, "\tmovslq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .bool => try out.print(alloc, "\tmovsbl {d}(%{s}), %{s}\n", .{ offset, src, dst }),
+        // FIXME: add a type pass to remove unions
+        .@"union" => |u| {
+            if (u.members.len != 2) return error.Invalid;
+            const a = u.members[0];
+            const b = u.members[1];
+            if (!(a == .instance and b == .none) or (a == .none and b == .instance)) {
+                return error.InvalidUnion;
+            }
+            try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst });
+        },
         else => |e| {
             std.debug.print("cant handle {s}\n", .{@tagName(e)});
             return error.NotImpl;

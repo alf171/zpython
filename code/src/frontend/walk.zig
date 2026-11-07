@@ -760,13 +760,14 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     const captured_type = (scope.local_values.map.get(resolved.local) orelse {
                         return error.CantFindCapturedValue;
                     }).type;
+                    const env_operand = ir_builder.function_closure_env orelse return error.CantFindEnv;
                     const dst: TypedOperand = .{
                         .operand = ir_builder.nextTemp(),
                         .type = try captured_type.clone(alloc),
                     };
                     const idx = try ir_builder.currentFunction().getOrCreateCapture(name, resolved.scope, local_info.id, captured_type, alloc);
                     const env: TypedOperand = .{
-                        .operand = ir_builder.function_closure_env orelse return error.CantFindEnv,
+                        .operand = env_operand,
                         .type = .ptr,
                     };
                     try ir_builder.emit(.{ .load_capture = .{
@@ -982,13 +983,13 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 },
             };
 
-            const class = ir_builder.getClassRecord(instance.class_id);
-            const field_index = class.findFieldIdx(name) orelse {
-                std.debug.print("cant find {s}\n", .{name});
+            const class = ir_builder.getClass(instance.class_id);
+            const field_index = class.kind.record.findFieldIdx(name) orelse {
+                std.debug.print("cant find `{s}` in class `{s}`\n", .{ name, class.name });
                 return error.CantFindField;
             };
-            const field = &class.fields.items[field_index];
-            const resolved_field_type = try class.resolveFieldType(field, instance, alloc);
+            const field = &class.kind.record.fields.items[field_index];
+            const resolved_field_type = try class.kind.record.resolveFieldType(field, instance, alloc);
 
             const dst: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),

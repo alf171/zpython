@@ -296,7 +296,7 @@ pub const TypeInfo = union(enum) {
             .type_variable => |tv| {
                 if (bindings.get(tv)) |resolves| {
                     if (!resolves.equal(expected)) {
-                        const lhs = try self.toString(alloc);
+                        const lhs = try resolves.toString(alloc);
                         defer alloc.free(lhs);
                         const rhs = try expected.toString(alloc);
                         defer alloc.free(rhs);
@@ -379,17 +379,27 @@ pub const TypeInfo = union(enum) {
                     return error.TypeMistmatch;
                 },
             },
+            .@"union" => |u| {
+                // exact equality
+                if (self.equal(expected)) return;
+                // partial match
+                for (u.members) |member| {
+                    if (member.equal(expected)) {
+                        return;
+                    }
+                }
+                return error.TypeMismatch;
+            },
             else => {
-                // FIXME: enabling this causing tons of type errors between i64 and i32
-                // need better type propogation to enable this
-                // if (!self.equal(expected)) {
-                //     const self_type = try self.toString(alloc);
-                //     defer alloc.free(self_type);
-                //     const expected_type = try expected.toString(alloc);
-                //     defer alloc.free(expected_type);
-                //     std.debug.print("expected type {s} got {s}\n", .{ self_type, expected_type });
-                //     return error.TypeMismatch;
-                // }
+                const int_cast = self == .i64 and expected == .i32 or self == .i32 and expected == .i64;
+                if (!self.equal(expected) and !int_cast) {
+                    const self_type = try self.toDisplayName(program, alloc);
+                    defer alloc.free(self_type);
+                    const expected_type = try expected.toDisplayName(program, alloc);
+                    defer alloc.free(expected_type);
+                    std.debug.print("expected type {s} got {s}\n", .{ self_type, expected_type });
+                    return error.TypeMismatch;
+                }
             },
         }
     }

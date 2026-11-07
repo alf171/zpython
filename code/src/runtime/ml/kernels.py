@@ -1,5 +1,5 @@
-from data import TensorData
-from indexing import index_2d
+from ml.data import TensorData
+from ml.indexing import index_2d
 
 @gpu
 def gt[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
@@ -118,13 +118,16 @@ def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     out.data[out_i] = acc
 
 @gpu
-def relu[U](out: TensorData[U], a: TensorData[U]) -> None:
+def where[U](out: TensorData[U], mask: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-    zero: U = 0
+
     out_i = index_2d(row, col, out.row_stride, out.col_stride)
+    mask_i = index_2d(row, col, mask.row_stride, mask.col_stride)
     a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    out.data[out_i] = max(a.data[a_i], zero)
+    b_i = index_2d(row, col, b.row_stride, b.col_stride)
+
+    out.data[out_i] = a.data[a_i] if mask.data[mask_i] else b.data[b_i]
 
 @gpu
 # a bit hacky for rdna3 :)

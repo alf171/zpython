@@ -1,19 +1,3 @@
-# from tensor import Tensor
-#
-# def broadcast_to[U](out: Tensor[U], left: Tensor[U]) -> None:
-#     grad = out.grad
-#     if (left.uop.shape[0] == 1 and out.uop.shape[1] != 1):
-#         grad = out.grad.sum(0)
-#
-#     if (left.uop.shape[0] == 1 and out.uop.shape[1] != 1):
-#         grad = out.grad.sum(1)
-#
-#     left.grad += grad
-#
-# def sum[U](out: Tensor[U], left: Tensor[U]) -> None:
-#     rows = left.uop.shape[0]
-#     cols = left.uop.shape[1]
-#     left.grad = out.grad.broadcast_to((rows, cols))
 
 def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
     if node.op == Ops.BUFFER:
@@ -32,11 +16,15 @@ def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
         two = Uop.fill(rhs.shape, two_t)
         return [incoming/rhs, -(incoming * lhs)/(rhs**two)]
     elif node.op == Ops.MATMUL:
-        return [incoming @ node.src[1].transpose(), node.src[0].transpose() @ node.src[0]]
-    elif node.op == Ops.RELU:
+        return [incoming @ node.src[1].transpose(), node.src[0].transpose() @ incoming]
+    elif node.op == Ops.WHERE:
+        mask = node.src[0]
         zero_t: T = 0
         zero = Uop.fill(node.shape, zero_t)
-        return [(node.src[0] > zero).where(incoming, zero)]
+        return [
+            mask.where(incoming, zero),
+            mask.where(zero, incoming)
+        ]
     elif node.op == Ops.EXP:
         # identity
         return [incoming * node]
@@ -53,10 +41,10 @@ def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
         # assume 2d
         source = node.src[0]
         grad = incoming
-        if (source.shape[0] != 1 and node.shape[0] != 1):
+        if (source.shape[0] == 1 and node.shape[0] != 1):
             grad = grad.sum(0)
-        if (source.shape[1] != 1 and node.shape[1] != 1):
+        if (source.shape[1] == 1 and node.shape[1] != 1):
             grad = grad.sum(1)
-        return grad
+        return [grad]
     elif node.op == Ops.TRANSPOSE:
         return [incoming.transpose()]

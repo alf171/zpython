@@ -39,6 +39,27 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     instruction.deinit(alloc);
                 },
                 .lir => |lir| switch (lir) {
+                    .binop => |bop| {
+                        if (bop.op != .bop or bop.op.bop != .pow) {
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
+                        }
+                        const symbol: []const u8 = switch (bop.dst.type) {
+                            .f64 => "pow",
+                            .f32 => "powf",
+                            else => unreachable,
+                        };
+
+                        try new_instructions.append(alloc, .{ .function_call = .{
+                            .dst = try bop.dst.clone(alloc),
+                            .callee = .{ .direct = try alloc.dupe(u8, symbol) },
+                            .args = try alloc.dupe(TypedOperand, &.{
+                                try bop.lhs.clone(alloc),
+                                try bop.rhs.clone(alloc),
+                            }),
+                        } });
+                        instruction.deinit(alloc);
+                    },
                     .unaryop => |uop| {
                         if (uop.op != .exp2) {
                             try new_instructions.append(alloc, instruction.*);

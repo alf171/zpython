@@ -236,15 +236,35 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                             try new_instructions.append(alloc, instruction.*);
                             continue;
                         }
+                        const negate = bop.op == .cmp and bop.op.cmp == .not_contains;
+                        const call_dst: TypedOperand = if (negate)
+                            .{
+                                .operand = function.nextTemp(),
+                                .type = .bool,
+                            }
+                        else
+                            try bop.dst.clone(alloc);
+
                         try new_instructions.append(alloc, .{
                             .function_call = .{
-                                .dst = try bop.dst.clone(alloc),
+                                .dst = call_dst,
                                 .callee = .{
                                     .direct = try alloc.dupe(u8, resolved.?.method.function_label),
                                 },
                                 .args = try resolved.?.arguments.toOwnedSlice(alloc),
                             },
                         });
+                        // not_contains shares __contains__ with a negation
+                        if (negate) {
+                            try new_instructions.append(alloc, .{
+                                .lir = .{ .select = .{
+                                    .dst = try bop.dst.clone(alloc),
+                                    .condition = try call_dst.clone(alloc),
+                                    .if_value = .{ .constant = .{ .bool = false } },
+                                    .else_value = .{ .constant = .{ .bool = true } },
+                                } },
+                            });
+                        }
 
                         instruction.deinit(alloc);
                     },

@@ -1,5 +1,5 @@
-from nn.module import Module
-from tensor import Tensor
+from ml.nn.module import Module
+from ml.tensor import Tensor
 
 class Linear[T](Module):
     def __init__(self, weights: Tensor[T], bias: Tensor[T]) -> None:

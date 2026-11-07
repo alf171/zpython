@@ -1,6 +1,6 @@
-from tensor import Tensor
-from ops import Ops
-from eval import evaluate
+from ml.tensor import Tensor
+from ml.ops import Ops
+from ml.eval import evaluate
 
 # FIXME: support tagged unions to remove args like axis
 class Uop[T]():
@@ -17,6 +17,8 @@ class Uop[T]():
         self.op: Ops = op
         self.shape: tuple[i32, i32] = shape
         self.axis: i32 = axis
+        # FIXME: communicate this with `all_tensors` global
+        self.owners: list[Tensor[T]] = []
 
     def toposort(self) -> list[Uop[T]]:
         visited: dict[Uop[T], bool] = {}
@@ -64,12 +66,12 @@ class Uop[T]():
         sources: list[Uop[bool]] = []
         return Uop(sources, [view], Ops.BUFFER, (view.rows, view.cols), 0)
 
-    def __eq__(self, other: Uop[T]) -> Uop[bool]:
+    def eq(self, other: Uop[T]) -> Uop[bool]:
         view = evaluate(self) == evaluate(other)
         sources: list[Uop[bool]] = []
         return Uop(sources, [view], Ops.BUFFER, (view.rows, view.cols), 0)
 
-    def __ne__(self, other: Uop[T]) -> Uop[bool]:
+    def ne(self, other: Uop[T]) -> Uop[bool]:
         view = evaluate(self) != evaluate(other)
         sources: list[Uop[bool]] = []
         return Uop(sources, [view], Ops.BUFFER, (view.rows, view.cols), 0)

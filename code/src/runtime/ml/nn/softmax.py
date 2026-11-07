@@ -1,5 +1,5 @@
-from nn.module import Module
-from tensor import Tensor
+from ml.nn.module import Module
+from ml.tensor import Tensor
 
 class Softmax[T](Module):
     def __init__(self) -> None:

@@ -1,21 +1,21 @@
-from indexing import index_2d
-from kernels import gt as _gt_gpu
-from kernels import ge as _ge_gpu
-from kernels import lt as _lt_gpu
-from kernels import le as _le_gpu
-from kernels import eq as _eq_gpu
-from kernels import ne as _ne_gpu
-from kernels import add as _add_gpu
-from kernels import sub as _sub_gpu
-from kernels import mul as _mul_gpu
-from kernels import div as _div_gpu
-from kernels import matmul as _matmul_gpu
-from kernels import relu as _relu_gpu
-from kernels import exp as _exp_gpu
-from kernels import sum_rows as _sum_rows_gpu
-from kernels import sum_cols as _sum_cols_gpu
-from kernels import max_rows as _max_rows_gpu
-from kernels import max_cols as _max_cols_gpu
+from ml.indexing import index_2d
+from ml.kernels import gt as _gt_gpu
+from ml.kernels import ge as _ge_gpu
+from ml.kernels import lt as _lt_gpu
+from ml.kernels import le as _le_gpu
+from ml.kernels import eq as _eq_gpu
+from ml.kernels import ne as _ne_gpu
+from ml.kernels import add as _add_gpu
+from ml.kernels import sub as _sub_gpu
+from ml.kernels import mul as _mul_gpu
+from ml.kernels import div as _div_gpu
+from ml.kernels import matmul as _matmul_gpu
+from ml.kernels import where as _where_gpu
+from ml.kernels import exp as _exp_gpu
+from ml.kernels import sum_rows as _sum_rows_gpu
+from ml.kernels import sum_cols as _sum_cols_gpu
+from ml.kernels import max_rows as _max_rows_gpu
+from ml.kernels import max_cols as _max_cols_gpu
 from random import randn
 
 class TensorData[T]:
@@ -131,11 +131,10 @@ class TensorData[T]:
         _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
         return res
 
-    def relu(self) -> TensorData[T]:
+    def where(self, lhs: TensorData[T], rhs: TensorData[T]) -> TensorData[T]:
         zero: T = 0
         res = TensorData.fill((self.rows, self.cols), zero)
-        _relu_gpu(res, self, (self.rows, self.cols, 1)
-        )
+        _where_gpu(res, self, lhs, rhs, (self.rows, self.cols, 1))
         return res
 
     def exp(self) -> TensorData[T]:

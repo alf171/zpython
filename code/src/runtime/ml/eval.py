@@ -1,6 +1,6 @@
-from uop import Uop
-from data import TensorData
-from ops import Ops
+from ml.uop import Uop
+from ml.data import TensorData
+from ml.ops import Ops
 
 def evaluate[T](node: Uop[T]) -> TensorData[T]:
     if node.op == Ops.BUFFER:
@@ -25,9 +25,11 @@ def evaluate[T](node: Uop[T]) -> TensorData[T]:
         lhs = evaluate(node.src[0])
         rhs = evaluate(node.src[1])
         return lhs @ rhs
-    elif node.op == Ops.RELU:
-        lhs = evaluate(node.src[0])
-        return lhs.relu()
+    elif node.op == Ops.WHERE:
+        condition = evaluate(node.src[0])
+        lhs = evaluate(node.src[1])
+        rhs = evaluate(node.src[2])
+        return condition.where(lhs, rhs)
     elif node.op == Ops.EXP:
         lhs = evaluate(node.src[0])
         return lhs.exp()

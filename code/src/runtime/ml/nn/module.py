@@ -1,4 +1,4 @@
-from tensor import Tensor
+from ml.tensor import Tensor
 
 class Module:
     def __init__(self) -> None:

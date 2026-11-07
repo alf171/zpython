@@ -299,6 +299,7 @@ pub fn loadImportModule(
                 return module.id;
             }
         }
+        std.debug.print("cant find module `{s}`\n", .{module_name});
         return error.ModuleNotFound;
     };
 
