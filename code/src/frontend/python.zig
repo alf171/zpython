@@ -583,8 +583,14 @@ pub fn parseTypeAnnotation(
                 if (arity == 0) return error.InvalidTypeArgCount;
 
                 const args = try alloc.alloc(TypeInfo, arity);
+                var initialized: usize = 0;
+                errdefer {
+                    for (args[0..initialized]) |arg| arg.deinit(alloc);
+                    alloc.free(args);
+                }
                 if (arity == 1) {
                     args[0] = try parseTypeAnnotation(slice_obj, irBuilder, alloc);
+                    initialized = 1;
                 } else {
                     if (!std.mem.eql(u8, getPyType(slice_obj), "Tuple")) {
                         return error.InvalidGenericsState;
@@ -597,6 +603,7 @@ pub fn parseTypeAnnotation(
                         const elt = c.PyList_GetItem(elts, @intCast(i));
                         std.debug.assert(elt != null);
                         args[i] = try parseTypeAnnotation(elt, irBuilder, alloc);
+                        initialized += 1;
                     }
                 }
 
