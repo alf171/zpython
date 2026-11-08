@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 class Animal:
     def __init__(self, name: str, sound: str) -> None:
         self.name = name

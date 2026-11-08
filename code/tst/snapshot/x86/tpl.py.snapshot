@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 value1: int = 100
 t1: tuple[int, str, bool] = (11, "first", True)
 value2: int = 200
@@ -45,4 +44,4 @@ False
 300
 3
 3
-[!!memory report!!]: allocs=51 frees=51 allocated_bytes=497 freed_bytes=497
+[!!memory report!!]: allocs=51 frees=51 allocated_bytes=512 freed_bytes=512

@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 sum = 0
 i = 3
 for m in range(i):
@@ -22,4 +21,4 @@ spill rounds: 0
 
 actual output:
 18
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=34 freed_bytes=34
+[!!memory report!!]: allocs=4 frees=4 allocated_bytes=36 freed_bytes=36

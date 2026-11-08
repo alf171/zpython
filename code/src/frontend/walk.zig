@@ -10,6 +10,7 @@ const hasDecorator = @import("python.zig").hasDecorator;
 const parseTypeAnnotation = @import("python.zig").parseTypeAnnotation;
 const parseConstant = @import("python.zig").parseConstant;
 const makeStringLiteral = @import("python.zig").makeStringLiteral;
+const diagnostics = @import("diagnostics.zig");
 
 const Function = @import("common").function.Function;
 const FunctionKind = @import("common").function.FunctionKind;
@@ -49,7 +50,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Dict, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, GlobalIdx, Max, Exp, Exp2, Log, Cos, Sqrt, Rand, SRand, Type, Hash, ArrayEmpty };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, Char, GlobalIdx, Max, Exp, Exp2, Log, Cos, Sqrt, Rand, SRand, Type, Hash, ArrayEmpty, OpenAt, Read, Close };
 
 const BoolOp = enum { And, Or };
 
@@ -829,8 +830,8 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 }, alloc);
                 return try function_dst.clone(alloc);
             }
-            std.debug.print("cant find local `{s}`\n", .{name});
-            return error.CantFindLocal;
+            diagnostics.report(stmt, ir_builder.current_file, "unknown variable '{s}'", .{name});
+            return error.DiagnosticReported;
         },
         // Compare(left=Constant(1),ops=[Lt()],comparators=[Constant(2)])
         .Compare => {
@@ -1500,19 +1501,19 @@ fn walkNamedCall(
                             },
                         }, alloc);
                     },
-                    .tuple => {
-                        const write_args = try alloc.alloc(TypedOperand, 3);
-                        write_args[0] = fd;
-                        write_args[1] = buf;
-                        write_args[2] = len;
-                        try ir_builder.emit(.{
-                            .function_call = .{
-                                .dst = null,
-                                .args = write_args,
-                                .callee = .{ .direct = try alloc.dupe(u8, "write") },
-                            },
-                        }, alloc);
-                    },
+                    // .tuple => {
+                    //     const write_args = try alloc.alloc(TypedOperand, 3);
+                    //     write_args[0] = fd;
+                    //     write_args[1] = buf;
+                    //     write_args[2] = len;
+                    //     try ir_builder.emit(.{
+                    //         .function_call = .{
+                    //             .dst = null,
+                    //             .args = write_args,
+                    //             .callee = .{ .direct = try alloc.dupe(u8, "write") },
+                    //         },
+                    //     }, alloc);
+                    // },
                     .instance => |instance| {
                         const class = ir_builder.getClassRecord(instance.class_id);
                         const method = class.findMethod("__write__") orelse {
@@ -1535,6 +1536,9 @@ fn walkNamedCall(
                     },
                 }
                 return .{ .operand = .unknown, .type = .none };
+            },
+            .OpenAt, .Read, .Close => {
+                return error.NotImpl;
             },
             .Len => {
                 std.debug.assert(c.PyList_Size(args) == 1);
@@ -1614,7 +1618,7 @@ fn walkNamedCall(
                 } }, alloc);
                 return try typed_dst.clone(alloc);
             },
-            .Int, .I32, .Float, .F32 => |t| {
+            .Int, .I32, .Float, .F32, .Char => |t| {
                 std.debug.assert(c.PyList_Size(args) == 1);
                 const arg0 = c.PyList_GetItem(args, 0);
                 std.debug.assert(arg0 != null);
@@ -1623,6 +1627,7 @@ fn walkNamedCall(
                     .I32 => .i32,
                     .F32 => .f32,
                     .Float => .f64,
+                    .Char => .char,
                     else => unreachable,
                 };
                 const value = try walkExpr(arg0, ir_builder, null, alloc);
@@ -2836,11 +2841,15 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "range")) return .Range;
     if (std.mem.eql(u8, name, "print")) return .Print;
     if (std.mem.eql(u8, name, "write")) return .Write;
+    if (std.mem.eql(u8, name, "openat")) return .OpenAt;
+    if (std.mem.eql(u8, name, "read")) return .Read;
+    if (std.mem.eql(u8, name, "close")) return .Close;
     if (std.mem.eql(u8, name, "len")) return .Len;
     if (std.mem.eql(u8, name, "int")) return .Int;
     if (std.mem.eql(u8, name, "i32")) return .I32;
     if (std.mem.eql(u8, name, "float")) return .Float;
     if (std.mem.eql(u8, name, "f32")) return .F32;
+    if (std.mem.eql(u8, name, "char")) return .Char;
     if (std.mem.eql(u8, name, "global_id")) return .GlobalIdx;
     if (std.mem.eql(u8, name, "max")) return .Max;
     if (std.mem.eql(u8, name, "exp")) return .Exp;

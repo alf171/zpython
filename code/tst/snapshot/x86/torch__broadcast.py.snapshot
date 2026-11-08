@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x_data: array[f32] = [10.0,20.0]
 x1 = Tensor(x_data, (1,2))
 
@@ -10,6 +9,8 @@ x2 = Tensor(x_data, (2,1))
 
 y = x2.broadcast_to((2,3))
 print(y)
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 120
@@ -26,4 +27,4 @@ spill rounds: 0
 actual output:
 10.00000 20.00000 10.00000 20.00000 10.00000 20.00000 
 10.00000 10.00000 10.00000 20.00000 20.00000 20.00000 
-[!!memory report!!]: allocs=199 frees=199 allocated_bytes=2374 freed_bytes=2374
+[!!memory report!!]: allocs=211 frees=211 allocated_bytes=2730 freed_bytes=2730

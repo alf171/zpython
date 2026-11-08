@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 ints: list[i32] = [0, 1, 2]
 print(type(ints))
 floats: list[f32] = [0, 1, 2]

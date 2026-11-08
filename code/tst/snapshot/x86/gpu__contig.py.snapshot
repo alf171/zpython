@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 @gpu
 def fill(out: list[i32]) -> None:
     row = global_id(0)
@@ -29,4 +28,4 @@ spill rounds: 2
 
 actual output:
 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 
-[!!memory report!!]: allocs=113 frees=113 allocated_bytes=1229 freed_bytes=1229
+[!!memory report!!]: allocs=113 frees=113 allocated_bytes=1279 freed_bytes=1279

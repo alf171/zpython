@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 class Counter:
     def __init__(self) -> None:
         self.value: i32 = 0
@@ -26,4 +25,4 @@ spill rounds: 0
 
 actual output:
 2
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=30 freed_bytes=30
+[!!memory report!!]: allocs=4 frees=4 allocated_bytes=31 freed_bytes=31

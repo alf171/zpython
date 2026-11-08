@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x: int = 2
 y: int = 3
 z: int = x + y
@@ -20,4 +19,4 @@ spill rounds: 0
 
 actual output:
 5
-[!!memory report!!]: allocs=3 frees=3 allocated_bytes=26 freed_bytes=26
+[!!memory report!!]: allocs=3 frees=3 allocated_bytes=27 freed_bytes=27

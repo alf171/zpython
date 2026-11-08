@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 neg_one: f32 = -1
 A = Tensor.fill((3,3), neg_one)
 B = A.relu()
@@ -9,6 +8,8 @@ one: f32 = 1
 C = Tensor.fill((3,3), one)
 D = C.relu()
 print(D[0,0])
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 115
@@ -25,4 +26,4 @@ spill rounds: 3
 actual output:
 0.00000
 1.00000
-[!!memory report!!]: allocs=158 frees=158 allocated_bytes=4066 freed_bytes=4066
+[!!memory report!!]: allocs=186 frees=186 allocated_bytes=4878 freed_bytes=4878

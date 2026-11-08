@@ -72,6 +72,7 @@ pub const ModuleGraph = struct {
             ir_builder.current_module_id = module.id;
             ir_builder.current_imports = self.imports[module.id];
             ir_builder.current_module_name = module.name;
+            ir_builder.current_file = module.path;
             ir_builder.function_origin = module.origin;
             try declareClassesInAst(module.ast, ir_builder, alloc);
         }
@@ -80,6 +81,7 @@ pub const ModuleGraph = struct {
             ir_builder.current_module_id = module.id;
             ir_builder.current_imports = self.imports[module.id];
             ir_builder.current_module_name = module.name;
+            ir_builder.current_file = module.path;
             ir_builder.function_origin = module.origin;
             try walkClassInitializerInAst(module.ast, ir_builder, alloc);
         }
@@ -88,6 +90,7 @@ pub const ModuleGraph = struct {
             ir_builder.current_module_id = module.id;
             ir_builder.current_imports = self.imports[module.id];
             ir_builder.current_module_name = module.name;
+            ir_builder.current_file = module.path;
             ir_builder.function_origin = module.origin;
             try declareFunctionsInAst(module.ast, ir_builder, alloc);
         }
@@ -111,6 +114,7 @@ pub const ModuleGraph = struct {
         ir_builder.current_module_id = id;
         ir_builder.current_imports = self.imports[id];
         ir_builder.current_module_name = self.modules[id].name;
+        ir_builder.current_file = self.modules[id].path;
         ir_builder.function_origin = self.modules[id].origin;
 
         try walkAstIntoBuilder(self.modules[id].ast, ir_builder, alloc);

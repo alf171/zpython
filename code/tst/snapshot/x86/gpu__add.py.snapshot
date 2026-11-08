@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 @gpu
 def add(out: list[i32], a: list[i32], b: list[i32]) -> None:
     i = global_id(0)
@@ -28,4 +27,4 @@ spill rounds: 5
 
 actual output:
 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 
-[!!memory report!!]: allocs=100 frees=100 allocated_bytes=1413 freed_bytes=1413
+[!!memory report!!]: allocs=100 frees=100 allocated_bytes=1438 freed_bytes=1438

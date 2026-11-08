@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x_data: array[f32] = [10.0,20.0,30.0,40.0]
 x1 = Tensor(x_data, (2,2))
 y = x1.sum(0)
@@ -8,6 +7,8 @@ print(y)
 z = x1.sum(1)
 z.print_shape()
 print(z)
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 106
@@ -26,4 +27,4 @@ actual output:
 40.00000 60.00000 
 (2, 1)
 30.00000 70.00000 
-[!!memory report!!]: allocs=150 frees=150 allocated_bytes=2916 freed_bytes=2916
+[!!memory report!!]: allocs=158 frees=158 allocated_bytes=3112 freed_bytes=3112

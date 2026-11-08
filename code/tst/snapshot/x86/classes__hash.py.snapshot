@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 class Key:
     def __init__(self, val: int) -> None:
         self.val = val
@@ -39,4 +38,4 @@ True
 False
 True
 False
-[!!memory report!!]: allocs=30 frees=30 allocated_bytes=294 freed_bytes=294
+[!!memory report!!]: allocs=30 frees=30 allocated_bytes=295 freed_bytes=295

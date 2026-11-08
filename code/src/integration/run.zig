@@ -98,7 +98,10 @@ pub fn main(init: std.process.Init) !void {
     }
 
     // walk user program
-    var ir_program = try walkAstWithRuntime(input_file, should_optim, use_escape_codes, std_lib_enabled, io, alloc);
+    var ir_program = walkAstWithRuntime(input_file, should_optim, use_escape_codes, std_lib_enabled, io, alloc) catch |err| switch (err) {
+        error.DiagnosticReported => std.process.exit(1),
+        else => return err,
+    };
     defer ir_program.deinit(alloc);
 
     // rewrite layer

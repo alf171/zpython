@@ -1,7 +1,6 @@
 running program: (OPTIM=true)
 
 
-
 class Color(Enum):
     RED = 0
     GREEN = 1
@@ -36,4 +35,4 @@ True
 True
 False
 2
-[!!memory report!!]: allocs=21 frees=21 allocated_bytes=209 freed_bytes=209
+[!!memory report!!]: allocs=21 frees=21 allocated_bytes=210 freed_bytes=210

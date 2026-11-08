@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x: float = 5.0
 print(exp(x))
 
@@ -21,4 +20,4 @@ spill rounds: 1
 actual output:
 148.41315
 f32
-[!!memory report!!]: allocs=16 frees=16 allocated_bytes=138 freed_bytes=138
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=146 freed_bytes=146

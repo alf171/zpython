@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x: int = 0
 
 while x < 3:
@@ -25,4 +24,4 @@ actual output:
 2
 3
 3
-[!!memory report!!]: allocs=12 frees=12 allocated_bytes=104 freed_bytes=104
+[!!memory report!!]: allocs=12 frees=12 allocated_bytes=108 freed_bytes=108

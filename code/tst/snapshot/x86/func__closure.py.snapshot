@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 def make() -> Callable[[], i32]:
     x: i32 = 1
     f: Callable[[], i32] = lambda: x
@@ -24,4 +23,4 @@ spill rounds: 0
 
 actual output:
 1
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=42 freed_bytes=42
+[!!memory report!!]: allocs=4 frees=4 allocated_bytes=43 freed_bytes=43

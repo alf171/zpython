@@ -29,7 +29,7 @@ pub fn walkAstWithRuntime(
         .limited(1 << 20),
     );
     defer alloc.free(code);
-    std.debug.print("\n\n{s}", .{code});
+    std.debug.print("\n{s}", .{code});
 
     // load modules (user + runtime)
     var graph = try module.loadGraph(user_file_name, .{

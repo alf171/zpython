@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 a: str | None = "foo"
 print(type(a))
 print(a)

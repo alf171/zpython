@@ -1,6 +1,6 @@
 running program: (OPTIM=true)
-
 srand(42)
+
 
 def xavier_normal(f_in: i32, f_out: i32) -> Tensor[f32]:
     shape = (f_out, f_in)
@@ -9,37 +9,75 @@ def xavier_normal(f_in: i32, f_out: i32) -> Tensor[f32]:
     scale = Tensor.fill(shape, std)
     return sample * scale
 
+
 # batch size 1
-data = xavier_normal(784, 1)
-weight1 = Tensor.randn((64,784))
-bias1 = Tensor.fill((1,64), f32(0))
+data = xavier_normal(16, 1)
+weight1 = xavier_normal(16, 64)
+bias1 = Tensor.fill((1, 64), f32(0))
+# 16 -> 64
 layer1 = Linear(weight1, bias1)
-# 784 -> 128
-y1 = layer1.forward(data)
-# relu
-y2 = y1.relu()
-weight2 = xavier_normal(64,10)
+weight2 = xavier_normal(64, 10)
 bias2 = Tensor.fill((1,10), f32(0))
+# 64 -> 10
 layer2 = Linear(weight2, bias2)
-# 128 -> 10
-y3 = layer2.forward(y2)
 # softmax
 softmax = Softmax[f32]()
-probs = softmax.forward(y3)
-print(probs.sum(1))
+# optim step
+optimizer = SGD([weight1, bias1, weight2, bias2], 0.001)
+
+target_data: array[f32] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+target = Tensor(target_data, (1,10))
+seed = Tensor.fill((1,1), f32(1))
+
+for step in range(25):
+    optimizer.zero_grad()
+    y1 = layer1.forward(data)
+    y2 = y1.relu()
+    y3 = layer2.forward(y2)
+    diff = y3 - target
+    loss = (diff*diff).sum(1).sum(0)
+    print(loss)
+    loss.backward(seed)
+    optimizer.step()
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
-number of asm lines: 172
-mov count: 99
-memory load count: 13
-memory store count: 25
-conditional jumps: 0
-unconditional jumps: 2
-comparisons: 0
+number of asm lines: 308
+mov count: 209
+memory load count: 24
+memory store count: 52
+conditional jumps: 1
+unconditional jumps: 5
+comparisons: 2
 returns: 2
-call count: 29
-spill rounds: 1
+call count: 44
+spill rounds: 10
 
 actual output:
-0.99999 
-[!!memory report!!]: allocs=820 frees=820 allocated_bytes=267055 freed_bytes=267055
+1.76347 
+1.73310 
+1.70335 
+1.67420 
+1.64563 
+1.61763 
+1.59176 
+1.56667 
+1.54204 
+1.51787 
+1.49414 
+1.47084 
+1.44797 
+1.42551 
+1.40344 
+1.38178 
+1.36049 
+1.33991 
+1.32014 
+1.30071 
+1.28161 
+1.26283 
+1.24436 
+1.22621 
+1.20835 
+[!!memory report!!]: allocs=55312 frees=55312 allocated_bytes=2830896 freed_bytes=2830896

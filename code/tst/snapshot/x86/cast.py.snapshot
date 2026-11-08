@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 # cast float -> int
 print(float(0))
 print(float(-3))
@@ -25,4 +24,4 @@ actual output:
 -3.00000
 5
 -5
-[!!memory report!!]: allocs=30 frees=30 allocated_bytes=256 freed_bytes=256
+[!!memory report!!]: allocs=30 frees=30 allocated_bytes=270 freed_bytes=270

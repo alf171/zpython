@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x = range(3, 5)
 print(len(x))
 
@@ -21,4 +20,4 @@ spill rounds: 0
 actual output:
 2
 4
-[!!memory report!!]: allocs=7 frees=7 allocated_bytes=84 freed_bytes=84
+[!!memory report!!]: allocs=7 frees=7 allocated_bytes=86 freed_bytes=86

@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 from random import randn
 
 x = 11
@@ -69,4 +68,4 @@ actual output:
 3.31662
 71876166
 -0.54265
-[!!memory report!!]: allocs=128 frees=128 allocated_bytes=1074 freed_bytes=1074
+[!!memory report!!]: allocs=128 frees=128 allocated_bytes=1152 freed_bytes=1152

@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 x_data: array[f32] = [1.0, 2.0, 3.0]
 w_data: array[f32] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
 b_data: array[f32] = [0.5, 1.0]
@@ -24,6 +23,8 @@ def print_union(grad: Tensor[f32]) -> None:
 print_union(x.grad)
 print_union(w.grad)
 print_union(b.grad)
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 245
@@ -42,4 +43,4 @@ actual output:
 1.00000 1.00000 0.00000 
 1.00000 2.00000 3.00000 1.00000 2.00000 3.00000 
 1.00000 1.00000 
-[!!memory report!!]: allocs=404 frees=404 allocated_bytes=7705 freed_bytes=7705
+[!!memory report!!]: allocs=438 frees=438 allocated_bytes=8467 freed_bytes=8467

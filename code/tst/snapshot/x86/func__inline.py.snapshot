@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 @inline
 def f(x: int) -> int:
     return x + 42
@@ -22,4 +21,4 @@ spill rounds: 0
 
 actual output:
 47
-[!!memory report!!]: allocs=4 frees=4 allocated_bytes=34 freed_bytes=34
+[!!memory report!!]: allocs=4 frees=4 allocated_bytes=36 freed_bytes=36

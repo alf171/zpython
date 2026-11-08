@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 A_data: array[f32] = [1,2,3,4]
 A = Tensor(A_data, (2,2))
 B = A.transpose()
@@ -8,6 +7,8 @@ print(B[0,1])
 
 A[0, 1] = f32(99.0)
 print(B[1,0])
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 167
@@ -25,4 +26,4 @@ actual output:
 2.00000
 3.00000
 99.00000
-[!!memory report!!]: allocs=63 frees=63 allocated_bytes=924 freed_bytes=924
+[!!memory report!!]: allocs=69 frees=69 allocated_bytes=1079 freed_bytes=1079

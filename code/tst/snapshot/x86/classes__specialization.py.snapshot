@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 class Box[T]:
     def __init__(self, values: list[T]) -> None:
         self.values = values
@@ -52,4 +51,4 @@ Box[f32]
 3.00000
 4.00000
 1
-[!!memory report!!]: allocs=57 frees=57 allocated_bytes=558 freed_bytes=558
+[!!memory report!!]: allocs=57 frees=57 allocated_bytes=573 freed_bytes=573

@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 two: i32 = 2
 A = Tensor.fill((3,3), two)
 three: i32 = 3
@@ -9,6 +8,8 @@ print(C[0,0])
 
 D = B - A
 print(D[0,0])
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 swallowing exception from exp(bool, i32)
 swallowing exception from exp(bool, i32)
 
@@ -27,4 +28,4 @@ spill rounds: 0
 actual output:
 6
 1
-[!!memory report!!]: allocs=74 frees=74 allocated_bytes=1972 freed_bytes=1972
+[!!memory report!!]: allocs=86 frees=86 allocated_bytes=2246 freed_bytes=2246

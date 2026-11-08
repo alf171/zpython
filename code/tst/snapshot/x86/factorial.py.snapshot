@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 def factorial(n: int) -> int:
     if (n == 0):
         return 1
@@ -21,4 +20,4 @@ spill rounds: 0
 
 actual output:
 1307674368000
-[!!memory report!!]: allocs=15 frees=15 allocated_bytes=122 freed_bytes=122
+[!!memory report!!]: allocs=15 frees=15 allocated_bytes=135 freed_bytes=135

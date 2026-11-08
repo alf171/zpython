@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 # i32 matmul
 # A_data: array[i32] = [1,2,3,4,5,6] 
 # A = Tensor(A_data, (2,3))
@@ -17,6 +16,8 @@ B_data: array[f32] = [2.0, -1.0,  0.5, 4.0, 1.5,  2.0, -2.0, 0.0]
 B = Tensor(B_data, (2, 4))
 C = A @ B
 print(C)
+swallowing exception from exp(bool, i32)
+swallowing exception from exp(bool, i32)
 
 performance report: (ORIGIN=user)
 number of asm lines: 163
@@ -32,4 +33,4 @@ spill rounds: 4
 
 actual output:
 0.00000 -5.50000 4.75000 6.00000 4.87500 6.50000 -6.50000 0.00000 -1.25000 2.00000 -1.50000 -4.00000 
-[!!memory report!!]: allocs=192 frees=192 allocated_bytes=2589 freed_bytes=2589
+[!!memory report!!]: allocs=202 frees=202 allocated_bytes=2905 freed_bytes=2905

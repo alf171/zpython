@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 def f() -> None:
     x = 1
     y = 2
@@ -33,4 +32,4 @@ spill rounds: 0
 actual output:
 2
 1
-[!!memory report!!]: allocs=6 frees=6 allocated_bytes=52 freed_bytes=52
+[!!memory report!!]: allocs=6 frees=6 allocated_bytes=54 freed_bytes=54

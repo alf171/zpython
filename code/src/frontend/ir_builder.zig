@@ -171,6 +171,7 @@ pub const IrBuilder = struct {
     current_imports: []const ImportEdge,
     current_module_id: ModuleId,
     current_module_name: []const u8,
+    current_file: ?[]const u8,
 
     pub fn init(origin: FunctionType, module_id: ModuleId, module_name: []const u8, alloc: std.mem.Allocator) !IrBuilder {
         const program = try Program.init(module_id, module_name, alloc);
@@ -191,6 +192,7 @@ pub const IrBuilder = struct {
             .current_imports = &.{},
             .current_module_id = module_id,
             .current_module_name = module_name,
+            .current_file = null,
         };
     }
 

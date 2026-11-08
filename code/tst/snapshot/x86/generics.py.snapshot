@@ -1,6 +1,5 @@
 running program: (OPTIM=true)
 
-
 lst_int: list[int] = [1, 2, 3, 4]
 lst_str: list[str] = ["foo", "bar"]
 lst_bool: list[bool] = [False, True]
@@ -62,4 +61,4 @@ False
 bar
 True
 42
-[!!memory report!!]: allocs=47 frees=47 allocated_bytes=500 freed_bytes=500
+[!!memory report!!]: allocs=47 frees=47 allocated_bytes=507 freed_bytes=507

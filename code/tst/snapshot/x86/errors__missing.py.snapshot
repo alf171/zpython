@@ -1,0 +1,3 @@
+running program: (OPTIM=true)
+print(missing)
+tst/python/errors/missing.py:1:7: error: unknown variable 'missing'

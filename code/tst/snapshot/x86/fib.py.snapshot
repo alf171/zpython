@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 def fib(n: int) -> int:
     if (n == 0):
         return 0
@@ -24,4 +23,4 @@ spill rounds: 0
 
 actual output:
 9227465
-[!!memory report!!]: allocs=9 frees=9 allocated_bytes=74 freed_bytes=74
+[!!memory report!!]: allocs=9 frees=9 allocated_bytes=81 freed_bytes=81

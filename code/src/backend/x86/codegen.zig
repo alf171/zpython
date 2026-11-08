@@ -419,6 +419,9 @@ fn emitFunction(
                                     .i32 => {
                                         try out.print(alloc, "\tmovl %{s}, %{s}\n", .{ reg32(src), reg32(dst) });
                                     },
+                                    .char => {
+                                        try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ reg8(src), dst });
+                                    },
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),

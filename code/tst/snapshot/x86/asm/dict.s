@@ -140,7 +140,7 @@ main_L0:
 	movq %r12, %rdi
 	movq %r13, %rsi
 	movq %rbx, %rdx
-	callq _dict__dict____init____class_9_i64
+	callq _dict__dict____init____class_10_i64
 	movq $18, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
@@ -184,7 +184,7 @@ main_L0:
 	callq _str__str____init__
 	movq %r12, %rdi
 	movq %r13, %rsi
-	callq _dict__dict____getitem____class_9_i64
+	callq _dict__dict____getitem____class_10_i64
 	movq %rax, %r13
 	movq $10, %rdi
 	callq arena_malloc
@@ -234,7 +234,7 @@ main_L0:
 	callq _str__str____init__
 	movq %r12, %rdi
 	movq %r13, %rsi
-	callq _dict__dict____getitem____class_9_i64
+	callq _dict__dict____getitem____class_10_i64
 	movq %rax, %r13
 	movq $10, %rdi
 	callq arena_malloc
@@ -287,7 +287,7 @@ main_L0:
 	callq _str__str____init__
 	movq %r12, %rdi
 	movq %r13, %rsi
-	callq _dict__dict____getitem____class_9_i64
+	callq _dict__dict____getitem____class_10_i64
 	movq %rax, %r13
 	movq $10, %rdi
 	callq arena_malloc
@@ -337,7 +337,7 @@ main_L0:
 	callq _str__str____init__
 	movq %r12, %rdi
 	movq %r13, %rsi
-	callq _dict__dict____contains____class_9_i64
+	callq _dict__dict____contains____class_10_i64
 	movq %rax, %r13
 	movq $10, %rdi
 	callq arena_malloc
@@ -390,7 +390,7 @@ main_L0:
 	callq _str__str____init__
 	movq %r12, %rdi
 	movq %r13, %rsi
-	callq _dict__dict____contains____class_9_i64
+	callq _dict__dict____contains____class_10_i64
 	movq %rax, %r12
 	movq $10, %rdi
 	callq arena_malloc
@@ -435,45 +435,10 @@ _tensor__Tensor__randn:
 	pushq %r14
 	pushq %r15
 _tensor__Tensor__randn_L0:
-	movq %rdi, %r14
-	movq %r14, %rdi
 	callq _data__TensorData__randn
-	movq %rax, %r13
-	movq $8, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $0, %rdi
-	movq %rdi, 0(%rbx)
-	movq $12, %rdi
-	callq arena_malloc
-	movq %rax, %r12
-	movq %r12, %rdi
-	movq %rbx, %rsi
-	callq _list__list____init____class_0_f32
-	movq $16, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq $1, %rdi
-	movq %rdi, 0(%rbx)
-	movq $8, %rdi
-	movq %r13, (%rbx,%rdi)
-	movq $12, %rdi
-	callq arena_malloc
-	movq %rax, %r13
-	movq %r13, %rdi
-	movq %rbx, %rsi
-	callq _list__list____init____class_2_f32
-	movq $44, %rdi
-	callq arena_malloc
-	movq %rax, %rbx
-	movq %rbx, %rdi
-	movq %r12, %rsi
-	movq %r13, %rdx
-	movq $0, %rcx
-	movq %r14, %r8
-	movq $0, %r9
-	callq _uop__Uop____init____f32
-	movq %rbx, %rdi
+	movq %rax, %rdi
+	callq _uop__Uop__from_data__f32
+	movq %rax, %rdi
 	callq _tensor__Tensor___init__f32
 	movq %rax, %rdi
 	movq %rdi, %rax
@@ -874,11 +839,17 @@ _print___print_int_helper_L3:
 	popq %rdx
 	popq %rax
 	movq %r11, %rdi
-	addq %rdi, %rbx
-	movq $8, %rdi
+	addq %rbx, %rdi
+	movzbq %dil, %rbx
+	movq $9, %rdi
 	callq arena_malloc
 	movq %rax, %rsi
-	movq %rbx, 0(%rsi)
+	movq $1, %rdi
+	movq %rdi, 0(%rsi)
+	movq $8, %rdi
+	movb %bl, (%rsi,%rdi)
+	movq $8, %rdi
+	addq %rdi, %rsi
 	movq $1, %rdi
 	movq $1, %rdx
 	callq write
@@ -1326,11 +1297,11 @@ _print__print_float:
 	pushq %r14
 	pushq %r15
 _print__print_float_L0:
-	movq %xmm0, -24(%rbp)
+	movq %xmm0, -16(%rbp)
 	movq %rsi, %r13
 	movabsq $0, %r11
 	movq %r11, %xmm1
-	movq -24(%rbp), %xmm0
+	movq -16(%rbp), %xmm0
 	ucomisd %xmm1, %xmm0
 	setb %r11b
 	movzbq %r11b, %rdi
@@ -1359,19 +1330,19 @@ _print__print_float_L1:
 	movq $1, %rsi
 	movq $1, %rdx
 	callq _str__str____write__
-	movq -24(%rbp), %xmm0
+	movq -16(%rbp), %xmm0
 	 movq %xmm0, %xmm0
 	movabsq $0x8000000000000000, %r11
 	movq %r11, %xmm15
 	 xorpd %xmm15, %xmm0
-	movq %xmm0, -16(%rbp)
+	movq %xmm0, -24(%rbp)
 	jmp _print__print_float_L3
 _print__print_float_L2:
-	movq -24(%rbp), %xmm0
-	movq %xmm0, -16(%rbp)
+	movq -16(%rbp), %xmm0
+	movq %xmm0, -24(%rbp)
 	jmp _print__print_float_L3
 _print__print_float_L3:
-	movq -16(%rbp), %xmm0
+	movq -24(%rbp), %xmm0
 	cvttsd2siq %xmm0, %r12
 	movq %r12, %rdi
 	callq _print___print_int_helper
@@ -1397,7 +1368,7 @@ _print__print_float_L3:
 	movq $1, %rdx
 	callq _str__str____write__
 	cvtsi2sdq %r12, %xmm1
-	movq -16(%rbp), %xmm0
+	movq -24(%rbp), %xmm0
 	movsd %xmm1, %xmm15
 	movsd %xmm0, %xmm1
 	subsd %xmm15, %xmm1
@@ -1941,7 +1912,7 @@ _str__str____add___epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict____init____class_9_i64:
+_dict__dict____init____class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $16, %rsp
@@ -1951,7 +1922,7 @@ _dict__dict____init____class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict____init____class_9_i64_L0:
+_dict__dict____init____class_10_i64_L0:
 	movq %rdi, %r14
 	movq %rsi, %r13
 	movq %rdx, %r12
@@ -1997,15 +1968,15 @@ _dict__dict____init____class_9_i64_L0:
 	movq %r12, %rdx
 	movq %rbx, %rdi
 	movq $0, %r12
-	jmp _dict__dict____init____class_9_i64_L1
-_dict__dict____init____class_9_i64_L1:
+	jmp _dict__dict____init____class_10_i64_L1
+_dict__dict____init____class_10_i64_L1:
 	cmpq %r9, %r12
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict____init____class_9_i64_L2
-	jmp _dict__dict____init____class_9_i64_L3
-_dict__dict____init____class_9_i64_L2:
+	jne _dict__dict____init____class_10_i64_L2
+	jmp _dict__dict____init____class_10_i64_L3
+_dict__dict____init____class_10_i64_L2:
 	movq %rax, %rbx
 	addq %r12, %rbx
 	movq $0, %r10
@@ -2015,8 +1986,8 @@ _dict__dict____init____class_9_i64_L2:
 	movb %r10b, (%rsi,%rdi)
 	movq $1, %rdi
 	addq %rdi, %r12
-	jmp _dict__dict____init____class_9_i64_L1
-_dict__dict____init____class_9_i64_L3:
+	jmp _dict__dict____init____class_10_i64_L1
+_dict__dict____init____class_10_i64_L3:
 	movslq 0(%r8), %rsi
 	movq $0, %rdi
 	movq %rdi, -8(%rbp)
@@ -2025,15 +1996,15 @@ _dict__dict____init____class_9_i64_L3:
 	movq %rcx, %r13
 	movq %rdx, %r12
 	movq $0, %rbx
-	jmp _dict__dict____init____class_9_i64_L4
-_dict__dict____init____class_9_i64_L4:
+	jmp _dict__dict____init____class_10_i64_L4
+_dict__dict____init____class_10_i64_L4:
 	cmpq %r15, %rbx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict____init____class_9_i64_L5
-	jmp _dict__dict____init____class_9_i64_L6
-_dict__dict____init____class_9_i64_L5:
+	jne _dict__dict____init____class_10_i64_L5
+	jmp _dict__dict____init____class_10_i64_L6
+_dict__dict____init____class_10_i64_L5:
 	movq -8(%rbp), %rdi
 	movq %rdi, %rcx
 	addq %rbx, %rcx
@@ -2050,14 +2021,14 @@ _dict__dict____init____class_9_i64_L5:
 	addq %rsi, %rdi
 	movq (%rdi,%r14), %rsi
 	movq %r13, %rdi
-	callq _dict__dict____setitem____class_9_i64
+	callq _dict__dict____setitem____class_10_i64
 	movq $1, %rdi
 	addq %rbx, %rdi
 	movq %rdi, %rbx
-	jmp _dict__dict____init____class_9_i64_L4
-_dict__dict____init____class_9_i64_L6:
-	jmp _dict__dict____init____class_9_i64_epilogue
-_dict__dict____init____class_9_i64_epilogue:
+	jmp _dict__dict____init____class_10_i64_L4
+_dict__dict____init____class_10_i64_L6:
+	jmp _dict__dict____init____class_10_i64_epilogue
+_dict__dict____init____class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2068,7 +2039,7 @@ _dict__dict____init____class_9_i64_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict____getitem____class_9_i64:
+_dict__dict____getitem____class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2077,10 +2048,10 @@ _dict__dict____getitem____class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict____getitem____class_9_i64_L0:
+_dict__dict____getitem____class_10_i64_L0:
 	movq %rdi, %rbx
 	movq %rbx, %rdi
-	callq _dict__dict___get__class_9_i64
+	callq _dict__dict___get__class_10_i64
 	movq %rax, %rsi
 	movq 8(%rbx), %rdx
 	movq $8, %rdi
@@ -2089,8 +2060,8 @@ _dict__dict____getitem____class_9_i64_L0:
 	addq %rsi, %rdi
 	movq (%rdi,%rdx), %rdi
 	movq %rdi, %rax
-	jmp _dict__dict____getitem____class_9_i64_epilogue
-_dict__dict____getitem____class_9_i64_epilogue:
+	jmp _dict__dict____getitem____class_10_i64_epilogue
+_dict__dict____getitem____class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2100,7 +2071,7 @@ _dict__dict____getitem____class_9_i64_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list____init____class_0_f32:
+_uop__Uop__from_data__f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2109,84 +2080,41 @@ _list__list____init____class_0_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list____init____class_0_f32_L0:
-	movq %rdi, %rdx
-	movq %rsi, %rdi
-	movq %rdi, 0(%rdx)
-	movslq 0(%rdi), %rdi
-	movl %edi, 8(%rdx)
-	jmp _list__list____init____class_0_f32_epilogue
-_list__list____init____class_0_f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_list__list____init____class_2_f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_list__list____init____class_2_f32_L0:
-	movq %rdi, %rdx
-	movq %rsi, %rdi
-	movq %rdi, 0(%rdx)
-	movslq 0(%rdi), %rdi
-	movl %edi, 8(%rdx)
-	jmp _list__list____init____class_2_f32_epilogue
-_list__list____init____class_2_f32_epilogue:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	addq $8, %rsp
-	popq %rbp
-	retq
-# origin: runtime
-_uop__Uop____init____f32:
-	pushq %rbp
-	movq %rsp, %rbp
-	subq $8, %rsp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-_uop__Uop____init____f32_L0:
+_uop__Uop__from_data__f32_L0:
 	movq %rdi, %r13
-	movq %rsi, %rbx
-	movq %rdx, %r10
-	movq %rcx, %rdx
-	movq %r8, %rsi
-	movq %r9, %rdi
-	movq %rbx, 0(%r13)
-	movq %r10, 8(%r13)
-	movq %rdx, 16(%r13)
-	movq %rsi, 24(%r13)
-	movl %edi, 32(%r13)
 	movq $8, %rdi
 	callq arena_malloc
-	movq %rax, %r12
+	movq %rax, %rbx
 	movq $0, %rdi
-	movq %rdi, 0(%r12)
+	movq %rdi, 0(%rbx)
 	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq %r14, %rdi
+	movq %rbx, %rsi
+	callq _list__list____init____class_0_f32
+	movslq 8(%r13), %r15
+	movslq 12(%r13), %rbx
+	movq $16, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movl %r15d, 0(%r12)
+	movl %ebx, 8(%r12)
+	movq $52, %rdi
 	callq arena_malloc
 	movq %rax, %rbx
 	movq %rbx, %rdi
-	movq %r12, %rsi
-	callq _list__list____init____class_1_f32
-	movq %rbx, 36(%r13)
-	jmp _uop__Uop____init____f32_epilogue
-_uop__Uop____init____f32_epilogue:
+	movq %r14, %rsi
+	movq $0, %rdx
+	movq %r12, %rcx
+	movq $0, %r8
+	callq _uop__Uop____init____f32
+	movq 8(%rbx), %rdi
+	movq %r13, %rsi
+	callq _list__list__append__class_2_f32
+	movq %rbx, %rax
+	jmp _uop__Uop__from_data__f32_epilogue
+_uop__Uop__from_data__f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2211,7 +2139,7 @@ _tensor__Tensor___init__f32_L0:
 	callq arena_malloc
 	movq %rax, %rbx
 	movq %r12, 0(%rbx)
-	movq 36(%r12), %rdi
+	movq 44(%r12), %rdi
 	movq %rbx, %rsi
 	callq _list__list__append__class_1_f32
 	movq $0, %rdi
@@ -2316,7 +2244,7 @@ _list__list____setitem____char_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict____setitem____class_9_i64:
+_dict__dict____setitem____class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2325,7 +2253,7 @@ _dict__dict____setitem____class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict____setitem____class_9_i64_L0:
+_dict__dict____setitem____class_10_i64_L0:
 	movq %rdi, %rbx
 	movq %rsi, %r13
 	movq %rdx, %r12
@@ -2343,18 +2271,18 @@ _dict__dict____setitem____class_9_i64_L0:
 	setge %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict____setitem____class_9_i64_L1
-	jmp _dict__dict____setitem____class_9_i64_L2
-_dict__dict____setitem____class_9_i64_L1:
+	jne _dict__dict____setitem____class_10_i64_L1
+	jmp _dict__dict____setitem____class_10_i64_L2
+_dict__dict____setitem____class_10_i64_L1:
 	movq %rbx, %rdi
-	callq _dict__dict___grow__class_9_i64
-	jmp _dict__dict____setitem____class_9_i64_L3
-_dict__dict____setitem____class_9_i64_L2:
-	jmp _dict__dict____setitem____class_9_i64_L3
-_dict__dict____setitem____class_9_i64_L3:
+	callq _dict__dict___grow__class_10_i64
+	jmp _dict__dict____setitem____class_10_i64_L3
+_dict__dict____setitem____class_10_i64_L2:
+	jmp _dict__dict____setitem____class_10_i64_L3
+_dict__dict____setitem____class_10_i64_L3:
 	movq %rbx, %rdi
 	movq %r13, %rsi
-	callq _dict__dict___get__class_9_i64
+	callq _dict__dict___get__class_10_i64
 	movq %rax, %rdx
 	movq 0(%rbx), %rcx
 	movq $8, %rdi
@@ -2379,8 +2307,8 @@ _dict__dict____setitem____class_9_i64_L3:
 	movq $1, %rdi
 	addq %rsi, %rdi
 	movl %edi, 24(%rbx)
-	jmp _dict__dict____setitem____class_9_i64_epilogue
-_dict__dict____setitem____class_9_i64_epilogue:
+	jmp _dict__dict____setitem____class_10_i64_epilogue
+_dict__dict____setitem____class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2390,7 +2318,7 @@ _dict__dict____setitem____class_9_i64_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict___get__class_9_i64:
+_dict__dict___get__class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2399,7 +2327,7 @@ _dict__dict___get__class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict___get__class_9_i64_L0:
+_dict__dict___get__class_10_i64_L0:
 	movq %rdi, %r12
 	movq %rsi, %r13
 	movq 8(%r12), %rdi
@@ -2421,16 +2349,16 @@ _dict__dict___get__class_9_i64_L0:
 	movq %r12, %r13
 	movq %rbx, %r12
 	movq %rdi, %rbx
-	jmp _dict__dict___get__class_9_i64_L1
-_dict__dict___get__class_9_i64_L1:
+	jmp _dict__dict___get__class_10_i64_L1
+_dict__dict___get__class_10_i64_L1:
 	movq 16(%r13), %rsi
 	movq $8, %rdi
 	addq %rbx, %rdi
 	movzbq (%rdi,%rsi), %rdi
 	cmpq $0, %rdi
-	jne _dict__dict___get__class_9_i64_L2
-	jmp _dict__dict___get__class_9_i64_L3
-_dict__dict___get__class_9_i64_L2:
+	jne _dict__dict___get__class_10_i64_L2
+	jmp _dict__dict___get__class_10_i64_L3
+_dict__dict___get__class_10_i64_L2:
 	movq 0(%r13), %rdx
 	movq $8, %rdi
 	movq %rbx, %rsi
@@ -2442,18 +2370,18 @@ _dict__dict___get__class_9_i64_L2:
 	callq _str__str____eq__
 	movq %rax, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict___get__class_9_i64_L4
-	jmp _dict__dict___get__class_9_i64_L5
-_dict__dict___get__class_9_i64_L3:
+	jne _dict__dict___get__class_10_i64_L4
+	jmp _dict__dict___get__class_10_i64_L5
+_dict__dict___get__class_10_i64_L3:
 	movq %rbx, %rax
-	jmp _dict__dict___get__class_9_i64_epilogue
-_dict__dict___get__class_9_i64_L4:
+	jmp _dict__dict___get__class_10_i64_epilogue
+_dict__dict___get__class_10_i64_L4:
 	movq %rbx, %rax
-	jmp _dict__dict___get__class_9_i64_epilogue
-	jmp _dict__dict___get__class_9_i64_L6
-_dict__dict___get__class_9_i64_L5:
-	jmp _dict__dict___get__class_9_i64_L6
-_dict__dict___get__class_9_i64_L6:
+	jmp _dict__dict___get__class_10_i64_epilogue
+	jmp _dict__dict___get__class_10_i64_L6
+_dict__dict___get__class_10_i64_L5:
+	jmp _dict__dict___get__class_10_i64_L6
+_dict__dict___get__class_10_i64_L6:
 	movq $1, %rdi
 	addq %rbx, %rdi
 	pushq %rax
@@ -2466,8 +2394,8 @@ _dict__dict___get__class_9_i64_L6:
 	popq %rdx
 	popq %rax
 	movq %r11, %rbx
-	jmp _dict__dict___get__class_9_i64_L1
-_dict__dict___get__class_9_i64_epilogue:
+	jmp _dict__dict___get__class_10_i64_L1
+_dict__dict___get__class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2477,7 +2405,7 @@ _dict__dict___get__class_9_i64_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_list__list____init____class_1_f32:
+_list__list____init____class_0_f32:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2486,14 +2414,133 @@ _list__list____init____class_1_f32:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_list__list____init____class_1_f32_L0:
+_list__list____init____class_0_f32_L0:
 	movq %rdi, %rdx
 	movq %rsi, %rdi
 	movq %rdi, 0(%rdx)
 	movslq 0(%rdi), %rdi
 	movl %edi, 8(%rdx)
-	jmp _list__list____init____class_1_f32_epilogue
-_list__list____init____class_1_f32_epilogue:
+	jmp _list__list____init____class_0_f32_epilogue
+_list__list____init____class_0_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_uop__Uop____init____f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $16, %rsp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_uop__Uop____init____f32_L0:
+	movq %rdi, %rbx
+	movq %rdx, %rdi
+	movq %rdi, -8(%rbp)
+	movq %rcx, %r13
+	movq %r8, %r12
+	movq %rsi, 0(%rbx)
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq $0, %rdi
+	movq %rdi, 0(%r14)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq %r15, %rdi
+	movq %r14, %rsi
+	callq _list__list____init____class_2_f32
+	movq %r15, 8(%rbx)
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r14
+	movq $0, %rdi
+	movq %rdi, 0(%r14)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r15
+	movq %r15, %rdi
+	movq %r14, %rsi
+	callq _list__list____init____class_0_bool
+	movq %r15, 16(%rbx)
+	movq -8(%rbp), %rdi
+	movq %rdi, 24(%rbx)
+	movq %r13, 32(%rbx)
+	movl %r12d, 40(%rbx)
+	movq $8, %rdi
+	callq arena_malloc
+	movq %rax, %r13
+	movq $0, %rdi
+	movq %rdi, 0(%r13)
+	movq $12, %rdi
+	callq arena_malloc
+	movq %rax, %r12
+	movq %r12, %rdi
+	movq %r13, %rsi
+	callq _list__list____init____class_1_f32
+	movq %r12, 44(%rbx)
+	jmp _uop__Uop____init____f32_epilogue
+_uop__Uop____init____f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	addq $16, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list__append__class_2_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list__append__class_2_f32_L0:
+	movq %rdi, %r12
+	movq %rsi, %rbx
+	movslq 8(%r12), %rsi
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rdi
+	cmpq %rdi, %rsi
+	sete %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list__append__class_2_f32_L1
+	jmp _list__list__append__class_2_f32_L2
+_list__list__append__class_2_f32_L1:
+	movq %r12, %rdi
+	callq _list__list___grow__class_2_f32
+	jmp _list__list__append__class_2_f32_L3
+_list__list__append__class_2_f32_L2:
+	jmp _list__list__append__class_2_f32_L3
+_list__list__append__class_2_f32_L3:
+	movslq 8(%r12), %rsi
+	movq 0(%r12), %rdx
+	movq $8, %rdi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq %rbx, (%rdx,%rdi)
+	movslq 8(%r12), %rsi
+	movq $1, %rdi
+	addq %rsi, %rdi
+	movl %edi, 8(%r12)
+	jmp _list__list__append__class_2_f32_epilogue
+_list__list__append__class_2_f32_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2553,7 +2600,7 @@ _list__list__append__class_1_f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict___grow__class_9_i64:
+_dict__dict___grow__class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $32, %rsp
@@ -2563,7 +2610,7 @@ _dict__dict___grow__class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict___grow__class_9_i64_L0:
+_dict__dict___grow__class_10_i64_L0:
 	movq %rdi, %r14
 	movq 0(%r14), %r13
 	movq 8(%r14), %r12
@@ -2614,15 +2661,15 @@ _dict__dict___grow__class_9_i64_L0:
 	movq %r12, %rdx
 	movq -8(%rbp), %rsi
 	movq $0, %r13
-	jmp _dict__dict___grow__class_9_i64_L1
-_dict__dict___grow__class_9_i64_L1:
+	jmp _dict__dict___grow__class_10_i64_L1
+_dict__dict___grow__class_10_i64_L1:
 	cmpq %r8, %r13
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict___grow__class_9_i64_L2
-	jmp _dict__dict___grow__class_9_i64_L3
-_dict__dict___grow__class_9_i64_L2:
+	jne _dict__dict___grow__class_10_i64_L2
+	jmp _dict__dict___grow__class_10_i64_L3
+_dict__dict___grow__class_10_i64_L2:
 	movq %r9, %r14
 	addq %r13, %r14
 	movq $0, %r12
@@ -2632,8 +2679,8 @@ _dict__dict___grow__class_9_i64_L2:
 	movb %r12b, (%rbx,%rdi)
 	movq $1, %rdi
 	addq %rdi, %r13
-	jmp _dict__dict___grow__class_9_i64_L1
-_dict__dict___grow__class_9_i64_L3:
+	jmp _dict__dict___grow__class_10_i64_L1
+_dict__dict___grow__class_10_i64_L3:
 	movq $0, %rdi
 	movq %rdi, -16(%rbp)
 	movq %rax, -24(%rbp)
@@ -2642,16 +2689,16 @@ _dict__dict___grow__class_9_i64_L3:
 	movq %rdx, %r13
 	movq %rsi, %r12
 	movq $0, %rbx
-	jmp _dict__dict___grow__class_9_i64_L4
-_dict__dict___grow__class_9_i64_L4:
+	jmp _dict__dict___grow__class_10_i64_L4
+_dict__dict___grow__class_10_i64_L4:
 	movq -24(%rbp), %rdi
 	cmpq %rdi, %rbx
 	setl %r11b
 	movzbq %r11b, %rdi
 	cmpq $0, %rdi
-	jne _dict__dict___grow__class_9_i64_L5
-	jmp _dict__dict___grow__class_9_i64_L6
-_dict__dict___grow__class_9_i64_L5:
+	jne _dict__dict___grow__class_10_i64_L5
+	jmp _dict__dict___grow__class_10_i64_L6
+_dict__dict___grow__class_10_i64_L5:
 	movq -16(%rbp), %rdi
 	movq %rdi, %rdx
 	addq %rbx, %rdx
@@ -2659,11 +2706,11 @@ _dict__dict___grow__class_9_i64_L5:
 	addq %rdx, %rdi
 	movzbq (%rdi,%r12), %rdi
 	cmpq $0, %rdi
-	jne _dict__dict___grow__class_9_i64_L7
-	jmp _dict__dict___grow__class_9_i64_L8
-_dict__dict___grow__class_9_i64_L6:
-	jmp _dict__dict___grow__class_9_i64_epilogue
-_dict__dict___grow__class_9_i64_L7:
+	jne _dict__dict___grow__class_10_i64_L7
+	jmp _dict__dict___grow__class_10_i64_L8
+_dict__dict___grow__class_10_i64_L6:
+	jmp _dict__dict___grow__class_10_i64_epilogue
+_dict__dict___grow__class_10_i64_L7:
 	movq $8, %rdi
 	movq %rdx, %rsi
 	imulq %rdi, %rsi
@@ -2678,16 +2725,16 @@ _dict__dict___grow__class_9_i64_L7:
 	movq (%rdi,%r15), %rsi
 	movq %r14, %rdi
 	movq %rcx, %rdx
-	callq _dict__dict____setitem____class_9_i64
-	jmp _dict__dict___grow__class_9_i64_L9
-_dict__dict___grow__class_9_i64_L8:
-	jmp _dict__dict___grow__class_9_i64_L9
-_dict__dict___grow__class_9_i64_L9:
+	callq _dict__dict____setitem____class_10_i64
+	jmp _dict__dict___grow__class_10_i64_L9
+_dict__dict___grow__class_10_i64_L8:
+	jmp _dict__dict___grow__class_10_i64_L9
+_dict__dict___grow__class_10_i64_L9:
 	movq $1, %rdi
 	addq %rbx, %rdi
 	movq %rdi, %rbx
-	jmp _dict__dict___grow__class_9_i64_L4
-_dict__dict___grow__class_9_i64_epilogue:
+	jmp _dict__dict___grow__class_10_i64_L4
+_dict__dict___grow__class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13
@@ -2695,6 +2742,161 @@ _dict__dict___grow__class_9_i64_epilogue:
 	popq %rbx
 	addq $8, %rsp
 	addq $32, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____init____class_2_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____init____class_2_f32_L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	movslq 0(%rdi), %rdi
+	movl %edi, 8(%rdx)
+	jmp _list__list____init____class_2_f32_epilogue
+_list__list____init____class_2_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____init____class_0_bool:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____init____class_0_bool_L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	movslq 0(%rdi), %rdi
+	movl %edi, 8(%rdx)
+	jmp _list__list____init____class_0_bool_epilogue
+_list__list____init____class_0_bool_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list____init____class_1_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list____init____class_1_f32_L0:
+	movq %rdi, %rdx
+	movq %rsi, %rdi
+	movq %rdi, 0(%rdx)
+	movslq 0(%rdi), %rdi
+	movl %edi, 8(%rdx)
+	jmp _list__list____init____class_1_f32_epilogue
+_list__list____init____class_1_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
+	popq %rbp
+	retq
+# origin: runtime
+_list__list___grow__class_2_f32:
+	pushq %rbp
+	movq %rsp, %rbp
+	subq $8, %rsp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+_list__list___grow__class_2_f32_L0:
+	movq %rdi, %r12
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rsi
+	movq $8, %rdi
+	cmpq %rdi, %rsi
+	setl %r11b
+	movzbq %r11b, %rdx
+	movq 0(%r12), %rdi
+	movslq 0(%rdi), %rsi
+	movq $2, %rdi
+	imulq %rsi, %rdi
+	cmpq $0, %rdx
+movq $8, %r11
+	movq %rdi, %rbx
+	cmovne %r11, %rbx
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	callq arena_malloc
+	movq %rax, %r8
+	movq %rbx, 0(%r8)
+	movslq 8(%r12), %r9
+	movq $0, %rcx
+	movq %r12, %rax
+	movq $0, %rdx
+	jmp _list__list___grow__class_2_f32_L1
+_list__list___grow__class_2_f32_L1:
+	cmpq %r9, %rdx
+	setl %r11b
+	movzbq %r11b, %rdi
+	cmpq $0, %rdi
+	jne _list__list___grow__class_2_f32_L2
+	jmp _list__list___grow__class_2_f32_L3
+_list__list___grow__class_2_f32_L2:
+	movq %rcx, %rbx
+	addq %rdx, %rbx
+	movq 0(%rax), %r10
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq (%rdi,%r10), %r10
+	movq $8, %rdi
+	movq %rbx, %rsi
+	imulq %rdi, %rsi
+	movq $8, %rdi
+	addq %rsi, %rdi
+	movq %r10, (%r8,%rdi)
+	movq $1, %rdi
+	addq %rdi, %rdx
+	jmp _list__list___grow__class_2_f32_L1
+_list__list___grow__class_2_f32_L3:
+	movq %r8, 0(%rax)
+	jmp _list__list___grow__class_2_f32_epilogue
+_list__list___grow__class_2_f32_epilogue:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	addq $8, %rsp
 	popq %rbp
 	retq
 # origin: runtime
@@ -2775,7 +2977,7 @@ _list__list___grow__class_1_f32_epilogue:
 	popq %rbp
 	retq
 # origin: runtime
-_dict__dict____contains____class_9_i64:
+_dict__dict____contains____class_10_i64:
 	pushq %rbp
 	movq %rsp, %rbp
 	subq $8, %rsp
@@ -2784,18 +2986,18 @@ _dict__dict____contains____class_9_i64:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-_dict__dict____contains____class_9_i64_L0:
+_dict__dict____contains____class_10_i64_L0:
 	movq %rdi, %rbx
 	movq %rbx, %rdi
-	callq _dict__dict___get__class_9_i64
+	callq _dict__dict___get__class_10_i64
 	movq %rax, %rdx
 	movq 16(%rbx), %rsi
 	movq $8, %rdi
 	addq %rdx, %rdi
 	movzbq (%rdi,%rsi), %rdi
 	movq %rdi, %rax
-	jmp _dict__dict____contains____class_9_i64_epilogue
-_dict__dict____contains____class_9_i64_epilogue:
+	jmp _dict__dict____contains____class_10_i64_epilogue
+_dict__dict____contains____class_10_i64_epilogue:
 	popq %r15
 	popq %r14
 	popq %r13

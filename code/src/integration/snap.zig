@@ -83,7 +83,7 @@ pub fn run(
     );
     defer alloc.free(asm_temp_path);
 
-    const result = try runCommand(alloc, io, &.{
+    const result = try std.process.run(alloc, io, .{ .argv = &.{
         compiler_path,
         python_file_name,
         asm_temp_path,
@@ -93,9 +93,16 @@ pub fn run(
         "--optim",
         host_arg,
         device_arg,
-    });
+    } });
     defer alloc.free(result.stdout);
     defer alloc.free(result.stderr);
+
+    const expected_error = std.mem.startsWith(u8, python_file_name, "tst/python/error");
+    const expected_exit: u8 = if (expected_error) 1 else 0;
+    if (result.term != .exited or result.term.exited != expected_exit) {
+        std.debug.print("unexpected exit: {any}, expected {d}\n{s}", .{ result.term, expected_exit, result.stderr });
+        return error.CommandFailed;
+    }
 
     // snapshot dir
     const snapshot_dir_path = try std.fmt.allocPrint(
@@ -124,6 +131,32 @@ pub fn run(
         const temp_output = try std.Io.Dir.createFileAbsolute(io, temp_stats_path, .{});
         defer temp_output.close(io);
         try temp_output.writeStreamingAll(io, result.stderr);
+    }
+
+    // skip if we expected an error
+    if (expected_error) {
+        if (update) {
+            const file = try dir.createFile(io, snapshot_file_name, .{});
+            defer file.close(io);
+            try file.writeStreamingAll(io, result.stderr);
+            std.debug.print(" [[REGENERATED]]\n", .{});
+            return;
+        }
+
+        try dir.access(io, snapshot_file_name, .{});
+        const diff = try calculateDiff(stats_path, temp_stats_path, io, alloc);
+        defer alloc.free(diff.stdout);
+        defer alloc.free(diff.stderr);
+        if (diff.term != .exited) return error.CommandFailed;
+        switch (diff.term.exited) {
+            0 => std.debug.print(" [[EQUAL]]\n", .{}),
+            1 => {
+                std.debug.print(" [[NOT EQUAL]]\n", .{});
+                return error.SnapshotMisMatch;
+            },
+            else => return error.CommandFailed,
+        }
+        return;
     }
 
     const stats_diff = try calculateDiff(stats_path, temp_stats_path, io, alloc);

@@ -1,5 +1,4 @@
 running program: (OPTIM=true)
-
 import helper
 from helper import two as helper_two
 
@@ -33,4 +32,4 @@ module
 2
 2
 3
-[!!memory report!!]: allocs=21 frees=21 allocated_bytes=215 freed_bytes=215
+[!!memory report!!]: allocs=21 frees=21 allocated_bytes=218 freed_bytes=218
