@@ -58,6 +58,24 @@ static hsa_status_t find_kernarg_region(hsa_region_t region, void *data) {
   return status;
 }
 
+static hsa_queue_t* shared_queue = NULL;
+
+static void shutdown_hsa() {
+  if (shared_queue != NULL) {
+    check(hsa_queue_destroy(shared_queue), "hsa_queue_destroy");
+  }
+  check(hsa_shut_down(), "hsa_shut_down");
+}
+
+static void ensure_hsa_initialized(void) {
+  static int initialized = 0;
+  if (initialized) return;
+
+  check(hsa_init(), "hsa_init");
+  if (atexit(shutdown_hsa) != 0) abort();
+  initialized = 1;
+}
+
 void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *workitems, const uint64_t *kernel_name_slots) {
   // TEMP: hack since tuples dont map 1 to 1 with strings (namely always 8 bytes)
   char symbol_name[256] = {0};
@@ -79,6 +97,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
     .y = (uint32_t)workitems[1],
     .z = (uint32_t)workitems[2],
   };
+  fprintf(stderr, "grid: %u x %u x %u\n", dims.x, dims.y, dims.z);
 
   uint16_t rank;
   if (dims.z != 1) {
@@ -92,7 +111,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   // TODO: do some validation on launch
 
   const uint64_t n = dims.x * dims.y * dims.z;
-  check(hsa_init(), "hsa_init");
+  ensure_hsa_initialized();
 
   hsa_agent_t gpu = {0};
   check(hsa_iterate_agents(find_gpu, &gpu), "hsa_iterate_agents");
@@ -109,7 +128,6 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   int code_object_fd = open("/tmp/device.co", O_RDONLY);
   if (code_object_fd < 0) {
     perror("open /tmp/device.co");
-    hsa_shut_down();
     abort();
   }
 
@@ -131,15 +149,15 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
 
   fprintf(stderr, "Loaded kernel.kd: kernel object=0x%lx\n", kernel_object);
 
-  // load queue
+  // load a sinlge shared queue. currently our execution model is single threaded so this works well
   uint32_t queue_max_size = 0;
   check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_max_size), "hsa_agent_get_info");
-  hsa_queue_t *queue = NULL;
-  check(hsa_queue_create(gpu, queue_max_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, UINT32_MAX, UINT32_MAX, &queue), "hsa_queue_create");
+  if (shared_queue == NULL) {
+    check(hsa_queue_create(gpu, queue_max_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, UINT32_MAX, UINT32_MAX, &shared_queue), "hsa_queue_create");
+  }
   hsa_signal_t completion_signal;
   check(hsa_signal_create(1, 0, NULL, &completion_signal), "hsa_signal_create");
-
-  fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", queue->id, queue->size, completion_signal.handle);
+  fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", shared_queue->id, shared_queue->size, completion_signal.handle);
 
   // get kernel_args
   hsa_region_t kernel_region = {0};
@@ -152,7 +170,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
 
   uint64_t *kernel_args = NULL;
   check(hsa_memory_allocate(kernel_region, arg_count * sizeof(*kernel_args), (void **)&kernel_args), "hsa_memory_allocate");
-  void **gpu_ptrs = calloc(arg_count, sizeof(*gpu_ptrs));
+  void **argument_device_ptrs = calloc(arg_count, sizeof(*argument_device_ptrs));
   for (uint64_t i = 0; i < arg_count; i++) {
     fprintf(
       stderr,
@@ -165,35 +183,35 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
     uint64_t byte_count = arg_slots[3 * i + 1];
     const GpuInstanceLayout *layout = (const GpuInstanceLayout *)(uintptr_t)arg_slots[3 * i + 2];
     if (byte_count != 0) {
-      void *host_ptr = (void *)arg_slots[3 * i];
+      void *instance_host_ptr = (void *)arg_slots[3 * i];
       if (layout != NULL) {
         for (uint64_t j = 0; j < layout->list_field_count; j++) {
           const GpuListField *field = &layout->list_fields[j];
-          void *list_host;
+          void *array_host_ptr;
           memcpy(
-            &list_host,
-            (const unsigned char *)host_ptr + field->offset,
-            sizeof(list_host)
+            &array_host_ptr,
+            (const unsigned char *)instance_host_ptr + field->offset,
+            sizeof(array_host_ptr)
           );
           uint64_t count;
-          memcpy(&count, list_host, sizeof(count));
+          memcpy(&count, array_host_ptr, sizeof(count));
 
           size_t bytes = sizeof(count) + count * field->element_size;
-          void *list_device;
-          check(hsa_amd_memory_lock(list_host, bytes, &gpu, 1, &list_device), "hsa_amd_memory_lock");
-          fprintf(stderr, "list host=%p device=%p\n", list_host, list_device);
+          void *array_device_ptr;
+          check(hsa_amd_memory_lock(array_host_ptr, bytes, &gpu, 1, &array_device_ptr), "hsa_amd_memory_lock");
+          fprintf(stderr, "list host=%p device=%p\n", array_host_ptr, array_device_ptr);
         }
       }
-      check(hsa_amd_memory_lock(host_ptr, byte_count, &gpu, 1, &gpu_ptrs[i]), "hsa_amd_memory_lock");
-      kernel_args[i] = (uint64_t)gpu_ptrs[i];
+      check(hsa_amd_memory_lock(instance_host_ptr, byte_count, &gpu, 1, &argument_device_ptrs[i]), "hsa_amd_memory_lock");
+      kernel_args[i] = (uint64_t)argument_device_ptrs[i];
     } else {
       kernel_args[i] = arg_slots[3*i];
     }
   }
 
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
-  uint32_t packet_index = packet_id & (queue->size - 1);
-  hsa_kernel_dispatch_packet_t *packet = &((hsa_kernel_dispatch_packet_t*)queue->base_address)[packet_index];
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(shared_queue, 1);
+  uint32_t packet_index = packet_id & (shared_queue->size - 1);
+  hsa_kernel_dispatch_packet_t *packet = &((hsa_kernel_dispatch_packet_t*)shared_queue->base_address)[packet_index];
   memset(packet, 0, sizeof(*packet));
   packet->setup = rank << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
   packet->workgroup_size_x = (uint16_t)dims.x;
@@ -225,7 +243,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
       __ATOMIC_RELEASE);
 
   hsa_signal_store_screlease(
-      queue->doorbell_signal,
+      shared_queue->doorbell_signal,
       packet_id);
    hsa_signal_value_t completion =
        hsa_signal_wait_scacquire(
@@ -238,10 +256,19 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   for (uint64_t i = 0; i < arg_count; i++) {
     uint64_t byte_count = arg_slots[3 * i + 1];
     if (byte_count != 0) {
-      void *host_ptr = (void *)arg_slots[3 * i];
-      check(hsa_amd_memory_unlock(host_ptr), "hsa_amd_memory_unlock");
+      void *instance_host_ptr = (void *)arg_slots[3 * i];
+      check(hsa_amd_memory_unlock(instance_host_ptr), "hsa_amd_memory_unlock");
+      const GpuInstanceLayout *layout = (const GpuInstanceLayout *)(uintptr_t)arg_slots[3 * i + 2];
+      if (layout != NULL) {
+        for (uint64_t j = 0; j < layout->list_field_count; j++) {
+          void *array_host_ptr;
+          memcpy(&array_host_ptr, (const unsigned char *)instance_host_ptr + layout->list_fields[j].offset, sizeof(array_host_ptr));
+          check(hsa_amd_memory_unlock(array_host_ptr), "hsa_amd_memory_unlock(array)");
+        }
+      }
     }
   }
+  free(argument_device_ptrs);
 
    fprintf(
        stderr,
@@ -251,11 +278,8 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   check(hsa_memory_free(kernel_args), "hsa_memory_free(kernel_args)");
 
   check(hsa_signal_destroy(completion_signal), "hsa_signal_destroy");
-  check(hsa_queue_destroy(queue), "hsa_queue_destroy");
 
   check(hsa_executable_destroy(executable), "hsa_executable_destroy");
   check(hsa_code_object_reader_destroy(reader), "hsa_code_object_reader_destroy");
   close(code_object_fd);
-
-  check(hsa_shut_down(), "hsa_shut_down");
 }

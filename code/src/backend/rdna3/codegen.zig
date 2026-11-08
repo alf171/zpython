@@ -155,8 +155,17 @@ pub fn emit(
                                     std.debug.assert(rhs.reg_type == .vgpr);
                                     std.debug.assert(lhs.count == 1);
                                     std.debug.assert(rhs.count == 1);
+                                    const t = switch (binop.lhs.type) {
+                                        .bool => "u32",
+                                        .i32 => "i32",
+                                        .f32 => "f32",
+                                        else => |e| {
+                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                            return error.NotImpl;
+                                        },
+                                    };
                                     // NOTE: rhs can technically be vector or scalar!
-                                    try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ cmp.condForCmp(), "i32", lhs.base, rhs.base });
+                                    try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ condForCmp(cmp, binop.lhs.type), t, lhs.base, rhs.base });
                                     try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
                                 },
                                 .bop => |bop| blk: {
@@ -521,6 +530,11 @@ pub fn emit(
     // try createFooter(&out, alloc);
 
     return out.toOwnedSlice(alloc);
+}
+
+fn condForCmp(op: common.ir.CmpOp, t: TypeInfo) []const u8 {
+    if (t == .f32 and op == .neq) return "neq";
+    return op.condForCmp();
 }
 
 fn emitHeader(out: *std.ArrayList(u8), alloc: std.mem.Allocator) !void {

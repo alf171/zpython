@@ -26,10 +26,10 @@ def evaluate[T](node: Uop[T]) -> TensorData[T]:
         rhs = evaluate(node.src[1])
         return lhs @ rhs
     elif node.op == Ops.WHERE:
-        condition = evaluate(node.src[0])
-        lhs = evaluate(node.src[1])
-        rhs = evaluate(node.src[2])
-        return condition.where(lhs, rhs)
+        condition = evaluate(node.conditions[0])
+        lhs = evaluate(node.src[0])
+        rhs = evaluate(node.src[1])
+        return TensorData.where(condition, lhs, rhs)
     elif node.op == Ops.EXP:
         lhs = evaluate(node.src[0])
         return lhs.exp()

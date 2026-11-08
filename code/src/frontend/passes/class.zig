@@ -268,6 +268,30 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
 
                         instruction.deinit(alloc);
                     },
+                    .unaryop => |uop| {
+                        if (uop.src.type != .instance) {
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
+                        }
+
+                        const builtin = uop.op.toClassBuiltin();
+                        if (builtin == null) {
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
+                        }
+                        const class = &program.classes.items[uop.src.type.instance.class_id];
+                        const method = class.kind.record.findMethod(builtin.?) orelse {
+                            return error.MissingUnaryOp;
+                        };
+                        try new_instructions.append(alloc, .{
+                            .function_call = .{
+                                .dst = try uop.dst.clone(alloc),
+                                .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
+                                .args = try alloc.dupe(TypedOperand, &.{try uop.src.clone(alloc)}),
+                            },
+                        });
+                        instruction.deinit(alloc);
+                    },
                     else => try new_instructions.append(alloc, instruction.*),
                 },
                 else => try new_instructions.append(alloc, instruction.*),

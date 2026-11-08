@@ -381,14 +381,25 @@ pub const TypeInfo = union(enum) {
             },
             .@"union" => |u| {
                 // exact equality
-                if (self.equal(expected)) return;
-                // partial match
-                for (u.members) |member| {
-                    if (member.equal(expected)) {
-                        return;
+                if (expected == .@"union") {
+                    for (expected.@"union".members) |member| {
+                        try self.unify(member, bindings, program, alloc);
                     }
+                    return;
                 }
-                return error.TypeMismatch;
+                // partial match
+                var matched: ?TypeInfo = null;
+                for (u.members) |member| {
+                    // equal just checks tags today
+                    if (!member.equal(expected)) {
+                        continue;
+                    }
+                    if (matched != null) return error.AmbiguousUnify;
+                    matched = member;
+                }
+
+                const member = matched orelse return error.TypeMismatch;
+                try member.unify(expected, bindings, program, alloc);
             },
             else => {
                 const int_cast = self == .i64 and expected == .i32 or self == .i32 and expected == .i64;
@@ -437,6 +448,21 @@ pub const TypeInfo = union(enum) {
                     .args = args,
                 } };
             },
+            .@"union" => |u| {
+                var members = try alloc.alloc(TypeInfo, u.members.len);
+                var initialized: usize = 0;
+                errdefer {
+                    for (members[0..initialized]) |member| {
+                        member.deinit(alloc);
+                    }
+                    alloc.free(members);
+                }
+                for (u.members, 0..) |member, i| {
+                    members[i] = try member.substitute(bindings, alloc);
+                    initialized += 1;
+                }
+                return .{ .@"union" = .{ .members = members } };
+            },
             else => return try self.clone(alloc),
         }
     }
@@ -464,6 +490,12 @@ pub const TypeInfo = union(enum) {
                 }
                 return false;
             },
+            // .@"union" => |u| {
+            //     for (u.members) |member| {
+            //         if (member.containsGenericVariable(wanted)) return true;
+            //     }
+            //     return false;
+            // },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;

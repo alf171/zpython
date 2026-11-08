@@ -125,6 +125,13 @@ pub const UnaryOp = enum {
     neg,
     sqrt,
     exp2,
+
+    pub fn toClassBuiltin(self: @This()) ?[]const u8 {
+        return switch (self) {
+            .neg => "__neg__",
+            else => null,
+        };
+    }
 };
 
 pub const ConstValue = union(enum) {
@@ -306,6 +313,7 @@ pub const CmpOp = enum {
             .lte => "__le__",
             .gt => "__gt__",
             .gte => "__ge__",
+            // elsewhere, we negate not_contains
             .contains, .not_contains => "__contains__",
             // operations cant be overwritten
             .is, .is_not => null,

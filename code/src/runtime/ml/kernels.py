@@ -118,7 +118,7 @@ def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     out.data[out_i] = acc
 
 @gpu
-def where[U](out: TensorData[U], mask: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
+def where[U](out: TensorData[U], mask: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
 

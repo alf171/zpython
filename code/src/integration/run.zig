@@ -392,7 +392,7 @@ pub fn runCommand(alloc: std.mem.Allocator, io: std.Io, argv: []const []const u8
     const result = try std.process.run(alloc, io, .{
         .argv = argv,
         .stdout_limit = .limited(1 << 20),
-        .stderr_limit = .limited(1 << 20),
+        .stderr_limit = .limited(16 << 20),
     });
     if (result.term != .exited or result.term.exited != 0) {
         std.debug.print(

@@ -616,6 +616,7 @@ fn emitLoadConstant(
     switch (type_) {
         .i64, .array, .callable, .instance, .tuple, .@"enum" => try out.print(alloc, "\tmovq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .i32 => try out.print(alloc, "\tmovslq {d}(%{s}), %{s}\n", .{ offset, src, dst }),
+        .f32 => try out.print(alloc, "\tmovss {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         .bool => try out.print(alloc, "\tmovsbl {d}(%{s}), %{s}\n", .{ offset, src, dst }),
         // FIXME: add a type pass to remove unions
         .@"union" => |u| {
@@ -645,6 +646,7 @@ fn emitStoreConstant(
     switch (type_) {
         .i64, .array, .instance, .tuple, .callable, .@"enum", .none => try out.print(alloc, "\tmovq %{s}, {d}(%{s})\n", .{ src, offset, dst }),
         .i32 => try out.print(alloc, "\tmovl %{s}, {d}(%{s})\n", .{ reg32(src), offset, dst }),
+        .f32 => try out.print(alloc, "\tmovss %{s}, {d}(%{s})\n", .{ src, offset, dst }),
         .char, .bool => try out.print(alloc, "\tmovb %{s}, {d}(%{s})\n", .{ reg8(src), offset, dst }),
         else => |e| {
             std.debug.print("cant handle {s}\n", .{@tagName(e)});

@@ -7,9 +7,7 @@ from ml.backward import grad_rule
 class Tensor[T]:
     def __init__(self, data: array[T], shape: tuple[i32, i32]) -> None:
         td: TensorData[T] = TensorData(data, shape)
-        buffers: list[TensorData[T]] = [td]
-        # sources: array[]
-        self.uop: Uop[T] = Uop([], buffers, Ops.BUFFER, shape, 0)
+        self.uop: Uop[T] = Uop.from_data(td)
         self.uop.owners.append(self)
         # optional gradient
         self.grad: Tensor[T] | None = None
@@ -30,8 +28,15 @@ class Tensor[T]:
     @staticmethod
     def randn(shape: tuple[i32, i32]) -> Tensor[f32]:
         data = TensorData.randn(shape)
-        uop: Uop[f32] = Uop([], [data], Ops.BUFFER, shape, 0)
+        uop: Uop[f32] = Uop.from_data(data)
         return Tensor._init(uop)
+
+    def assign(self, value: Tensor[T]) -> Tensor[T]:
+        data = evaluate(value.uop)
+        uop = Uop.from_data(data)
+        self.uop = uop
+        uop.owners.append(self)
+        return self
 
     def backward(self, incoming_grad: Tensor[T]) -> None:
         uops = self.uop.toposort()
@@ -50,7 +55,7 @@ class Tensor[T]:
                 incoming = contributions[j]
 
                 if source in grads:
-                    grads[source] = Uop([grads[source], incoming], [], Ops.ADD, source.shape, 0)
+                    grads[source] = Uop([grads[source], incoming], Ops.ADD, source.shape, 0)
                 else:
                     grads[source] = incoming
 
@@ -95,12 +100,12 @@ class Tensor[T]:
         return Tensor._init(self.uop.ne(other.uop))
 
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
-        uop = Uop([self.uop, other.uop], [], Ops.ADD, self.uop.shape, 0)
+        uop = Uop([self.uop, other.uop], Ops.ADD, self.uop.shape, 0)
         res = Tensor._init(uop)
         return res
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
-        uop = Uop([self.uop, other.uop], [], Ops.SUB, self.uop.shape, 0)
+        uop = Uop([self.uop, other.uop], Ops.SUB, self.uop.shape, 0)
         res = Tensor._init(uop)
         return res
 
@@ -115,17 +120,20 @@ class Tensor[T]:
     def __matmul__(self, other: Tensor[T]) -> Tensor[T]:
         return Tensor._init(self.uop @ other.uop)
 
-    # self is bool
-    def where[U](self, lhs: Tensor[U], rhs: Tensor[U]) -> Tensor[U]:
-        return Tensor._init(self.uop.where(lhs.uop, rhs.uop))
+    def __neg__(self) -> Tensor[T]:
+        return Tensor._init(-self.uop)
+
+    @staticmethod
+    def where[U](condition: Tensor[bool], lhs: Tensor[U], rhs: Tensor[U]) -> Tensor[U]:
+        return Tensor._init(Uop.where(condition.uop, lhs.uop, rhs.uop))
 
     def relu(self) -> Tensor[T]:
         zero: T = 0
         zeros = Tensor.fill(self.uop.shape, zero)
-        return (self > zeros).where(self, zeros)
+        return Tensor.where(self > zeros, self, zeros)
 
     def exp(self) -> Tensor[T]:
-        uop = Uop([self.uop], [], Ops.EXP, self.uop.shape, 0)
+        uop = Uop([self.uop], Ops.EXP, self.uop.shape, 0)
         res = Tensor._init(uop)
         return res
 
@@ -134,7 +142,7 @@ class Tensor[T]:
 
     def max(self, axis: i32) -> Tensor[T]:
         shape = (self.uop.shape[0], 1) if axis == 1 else (1, self.uop.shape[1])
-        uop = Uop([self.uop], [], Ops.MAX, shape, axis)
+        uop = Uop([self.uop], Ops.MAX, shape, axis)
         res = Tensor._init(uop)
         return res
 

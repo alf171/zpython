@@ -131,10 +131,11 @@ class TensorData[T]:
         _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
         return res
 
-    def where(self, lhs: TensorData[T], rhs: TensorData[T]) -> TensorData[T]:
-        zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
-        _where_gpu(res, self, lhs, rhs, (self.rows, self.cols, 1))
+    @staticmethod
+    def where[U](condition: TensorData[bool], lhs: TensorData[U], rhs: TensorData[U]) -> TensorData[U]:
+        zero: U = 0
+        res = TensorData.fill((lhs.rows, lhs.cols), zero)
+        _where_gpu(res, condition, lhs, rhs, (lhs.rows, lhs.cols, 1))
         return res
 
     def exp(self) -> TensorData[T]:

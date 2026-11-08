@@ -18,12 +18,12 @@ def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
     elif node.op == Ops.MATMUL:
         return [incoming @ node.src[1].transpose(), node.src[0].transpose() @ incoming]
     elif node.op == Ops.WHERE:
-        mask = node.src[0]
+        mask = node.conditions[0]
         zero_t: T = 0
         zero = Uop.fill(node.shape, zero_t)
         return [
-            mask.where(incoming, zero),
-            mask.where(zero, incoming)
+            Uop.where(mask, incoming, zero),
+            Uop.where(mask, zero, incoming)
         ]
     elif node.op == Ops.EXP:
         # identity

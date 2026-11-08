@@ -27,6 +27,7 @@
             pkg-config
             lld
             rocmPackages.rocm-runtime
+            rocmPackages.rocprofiler-sdk
           ];
 
           HSA_RUNTIME_PATH = "${pkgs.rocmPackages.rocm-runtime}";
