@@ -88,7 +88,13 @@ pub fn walkLoop(
             .pred = entry_block,
             .value = try before_val.clone(alloc),
         };
-        inputs[1] = undefined;
+        inputs[1] = .{
+            .pred = entry_block,
+            .value = .{
+                .operand = .unknown,
+                .type = .any,
+            },
+        };
 
         const dst: TypedOperand = .{
             .operand = ir_builder.nextTemp(),
@@ -114,7 +120,13 @@ pub fn walkLoop(
             .pred = entry_block,
             .value = try carry.initial.clone(alloc),
         };
-        inputs[1] = undefined;
+        inputs[1] = .{
+            .pred = entry_block,
+            .value = .{
+                .operand = .unknown,
+                .type = .any,
+            },
+        };
         const dst = TypedOperand{
             .operand = ir_builder.nextTemp(),
             .type = try carry.initial.type.clone(alloc),

@@ -11,6 +11,7 @@ const Function = @import("common").function.Function;
 const FunctionKind = @import("common").function.FunctionKind;
 const ConstValue = @import("common").ir.ConstValue;
 const ValueRef = @import("common").ir.ValueRef;
+const diagnostics = @import("diagnostics.zig");
 
 pub const c = @cImport({
     @cInclude("Python.h");
@@ -520,8 +521,8 @@ pub fn parseTypeAnnotation(
                 .type_variable = type_param.id,
             };
         }
-        std.debug.print("cant handle {s}\n", .{annotation_id});
-        return error.TypeNotImplemented;
+        diagnostics.report(annotation, irBuilder.current_file, "invalid type '{s}'", .{annotation_id});
+        return error.DiagnosticReported;
     } else if (std.mem.eql(u8, kind, "Subscript")) {
         const slice_obj = c.PyObject_GetAttrString(annotation, "slice");
         std.debug.assert(slice_obj != null);

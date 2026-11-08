@@ -1,0 +1,26 @@
+running program: (OPTIM=true)
+
+path_ptr = "tst/python/if.py"
+fd = openat(i32(-100), path_ptr, i32(0), i32(0))
+if fd >= 0:
+    header: array[char] = array_empty(16)
+    count = read(fd, header, 16)
+    write(1, header, count)
+    print("\n", end="")
+    close(fd)
+
+performance report: (ORIGIN=user)
+number of asm lines: 154
+mov count: 111
+memory load count: 6
+memory store count: 30
+conditional jumps: 1
+unconditional jumps: 4
+comparisons: 2
+returns: 1
+call count: 16
+spill rounds: 0
+
+actual output:
+def f() -> None:
+[!!memory report!!]: allocs=7 frees=7 allocated_bytes=92 freed_bytes=92

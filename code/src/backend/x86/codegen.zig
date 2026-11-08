@@ -457,6 +457,11 @@ fn emitFunction(
                                     .i64 => {
                                         try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ reg8(src), dst });
                                     },
+                                    .f32 => {
+                                        const scratch = try abi.scratchReg(0, .gp);
+                                        try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ reg8(src), scratch });
+                                        try out.print(alloc, "\tcvtsi2ssq %{s}, %{s}\n", .{ scratch, dst });
+                                    },
                                     else => {
                                         std.debug.print(
                                             "unsupported cast: {s} -> {s}\n",

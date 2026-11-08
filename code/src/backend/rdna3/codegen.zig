@@ -39,10 +39,10 @@ pub fn emit(
                         const kernel_offset = fp.index * 8;
                         switch (dst.count) {
                             1 => {
-                                try out.print(alloc, "\ts_load_b32 s{d}, s[0:1], {d}\n", .{ dst.base, kernel_offset });
+                                try out.print(alloc, "\ts_load_b32 s{d}, s[2:3], {d}\n", .{ dst.base, kernel_offset });
                             },
                             2 => {
-                                try out.print(alloc, "\ts_load_b64 s[{d}:{d}], s[0:1], {d}\n", .{ dst.base, dst.base + 1, kernel_offset });
+                                try out.print(alloc, "\ts_load_b64 s[{d}:{d}], s[2:3], {d}\n", .{ dst.base, dst.base + 1, kernel_offset });
                             },
                             else => return error.NotImpl,
                         }
@@ -54,13 +54,27 @@ pub fn emit(
                         if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
                         switch (gi.axis) {
                             .constant => |c| {
+                                const scratch = try abi.scratchReg(0, 1, .sgpr);
                                 const axis = try c.valueAsIntImm();
-                                const bit_offset: u8 = @intCast(axis * 10);
-                                // bit field extract work item asked for
-                                // x=0 (bits 0-9), y=1 (bits 10-19), z=2 (bits 20-29)
-                                try out.print(alloc, "\tv_bfe_u32 v{d}, v0, {d}, {d}\n", .{ dst.base, bit_offset, 10 });
-                                if (dst.count == 2)
+                                const offset: u16 = if (axis == 2) 8 else 4;
+                                const field = (16 << 16) | @as(u32, if (axis == 1) 16 else 0);
+                                // if (dst.count == 2)
+                                //     try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                                try out.print(alloc, "\ts_load_b32 s{d}, s[0:1], {d}\n", .{ scratch.base, offset });
+                                try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
+                                // scratch = workgroup_size[axis]
+                                try out.print(alloc, "\ts_bfe_u32 s{d}, s{d}, {d}\n", .{ scratch.base, scratch.base, field });
+                                // extract the local id
+                                try out.print(alloc, "\tv_bfe_u32 v{d}, v0, {d}, 10\n", .{ dst.base, axis * 10 });
+                                // axis starts at reg s5
+                                // scratch = group_id[axis] * workgroup_size[axis]
+                                try out.print(alloc, "\ts_mul_i32 s{d}, s{d}, s{d}\n", .{ scratch.base, 4 + axis, scratch.base });
+                                // dst = group_offset + local id
+                                try out.print(alloc, "\tv_add_u32 v{d}, s{d}, v{d}\n", .{ dst.base, scratch.base, dst.base });
+
+                                if (dst.count == 2) {
                                     try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                                }
                             },
                             else => |e| {
                                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
@@ -570,8 +584,11 @@ fn emitKernelDescriptor(
     try out.appendSlice(alloc, "\t.amdhsa_group_segment_fixed_size 0\n");
     try out.appendSlice(alloc, "\t.amdhsa_private_segment_fixed_size 0\n");
     try out.print(alloc, "\t.amdhsa_kernarg_size {d}\n", .{kernel_param_count * 8});
+    try out.appendSlice(alloc, "\t.amdhsa_user_sgpr_dispatch_ptr 1\n");
     try out.appendSlice(alloc, "\t.amdhsa_user_sgpr_kernarg_segment_ptr 1\n");
     try out.appendSlice(alloc, "\t.amdhsa_system_sgpr_workgroup_id_x 1\n");
+    try out.appendSlice(alloc, "\t.amdhsa_system_sgpr_workgroup_id_y 1\n");
+    try out.appendSlice(alloc, "\t.amdhsa_system_sgpr_workgroup_id_z 1\n");
     // FIXME: we should avoid hardcoding here
     try out.appendSlice(alloc, "\t.amdhsa_system_vgpr_workitem_id 2\n");
     try out.print(alloc, "\t.amdhsa_next_free_vgpr {d}\n", .{register_usage.vgpr_next});

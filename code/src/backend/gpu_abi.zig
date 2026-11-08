@@ -69,17 +69,13 @@ pub const GpuAbi = struct {
         return reg;
     }
 
-    pub fn regFor(self: @This(), op: Operand) !GpuReg {
+    pub fn regFor(_: @This(), op: Operand) !GpuReg {
         switch (op) {
             .reg => |reg| {
-                const physical_reg = try self.regForColor(reg.id, .{
-                    .count = reg.count(),
-                    .type = reg.type,
-                });
                 return .{
-                    .reg_type = physical_reg.type,
-                    .base = physical_reg.id,
-                    .count = physical_reg.count(),
+                    .reg_type = reg.type,
+                    .base = reg.id,
+                    .count = reg.count(),
                 };
             },
             else => return error.UnsupportedOperand,

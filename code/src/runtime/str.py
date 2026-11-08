@@ -36,6 +36,9 @@ class str:
     def __write__(self, fd: int, count: int) -> None:
         write(fd, self.data, count)
 
+    def __openat__(self, dirfd: i32, flags: i32, mode: i32) -> i32:
+        return openat(dirfd, self.data, flags, mode)
+
     def __print__(self, end:str = "\n") -> None:
         write(1, self, len(self))
         write(1, end, len(end))

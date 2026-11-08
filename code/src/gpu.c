@@ -97,6 +97,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
     .y = (uint32_t)workitems[1],
     .z = (uint32_t)workitems[2],
   };
+
   fprintf(stderr, "grid: %u x %u x %u\n", dims.x, dims.y, dims.z);
 
   uint16_t rank;
@@ -108,9 +109,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
     rank = 1;
   }
 
-  // TODO: do some validation on launch
-
-  const uint64_t n = dims.x * dims.y * dims.z;
+  const uint64_t n = (uint64_t)dims.x * dims.y * dims.z;
   ensure_hsa_initialized();
 
   hsa_agent_t gpu = {0};
@@ -119,6 +118,20 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   if (gpu.handle == 0) {
     fprintf(stderr, "no hsa gpu agent found\n");
     abort();
+  }
+
+  uint32_t max_workgroup_size;
+  uint16_t max_workgroup_dims[3];
+  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &max_workgroup_size), "hsa_agent_get_info(WORKGROUP_MAX_SIZE)");
+  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &max_workgroup_dims), "hsa_agent_get_info(WORKGROUP_MAX_DIM)");
+  const uint32_t grid[3] = {dims.x, dims.y, dims.z};
+  uint16_t group[3];
+  uint32_t budget = 256;
+  for (unsigned axis = 0; axis < 3; axis++) {
+    uint32_t size = grid[axis] < budget ? grid[axis] : budget;
+    while (grid[axis] % size != 0) size--;
+    group[axis] = (uint16_t)size;
+    budget /= size;
   }
 
   char name[64] = {0};
@@ -214,10 +227,10 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   hsa_kernel_dispatch_packet_t *packet = &((hsa_kernel_dispatch_packet_t*)shared_queue->base_address)[packet_index];
   memset(packet, 0, sizeof(*packet));
   packet->setup = rank << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-  packet->workgroup_size_x = (uint16_t)dims.x;
-  packet->workgroup_size_y = (uint16_t)dims.y;
-  packet->workgroup_size_z = (uint16_t)dims.z;
 
+  packet->workgroup_size_x = group[0];
+  packet->workgroup_size_y = group[1];
+  packet->workgroup_size_z = group[2];
   packet->grid_size_x = dims.x;
   packet->grid_size_y = dims.y;
   packet->grid_size_z = dims.z;
