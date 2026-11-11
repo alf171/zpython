@@ -3,6 +3,14 @@ from ml.data import TensorData
 from ml.ops import Ops
 
 def evaluate[T](node: Uop[T]) -> TensorData[T]:
+    if len(node.buffers) > 0:
+        return node.buffers[0]
+
+    res = evaluate_uncached(node)
+    node.buffers.append(res)
+    return res
+
+def evaluate_uncached[T](node: Uop[T]) -> TensorData[T]:
     if node.op == Ops.BUFFER:
         return node.buffers[0]
     elif node.op == Ops.ADD:
@@ -39,6 +47,9 @@ def evaluate[T](node: Uop[T]) -> TensorData[T]:
     elif node.op == Ops.MAX:
         lhs = evaluate(node.src[0])
         return lhs.max(node.axis)
+    elif node.op == Ops.ARGMAX:
+        lhs = evaluate(node.src[0])
+        return lhs.argmax(node.axis)
     elif node.op == Ops.BROADCAST:
         lhs = evaluate(node.src[0])
         return lhs.broadcast_to(node.shape)

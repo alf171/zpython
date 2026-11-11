@@ -104,3 +104,11 @@ class Uop[T]():
     def sum(self, axis: i32) -> Uop[T]:
         shape = (self.shape[0], 1) if axis == 1 else (1, self.shape[1])
         return Uop([self], Ops.SUM, shape, axis)
+
+    def max(self, axis: i32) -> Uop[T]:
+        shape = (self.shape[0], 1) if axis == 1 else (1, self.shape[1])
+        return Uop([self], Ops.MAX, shape, axis)
+
+    def argmax(self, axis: i32) -> Uop[T]:
+        shape = (self.shape[0], 1) if axis == 1 else (1, self.shape[1])
+        return Uop([self], Ops.ARGMAX, shape, axis)

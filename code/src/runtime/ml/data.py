@@ -16,6 +16,8 @@ from ml.kernels import sum_rows as _sum_rows_gpu
 from ml.kernels import sum_cols as _sum_cols_gpu
 from ml.kernels import max_rows as _max_rows_gpu
 from ml.kernels import max_cols as _max_cols_gpu
+from ml.kernels import argmax_rows as _argmax_rows_gpu
+from ml.kernels import argmax_cols as _argmax_cols_gpu
 from random import randn
 
 class TensorData[T]:
@@ -164,6 +166,16 @@ class TensorData[T]:
         else:
             out = TensorData.fill((self.rows, 1), zero)
             _max_rows_gpu(out.data, self, (self.rows, 1, 1))
+        return out
+
+    def argmax(self, axis: i32) -> TensorData[i32]:
+        zero: i32 = 0
+        if axis == 0:
+            out = TensorData.fill((1, self.cols), zero)
+            _argmax_cols_gpu(out.data, self, (self.cols, 1, 1))
+        else:
+            out = TensorData.fill((self.rows, 1), zero)
+            _argmax_rows_gpu(out.data, self, (self.rows, 1, 1))
         return out
 
     def __print__(self, end:str="\n") -> None:

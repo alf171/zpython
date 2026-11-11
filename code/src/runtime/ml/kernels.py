@@ -175,3 +175,31 @@ def max_rows[U](out: array[U], a: TensorData[U]) -> None:
         best = max(best, a.data[index_2d(row, col, a.row_stride, a.col_stride)])
 
     out[row] = best
+
+@gpu
+def argmax_cols[U](out: array[i32], a: TensorData[U]) -> None:
+    col = global_id(0)
+    best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
+    best_index: i32 = 0
+
+    for row in range(1, a.rows):
+        value = a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        if value > best:
+            best = value
+            best_index = row
+
+    out[col] = best_index
+
+@gpu
+def argmax_rows[U](out: array[i32], a: TensorData[U]) -> None:
+    row = global_id(0)
+    best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
+    best_index: i32 = 0
+
+    for col in range(1, a.cols):
+        value = a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        if value > best:
+            best = value
+            best_index = col
+
+    out[row] = best_index

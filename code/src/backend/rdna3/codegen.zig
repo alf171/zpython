@@ -141,7 +141,7 @@ pub fn emit(
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg_lo });
                                         try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base + 1, src_reg_hi });
                                     },
-                                    .i32, .f32 => {
+                                    .i32, .f32, .bool => {
                                         std.debug.assert(dst.reg_type == .vgpr);
                                         const src = try abi.regFor(top.operand);
                                         const src_reg = try src.toString(alloc);

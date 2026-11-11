@@ -91,14 +91,14 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   }
   static const char suffix[] = ".kd";
   memcpy(symbol_name + i, suffix, sizeof(suffix));
-  fprintf(stderr, "Looking up kernel symbol: '%s'\n", symbol_name);
+  // fprintf(stderr, "Looking up kernel symbol: '%s'\n", symbol_name);
   const LaunchDims dims = {
     .x = (uint32_t)workitems[0],
     .y = (uint32_t)workitems[1],
     .z = (uint32_t)workitems[2],
   };
 
-  fprintf(stderr, "grid: %u x %u x %u\n", dims.x, dims.y, dims.z);
+  // fprintf(stderr, "grid: %u x %u x %u\n", dims.x, dims.y, dims.z);
 
   uint16_t rank;
   if (dims.z != 1) {
@@ -160,7 +160,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   uint64_t kernel_object = 0;
   check(hsa_executable_symbol_get_info(kernel_symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernel_object), "hsa_executable_symbol_get_info");
 
-  fprintf(stderr, "Loaded kernel.kd: kernel object=0x%lx\n", kernel_object);
+  // fprintf(stderr, "Loaded kernel.kd: kernel object=0x%lx\n", kernel_object);
 
   // load a sinlge shared queue. currently our execution model is single threaded so this works well
   uint32_t queue_max_size = 0;
@@ -170,7 +170,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   }
   hsa_signal_t completion_signal;
   check(hsa_signal_create(1, 0, NULL, &completion_signal), "hsa_signal_create");
-  fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", shared_queue->id, shared_queue->size, completion_signal.handle);
+  // fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", shared_queue->id, shared_queue->size, completion_signal.handle);
 
   // get kernel_args
   hsa_region_t kernel_region = {0};
@@ -185,14 +185,14 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   check(hsa_memory_allocate(kernel_region, arg_count * sizeof(*kernel_args), (void **)&kernel_args), "hsa_memory_allocate");
   void **argument_device_ptrs = calloc(arg_count, sizeof(*argument_device_ptrs));
   for (uint64_t i = 0; i < arg_count; i++) {
-    fprintf(
-      stderr,
-      "arg[%lu] value=%#lx bytes=%lu layout=%#lx\n",
-      i,
-      arg_slots[3 * i],
-      arg_slots[3 * i + 1],
-      arg_slots[3 * i + 2]
-    );
+    // fprintf(
+    //   stderr,
+    //   "arg[%lu] value=%#lx bytes=%lu layout=%#lx\n",
+    //   i,
+    //   arg_slots[3 * i],
+    //   arg_slots[3 * i + 1],
+    //   arg_slots[3 * i + 2]
+    // );
     uint64_t byte_count = arg_slots[3 * i + 1];
     const GpuInstanceLayout *layout = (const GpuInstanceLayout *)(uintptr_t)arg_slots[3 * i + 2];
     if (byte_count != 0) {
@@ -212,7 +212,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
           size_t bytes = sizeof(count) + count * field->element_size;
           void *array_device_ptr;
           check(hsa_amd_memory_lock(array_host_ptr, bytes, &gpu, 1, &array_device_ptr), "hsa_amd_memory_lock");
-          fprintf(stderr, "list host=%p device=%p\n", array_host_ptr, array_device_ptr);
+          // fprintf(stderr, "list host=%p device=%p\n", array_host_ptr, array_device_ptr);
         }
       }
       check(hsa_amd_memory_lock(instance_host_ptr, byte_count, &gpu, 1, &argument_device_ptrs[i]), "hsa_amd_memory_lock");
@@ -283,10 +283,10 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   }
   free(argument_device_ptrs);
 
-   fprintf(
-       stderr,
-       "Kernel completed: signal=%ld\n",
-       completion);
+   // fprintf(
+   //     stderr,
+   //     "Kernel completed: signal=%ld\n",
+   //     completion);
 
   check(hsa_memory_free(kernel_args), "hsa_memory_free(kernel_args)");
 

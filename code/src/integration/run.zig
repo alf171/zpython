@@ -69,6 +69,7 @@ pub fn main(init: std.process.Init) !void {
     const input_file = args[1];
     const output_file = args[2];
     var should_run = false;
+    var live_output = false;
     var should_optim = false;
     var should_dump_ir = false;
     var should_dump_stats = false;
@@ -83,6 +84,7 @@ pub fn main(init: std.process.Init) !void {
     };
     for (args[3..]) |arg| {
         if (std.mem.eql(u8, arg, "--run")) should_run = true;
+        if (std.mem.eql(u8, arg, "--live")) live_output = true;
         if (std.mem.eql(u8, arg, "--optim")) should_optim = true;
         if (std.mem.eql(u8, arg, "--dump-ir")) should_dump_ir = true;
         if (std.mem.eql(u8, arg, "--dump-stats")) should_dump_stats = true;
@@ -363,17 +365,32 @@ pub fn main(init: std.process.Init) !void {
         timer.finish(.backend_link, io);
         // run!
         timer.begin(.backend_execute, io);
-        const run_result = try runCommand(alloc, io, &.{"/tmp/integration_out"});
-        timer.finish(.backend_execute, io);
-        defer alloc.free(run_result.stdout);
-        defer alloc.free(run_result.stderr);
+        if (live_output) {
+            var child = try std.process.spawn(io, .{
+                .argv = &.{"/tmp/integration_out"},
+                .stdout = .inherit,
+                .stderr = .inherit,
+            });
+            defer child.kill(io);
 
-        std.debug.print("\n", .{});
-        if (use_escape_codes) std.debug.print("{s}", .{underline_code});
-        std.debug.print("actual output:", .{});
-        if (use_escape_codes) std.debug.print("{s}", .{reset_code});
-        std.debug.print("\n", .{});
-        std.debug.print("{s}", .{run_result.stdout});
+            const term = try child.wait(io);
+            timer.finish(.backend_execute, io);
+            if (term == .exited and term.exited != 0) {
+                return error.CommandFailed;
+            }
+        } else {
+            const run_result = try runCommand(alloc, io, &.{"/tmp/integration_out"});
+            timer.finish(.backend_execute, io);
+            defer alloc.free(run_result.stdout);
+            defer alloc.free(run_result.stderr);
+
+            std.debug.print("\n", .{});
+            if (use_escape_codes) std.debug.print("{s}", .{underline_code});
+            std.debug.print("actual output:", .{});
+            if (use_escape_codes) std.debug.print("{s}", .{reset_code});
+            std.debug.print("\n", .{});
+            std.debug.print("{s}", .{run_result.stdout});
+        }
     }
     timer.finish(.backend_total, io);
     if (should_dump_time) {

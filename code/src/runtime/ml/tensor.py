@@ -141,10 +141,13 @@ class Tensor[T]:
         return Tensor._init(self.uop.sum(axis))
 
     def max(self, axis: i32) -> Tensor[T]:
-        shape = (self.uop.shape[0], 1) if axis == 1 else (1, self.uop.shape[1])
-        uop = Uop([self.uop], Ops.MAX, shape, axis)
-        res = Tensor._init(uop)
-        return res
+        return Tensor._init(self.uop.max(axis))
+
+    def argmax(self, axis: i32) -> Tensor[i32]:
+        # HACK: eager
+        values = evaluate(self.uop)
+        indicies = values.argmax(axis)
+        return Tensor._init(Uop.from_data(indicies))
 
     def __print__(self, end:str="\n") -> None:
         print(self.uop, end=end)

@@ -987,8 +987,8 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
 
             const class = ir_builder.getClass(instance.class_id);
             const field_index = class.kind.record.findFieldIdx(name) orelse {
-                std.debug.print("cant find `{s}` in class `{s}`\n", .{ name, class.name });
-                return error.CantFindField;
+                diagnostics.report(stmt, ir_builder.current_file, "class '{s}' has not attribute '{s}'", .{ class.name, name });
+                return error.DiagnosticReported;
             };
             const field = &class.kind.record.fields.items[field_index];
             const resolved_field_type = try class.kind.record.resolveFieldType(field, instance, alloc);
