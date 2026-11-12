@@ -39,10 +39,29 @@ def evaluate_uncached[T](node: Uop[T]) -> TensorData[T]:
         rhs = evaluate(cast(Uop[T], node.src[2]))
         return TensorData.where(condition, lhs, rhs)
     elif node.op == Ops.GT:
-        # ughhh why do we need f32...
         lhs = evaluate(cast(Uop[f32], node.src[0]))
         rhs = evaluate(cast(Uop[f32], node.src[1]))
         return lhs > rhs
+    elif node.op == Ops.GE:
+        lhs = evaluate(cast(Uop[f32], node.src[0]))
+        rhs = evaluate(cast(Uop[f32], node.src[1]))
+        return lhs >= rhs
+    elif node.op == Ops.LT:
+        lhs = evaluate(cast(Uop[f32], node.src[0]))
+        rhs = evaluate(cast(Uop[f32], node.src[1]))
+        return lhs < rhs
+    elif node.op == Ops.LE:
+        lhs = evaluate(cast(Uop[f32], node.src[0]))
+        rhs = evaluate(cast(Uop[f32], node.src[1]))
+        return lhs <= rhs
+    elif node.op == Ops.EQ:
+        lhs = evaluate(cast(Uop[f32], node.src[0]))
+        rhs = evaluate(cast(Uop[f32], node.src[1]))
+        return lhs == rhs
+    elif node.op == Ops.NE:
+        lhs = evaluate(cast(Uop[f32], node.src[0]))
+        rhs = evaluate(cast(Uop[f32], node.src[1]))
+        return lhs != rhs
     elif node.op == Ops.EXP:
         lhs = evaluate(cast(Uop[T], node.src[0]))
         return lhs.exp()

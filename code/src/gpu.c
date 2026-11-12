@@ -14,6 +14,13 @@ typedef struct {
   uint32_t z;
 } LaunchDims;
 
+typedef struct {
+  hsa_agent_t agent;
+  hsa_executable_t executable;
+  hsa_queue_t *queue;
+  hsa_region_t kernelarg_region;
+} GpuRuntime;
+
 static void check(hsa_status_t status, const char *operation) {
   if (status == HSA_STATUS_SUCCESS)
     return;
@@ -58,12 +65,13 @@ static hsa_status_t find_kernarg_region(hsa_region_t region, void *data) {
   return status;
 }
 
-static hsa_queue_t* shared_queue = NULL;
+static GpuRuntime runtime = {0};
 
 static void shutdown_hsa() {
-  if (shared_queue != NULL) {
-    check(hsa_queue_destroy(shared_queue), "hsa_queue_destroy");
+  if (runtime.queue != NULL) {
+    check(hsa_queue_destroy(runtime.queue), "hsa_queue_destroy");
   }
+  check(hsa_executable_destroy(runtime.executable), "hsa_executable_destroy");
   check(hsa_shut_down(), "hsa_shut_down");
 }
 
@@ -73,6 +81,43 @@ static void ensure_hsa_initialized(void) {
 
   check(hsa_init(), "hsa_init");
   if (atexit(shutdown_hsa) != 0) abort();
+
+  // agent
+  check(hsa_iterate_agents(find_gpu, &runtime.agent), "hsa_iterate_agents");
+  if (runtime.agent.handle == 0) {
+    fprintf(stderr, "no hsa gpu agent found\n");
+    abort();
+  }
+
+  // executable
+  hsa_profile_t profile;
+  check(hsa_agent_get_info(runtime.agent, HSA_AGENT_INFO_PROFILE, &profile), "hsa_agent_get_info(PROFILE)");
+  int code_object_fd = open("/tmp/device.co", O_RDONLY);
+  if (code_object_fd < 0) {
+    perror("open /tmp/device.co");
+    abort();
+  }
+  hsa_code_object_reader_t reader;
+  check(hsa_code_object_reader_create_from_file(code_object_fd, &reader), "hsa_code_object_reader_create_from_file");
+  check(hsa_executable_create_alt(profile, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT, NULL, &runtime.executable), "hsa_executable_create_alt");
+  hsa_loaded_code_object_t loaded_code_obj;
+  check(hsa_executable_load_agent_code_object(runtime.executable, runtime.agent, reader, NULL, &loaded_code_obj), "hsa_executable_load_agent_code_object");
+  check(hsa_executable_freeze(runtime.executable, NULL), "hsa_executable_freeze");
+  // destroy
+  check(hsa_code_object_reader_destroy(reader), "hsa_code_object_reader_destroy");
+  close(code_object_fd);
+  // queue
+  uint32_t queue_max_size = 0;
+  check(hsa_agent_get_info(runtime.agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_max_size), "hsa_agent_get_info");
+  check(hsa_queue_create(runtime.agent, queue_max_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, UINT32_MAX, UINT32_MAX, &runtime.queue), "hsa_queue_create");
+  // get kernel arg region
+  check(hsa_agent_iterate_regions(runtime.agent, find_kernarg_region, &runtime.kernelarg_region), "hsa_agent_iterate_regions");
+
+  if (runtime.kernelarg_region.handle == 0) {
+    fprintf(stderr, "No kernarg region found\n");
+    abort();
+  }
+
   initialized = 1;
 }
 
@@ -112,18 +157,10 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   const uint64_t n = (uint64_t)dims.x * dims.y * dims.z;
   ensure_hsa_initialized();
 
-  hsa_agent_t gpu = {0};
-  check(hsa_iterate_agents(find_gpu, &gpu), "hsa_iterate_agents");
-
-  if (gpu.handle == 0) {
-    fprintf(stderr, "no hsa gpu agent found\n");
-    abort();
-  }
-
   uint32_t max_workgroup_size;
   uint16_t max_workgroup_dims[3];
-  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &max_workgroup_size), "hsa_agent_get_info(WORKGROUP_MAX_SIZE)");
-  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &max_workgroup_dims), "hsa_agent_get_info(WORKGROUP_MAX_DIM)");
+  check(hsa_agent_get_info(runtime.agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &max_workgroup_size), "hsa_agent_get_info(WORKGROUP_MAX_SIZE)");
+  check(hsa_agent_get_info(runtime.agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &max_workgroup_dims), "hsa_agent_get_info(WORKGROUP_MAX_DIM)");
   const uint32_t grid[3] = {dims.x, dims.y, dims.z};
   uint16_t group[3];
   uint32_t budget = 256;
@@ -135,54 +172,22 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   }
 
   char name[64] = {0};
-  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_NAME, name), "hsa_agent_info(name)");
-  hsa_profile_t profile;
-  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_PROFILE, &profile), "hsa_agent_get_info(PROFILE)");
-  int code_object_fd = open("/tmp/device.co", O_RDONLY);
-  if (code_object_fd < 0) {
-    perror("open /tmp/device.co");
-    abort();
-  }
-
-  hsa_code_object_reader_t reader;
-  check(hsa_code_object_reader_create_from_file(code_object_fd, &reader), "hsa_code_object_reader_create_from_file");
-
-  hsa_executable_t executable;
-  check(hsa_executable_create_alt(profile, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT, NULL, &executable), "hsa_executable_create_alt");
-
-  hsa_loaded_code_object_t loaded_code_obj;
-  check(hsa_executable_load_agent_code_object(executable, gpu, reader, NULL, &loaded_code_obj), "hsa_executable_load_agent_code_object");
-  check(hsa_executable_freeze(executable, NULL), "hsa_executable_freeze");
+  check(hsa_agent_get_info(runtime.agent, HSA_AGENT_INFO_NAME, name), "hsa_agent_info(name)");
 
   hsa_executable_symbol_t kernel_symbol;
-  check(hsa_executable_get_symbol_by_name(executable, symbol_name, &gpu, &kernel_symbol), "hsa_executable_get_symbol_by_name");
+  check(hsa_executable_get_symbol_by_name(runtime.executable, symbol_name, &runtime.agent, &kernel_symbol), "hsa_executable_get_symbol_by_name");
 
   uint64_t kernel_object = 0;
   check(hsa_executable_symbol_get_info(kernel_symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernel_object), "hsa_executable_symbol_get_info");
 
   // fprintf(stderr, "Loaded kernel.kd: kernel object=0x%lx\n", kernel_object);
 
-  // load a sinlge shared queue. currently our execution model is single threaded so this works well
-  uint32_t queue_max_size = 0;
-  check(hsa_agent_get_info(gpu, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_max_size), "hsa_agent_get_info");
-  if (shared_queue == NULL) {
-    check(hsa_queue_create(gpu, queue_max_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, UINT32_MAX, UINT32_MAX, &shared_queue), "hsa_queue_create");
-  }
   hsa_signal_t completion_signal;
   check(hsa_signal_create(1, 0, NULL, &completion_signal), "hsa_signal_create");
   // fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", shared_queue->id, shared_queue->size, completion_signal.handle);
 
-  // get kernel_args
-  hsa_region_t kernel_region = {0};
-  check(hsa_agent_iterate_regions(gpu, find_kernarg_region, &kernel_region), "hsa_agent_iterate_regions");
-
-  if (kernel_region.handle == 0) {
-    fprintf(stderr, "No kernarg region found\n");
-    abort();
-  }
-
   uint64_t *kernel_args = NULL;
-  check(hsa_memory_allocate(kernel_region, arg_count * sizeof(*kernel_args), (void **)&kernel_args), "hsa_memory_allocate");
+  check(hsa_memory_allocate(runtime.kernelarg_region, arg_count * sizeof(*kernel_args), (void **)&kernel_args), "hsa_memory_allocate");
   void **argument_device_ptrs = calloc(arg_count, sizeof(*argument_device_ptrs));
   for (uint64_t i = 0; i < arg_count; i++) {
     // fprintf(
@@ -211,20 +216,20 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
 
           size_t bytes = sizeof(count) + count * field->element_size;
           void *array_device_ptr;
-          check(hsa_amd_memory_lock(array_host_ptr, bytes, &gpu, 1, &array_device_ptr), "hsa_amd_memory_lock");
+          check(hsa_amd_memory_lock(array_host_ptr, bytes, &runtime.agent, 1, &array_device_ptr), "hsa_amd_memory_lock");
           // fprintf(stderr, "list host=%p device=%p\n", array_host_ptr, array_device_ptr);
         }
       }
-      check(hsa_amd_memory_lock(instance_host_ptr, byte_count, &gpu, 1, &argument_device_ptrs[i]), "hsa_amd_memory_lock");
+      check(hsa_amd_memory_lock(instance_host_ptr, byte_count, &runtime.agent, 1, &argument_device_ptrs[i]), "hsa_amd_memory_lock");
       kernel_args[i] = (uint64_t)argument_device_ptrs[i];
     } else {
       kernel_args[i] = arg_slots[3*i];
     }
   }
 
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(shared_queue, 1);
-  uint32_t packet_index = packet_id & (shared_queue->size - 1);
-  hsa_kernel_dispatch_packet_t *packet = &((hsa_kernel_dispatch_packet_t*)shared_queue->base_address)[packet_index];
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(runtime.queue, 1);
+  uint32_t packet_index = packet_id & (runtime.queue->size - 1);
+  hsa_kernel_dispatch_packet_t *packet = &((hsa_kernel_dispatch_packet_t*)runtime.queue->base_address)[packet_index];
   memset(packet, 0, sizeof(*packet));
   packet->setup = rank << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
@@ -256,7 +261,7 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
       __ATOMIC_RELEASE);
 
   hsa_signal_store_screlease(
-      shared_queue->doorbell_signal,
+      runtime.queue->doorbell_signal,
       packet_id);
    hsa_signal_value_t completion =
        hsa_signal_wait_scacquire(
@@ -291,8 +296,4 @@ void gpu_launch(const uint64_t *arg_slots, uint64_t arg_count, const uint64_t *w
   check(hsa_memory_free(kernel_args), "hsa_memory_free(kernel_args)");
 
   check(hsa_signal_destroy(completion_signal), "hsa_signal_destroy");
-
-  check(hsa_executable_destroy(executable), "hsa_executable_destroy");
-  check(hsa_code_object_reader_destroy(reader), "hsa_code_object_reader_destroy");
-  close(code_object_fd);
 }

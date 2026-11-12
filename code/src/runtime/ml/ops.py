@@ -16,3 +16,8 @@ class Ops(Enum):
     TRANSPOSE = 13
     WHERE = 14
     GT = 15
+    GE = 16
+    LT = 17
+    LE = 18
+    EQ = 19
+    NE = 20

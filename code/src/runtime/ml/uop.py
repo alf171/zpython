@@ -49,24 +49,19 @@ class Uop[T]():
         return Uop([self, other], Ops.GT, self.shape, 0)
 
     def __ge__(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) >= evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.GE, self.shape, 0)
 
     def __lt__(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) < evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.LT, self.shape, 0)
 
     def __le__(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) <= evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.LE, self.shape, 0)
 
     def eq(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) == evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.EQ, self.shape, 0)
 
     def ne(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) != evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.NE, self.shape, 0)
 
     def transpose(self) -> Uop[T]:
         shape = (self.shape[1], self.shape[0])
