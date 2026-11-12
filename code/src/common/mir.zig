@@ -44,26 +44,6 @@ pub const SubscriptStore = struct {
     src: ValueRef,
 };
 
-pub const FunctionCallee = union(enum) {
-    /// a function name to call
-    direct: []const u8,
-    /// a value holding our function
-    indirect: TypedOperand,
-
-    pub fn clone(self: @This(), alloc: std.mem.Allocator) !@This() {
-        return switch (self) {
-            .direct => |d| .{ .direct = try alloc.dupe(u8, d) },
-            .indirect => |ind| .{ .indirect = try ind.clone(alloc) },
-        };
-    }
-};
-
-pub const FunctionCallInst = struct {
-    dst: ?TypedOperand,
-    callee: FunctionCallee,
-    args: []TypedOperand,
-};
-
 /// TODO: move print, write, hash into here
 ///
 /// ops with defered resolution
@@ -135,16 +115,6 @@ pub const Instruction = union(enum) {
         dst: TypedOperand,
         name: []const u8,
         index: usize,
-    },
-    function_call: FunctionCallInst,
-    function_return: struct {
-        value: ?TypedOperand,
-    },
-    // used to pass functions as value
-    function_ref: struct {
-        dst: TypedOperand,
-        // `module_name`__`function_name`
-        label: []const u8,
     },
     // similar to `load_local` but for captures
     load_capture: struct {
@@ -248,26 +218,6 @@ pub const Instruction = union(enum) {
                 alloc.free(fp.label);
                 fp.dst.deinit(alloc);
                 alloc.free(fp.name);
-            },
-            .function_ref => |fr| {
-                fr.dst.type.deinit(alloc);
-                alloc.free(fr.label);
-            },
-            .function_return => |fr| {
-                if (fr.value) |val| val.deinit(alloc);
-            },
-            .function_call => |fc| {
-                if (fc.dst) |dst| {
-                    dst.deinit(alloc);
-                }
-                switch (fc.callee) {
-                    .direct => |d| alloc.free(d),
-                    .indirect => |ind| ind.deinit(alloc),
-                }
-                for (fc.args) |arg| {
-                    arg.deinit(alloc);
-                }
-                alloc.free(fc.args);
             },
             .tuple_literal => |tl| {
                 tl.dst.deinit(alloc);
@@ -463,38 +413,9 @@ pub const Instruction = union(enum) {
                 ss.src.print();
                 debugPrint("\n", .{});
             },
-            .function_ref => |fr| {
-                fr.dst.operand.print();
-                debugPrint(" <- {s}\n", .{fr.label});
-            },
             .function_param => |fp| {
                 fp.dst.operand.print();
                 debugPrint(" <- param {d}\n", .{fp.index});
-            },
-            .function_call => |fc| {
-                if (fc.dst) |dst| {
-                    dst.operand.print();
-                    debugPrint(" <- ", .{});
-                }
-                switch (fc.callee) {
-                    .direct => |function_name| debugPrint("{s}(", .{function_name}),
-                    .indirect => |ind| {
-                        ind.operand.print();
-                        debugPrint("(", .{});
-                    },
-                }
-                for (fc.args, 0..) |arg, i| {
-                    if (i != 0) debugPrint(", ", .{});
-                    arg.operand.print();
-                }
-                debugPrint(")\n", .{});
-            },
-            .function_return => |fr| {
-                debugPrint("return ", .{});
-                if (fr.value) |value| {
-                    value.operand.print();
-                }
-                debugPrint("\n", .{});
             },
             .gpu_launch => |gl| {
                 debugPrint("{s}(", .{gl.kernel});
@@ -566,17 +487,6 @@ pub const Instruction = union(enum) {
                     .constant => {},
                 }
             },
-            .function_call => |*fc| {
-                switch (fc.callee) {
-                    .direct => {},
-                    .indirect => |*dir| {
-                        if (dir.operand.equal(old)) dir.operand = new;
-                    },
-                }
-                for (fc.args) |*arg| {
-                    if (arg.operand.equal(old)) arg.operand = new;
-                }
-            },
             .global_idx => |*gi| {
                 switch (gi.axis) {
                     .top => |*top| {
@@ -624,13 +534,6 @@ pub const Instruction = union(enum) {
             .function_param => |*fp| {
                 if (fp.dst.operand.equal(old)) fp.dst.operand = new;
             },
-            .function_call => |*fc| {
-                if (fc.dst) |*op| {
-                    if (op.operand.equal(old)) {
-                        op.operand = new;
-                    }
-                }
-            },
             .global_idx => |*gi| {
                 if (gi.dst.operand.equal(old)) {
                     gi.dst.operand = new;
@@ -669,10 +572,7 @@ pub const Instruction = union(enum) {
             .subscript_store => null,
             .print => null,
             .hash => |*h| .{ .top = &h.dst },
-            .function_ref => |*fr| .{ .top = &fr.dst },
             .function_param => |*fp| .{ .top = &fp.dst },
-            .function_call => |*fc| if (fc.dst) |*op| .{ .top = op } else null,
-            .function_return => null,
             .global_idx => |*gi| .{ .top = &gi.dst },
             .gpu_launch => null,
             .field_store => null,
@@ -761,24 +661,7 @@ pub const Instruction = union(enum) {
                     .constant => {},
                 }
             },
-            .function_ref => {},
             .function_param => {},
-            .function_call => |*fc| {
-                switch (fc.callee) {
-                    .direct => {},
-                    .indirect => |*ind| {
-                        try res.append(alloc, .{ .top = ind });
-                    },
-                }
-                for (fc.args) |*arg| {
-                    try res.append(alloc, .{ .top = arg });
-                }
-            },
-            .function_return => |*fc| {
-                if (fc.value) |*top| {
-                    try res.append(alloc, .{ .top = top });
-                }
-            },
             .global_idx => |*gi| {
                 switch (gi.axis) {
                     .top => |*top| {
@@ -847,9 +730,6 @@ pub const Instruction = union(enum) {
                 .dst = try l.dst.clone(alloc),
                 .src = try l.src.clone(alloc),
             } },
-            .function_return => |fr| .{ .function_return = .{
-                .value = if (fr.value) |value| try value.clone(alloc) else null,
-            } },
             .range => |r| .{ .range = .{
                 .dst = try r.dst.clone(alloc),
                 .start = try r.start.clone(alloc),
@@ -873,23 +753,6 @@ pub const Instruction = union(enum) {
                     .index = try ss.index.clone(alloc),
                     .src = try ss.src.clone(alloc),
                 },
-            },
-            .function_ref => |fr| .{ .function_ref = .{
-                .dst = try fr.dst.clone(alloc),
-                .label = try alloc.dupe(u8, fr.label),
-            } },
-            .function_call => |fc| blk: {
-                const new_args = try alloc.alloc(TypedOperand, fc.args.len);
-                for (fc.args, 0..) |arg, i| {
-                    new_args[i] = try arg.clone(alloc);
-                }
-                break :blk .{
-                    .function_call = .{
-                        .dst = if (fc.dst) |dst| try dst.clone(alloc) else null,
-                        .callee = try fc.callee.clone(alloc),
-                        .args = new_args,
-                    },
-                };
             },
             .array_literal => |al| blk: {
                 const elements = try alloc.alloc(ValueRef, al.elements.len);

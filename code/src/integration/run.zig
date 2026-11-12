@@ -375,7 +375,8 @@ pub fn main(init: std.process.Init) !void {
 
             const term = try child.wait(io);
             timer.finish(.backend_execute, io);
-            if (term == .exited and term.exited != 0) {
+            if (term != .exited or term.exited != 0) {
+                std.debug.print("program terminated: {any}\n", .{term});
                 return error.CommandFailed;
             }
         } else {

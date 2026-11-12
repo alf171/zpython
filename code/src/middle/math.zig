@@ -31,11 +31,11 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
                     for (ic.args, 0..) |arg, i| {
                         args[i] = try arg.clone(alloc);
                     }
-                    try new_instructions.append(alloc, .{ .function_call = .{
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                         .dst = if (ic.dst) |d| try d.clone(alloc) else null,
                         .callee = .{ .direct = try alloc.dupe(u8, uop_symbol.?) },
                         .args = args,
-                    } });
+                    } } });
                     instruction.deinit(alloc);
                 },
                 .lir => |lir| switch (lir) {
@@ -50,14 +50,14 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             else => unreachable,
                         };
 
-                        try new_instructions.append(alloc, .{ .function_call = .{
+                        try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                             .dst = try bop.dst.clone(alloc),
                             .callee = .{ .direct = try alloc.dupe(u8, symbol) },
                             .args = try alloc.dupe(TypedOperand, &.{
                                 try bop.lhs.clone(alloc),
                                 try bop.rhs.clone(alloc),
                             }),
-                        } });
+                        } } });
                         instruction.deinit(alloc);
                     },
                     .unaryop => |uop| {
@@ -71,13 +71,13 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
                             else => unreachable,
                         };
 
-                        try new_instructions.append(alloc, .{ .function_call = .{
+                        try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                             .dst = try uop.dst.clone(alloc),
                             .callee = .{ .direct = try alloc.dupe(u8, symbol) },
                             .args = try alloc.dupe(TypedOperand, &.{
                                 try uop.src.clone(alloc),
                             }),
-                        } });
+                        } } });
                         instruction.deinit(alloc);
                     },
                     else => try new_instructions.append(alloc, instruction.*),

@@ -434,32 +434,32 @@ fn emitFunction(
 
                             try out.print(alloc, "\tsub {s}, x29, #{d}\n", .{ dst, bytes });
                         },
+                        // abi specific component are handled in pre_color
+                        .function_call => |fc| {
+                            switch (fc.callee) {
+                                .direct => |function_name| {
+                                    try out.print(alloc, "\tbl _{s}\n", .{function_name});
+                                },
+                                .indirect => |ind| {
+                                    const addr = try abi.regFor(ind.operand);
+                                    try out.print(alloc, "\tblr {s}\n", .{addr});
+                                },
+                            }
+                        },
+                        // abi specific component are handled in pre_color
+                        .function_return => {
+                            try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
+                        },
+                        .function_ref => |fr| {
+                            const dst = try abi.regFor(fr.dst.operand);
+                            try out.print(alloc, "\tadrp {s}, _{s}@PAGE\n", .{ dst, fr.label });
+                            try out.print(alloc, "\tadd {s}, {s}, _{s}@PAGEOFF\n", .{ dst, dst, fr.label });
+                        },
                         else => |lir| {
                             std.debug.panic("ir instruction doesnt have a mapping in arm backend: {s}\n", .{@tagName(lir)});
                             return error.NotSupported;
                         },
                     }
-                },
-                // abi specific component are handled in pre_color
-                .function_call => |fc| {
-                    switch (fc.callee) {
-                        .direct => |function_name| {
-                            try out.print(alloc, "\tbl _{s}\n", .{function_name});
-                        },
-                        .indirect => |ind| {
-                            const addr = try abi.regFor(ind.operand);
-                            try out.print(alloc, "\tblr {s}\n", .{addr});
-                        },
-                    }
-                },
-                // abi specific component are handled in pre_color
-                .function_return => {
-                    try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
-                },
-                .function_ref => |fr| {
-                    const dst = try abi.regFor(fr.dst.operand);
-                    try out.print(alloc, "\tadrp {s}, _{s}@PAGE\n", .{ dst, fr.label });
-                    try out.print(alloc, "\tadd {s}, {s}, _{s}@PAGEOFF\n", .{ dst, dst, fr.label });
                 },
                 else => |ir| {
                     std.debug.panic("ir instruction doesnt have a mapping in arm backend: {s}\n", .{@tagName(ir)});

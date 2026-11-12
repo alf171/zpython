@@ -59,13 +59,13 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                             try arg.clone(alloc),
                         );
                     }
-                    try new_instructions.append(alloc, .{ .function_call = .{
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                         .dst = null,
                         .callee = .{
                             .direct = try alloc.dupe(u8, method.function_label),
                         },
                         .args = try new_function_args.toOwnedSlice(alloc),
-                    } });
+                    } } });
                     instruction.deinit(alloc);
                 },
                 // dst <- src[index]
@@ -92,7 +92,7 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                     arguments[0] = try s.src.clone(alloc);
                     arguments[1] = try s.index.clone(alloc);
 
-                    try new_instructions.append(alloc, .{
+                    try new_instructions.append(alloc, .{ .lir = .{
                         .function_call = .{
                             .dst = try s.dst.clone(alloc),
                             .callee = .{
@@ -100,7 +100,7 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                             },
                             .args = arguments,
                         },
-                    });
+                    } });
                     instruction.deinit(alloc);
                 },
                 .subscript_store => |ss| {
@@ -138,15 +138,13 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                         },
                     };
 
-                    try new_instructions.append(alloc, .{
-                        .function_call = .{
-                            .dst = null,
-                            .callee = .{
-                                .direct = try alloc.dupe(u8, method.function_label),
-                            },
-                            .args = arguments,
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                        .dst = null,
+                        .callee = .{
+                            .direct = try alloc.dupe(u8, method.function_label),
                         },
-                    });
+                        .args = arguments,
+                    } } });
                     instruction.deinit(alloc);
                 },
                 // len
@@ -170,15 +168,13 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                     }
                     arguments[0] = try l.src.clone(alloc);
 
-                    try new_instructions.append(alloc, .{
-                        .function_call = .{
-                            .dst = try l.dst.clone(alloc),
-                            .callee = .{
-                                .direct = try alloc.dupe(u8, method.function_label),
-                            },
-                            .args = arguments,
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                        .dst = try l.dst.clone(alloc),
+                        .callee = .{
+                            .direct = try alloc.dupe(u8, method.function_label),
                         },
-                    });
+                        .args = arguments,
+                    } } });
                     instruction.deinit(alloc);
                 },
                 .lir => |lir| switch (lir) {
@@ -245,15 +241,13 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                         else
                             try bop.dst.clone(alloc);
 
-                        try new_instructions.append(alloc, .{
-                            .function_call = .{
-                                .dst = call_dst,
-                                .callee = .{
-                                    .direct = try alloc.dupe(u8, resolved.?.method.function_label),
-                                },
-                                .args = try resolved.?.arguments.toOwnedSlice(alloc),
+                        try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                            .dst = call_dst,
+                            .callee = .{
+                                .direct = try alloc.dupe(u8, resolved.?.method.function_label),
                             },
-                        });
+                            .args = try resolved.?.arguments.toOwnedSlice(alloc),
+                        } } });
                         // not_contains shares __contains__ with a negation
                         if (negate) {
                             try new_instructions.append(alloc, .{
@@ -283,13 +277,11 @@ fn lowerCall(program: *Program, function: *Function, operator_only: bool, alloc:
                         const method = class.kind.record.findMethod(builtin.?) orelse {
                             return error.MissingUnaryOp;
                         };
-                        try new_instructions.append(alloc, .{
-                            .function_call = .{
-                                .dst = try uop.dst.clone(alloc),
-                                .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
-                                .args = try alloc.dupe(TypedOperand, &.{try uop.src.clone(alloc)}),
-                            },
-                        });
+                        try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                            .dst = try uop.dst.clone(alloc),
+                            .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
+                            .args = try alloc.dupe(TypedOperand, &.{try uop.src.clone(alloc)}),
+                        } } });
                         instruction.deinit(alloc);
                     },
                     else => try new_instructions.append(alloc, instruction.*),
@@ -332,13 +324,13 @@ fn lowerStorageFunction(program: *Program, function: *Function, alloc: std.mem.A
                     const args = try alloc.dupe(TypedOperand, &.{
                         .{ .operand = size_temp, .type = .i64 },
                     });
-                    try new_instructions.append(alloc, .{ .function_call = .{
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                         .dst = try ca.dst.clone(alloc),
                         .callee = .{
                             .direct = try alloc.dupe(u8, "arena_malloc"),
                         },
                         .args = args,
-                    } });
+                    } } });
                     instruction.deinit(alloc);
                 },
                 // self.attr = attr

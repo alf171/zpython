@@ -158,17 +158,18 @@ pub const RecordInfo = struct {
         instance: ClassInstance,
         alloc: std.mem.Allocator,
     ) !TypeInfo {
-        if (self.type_params.len == 0) {
+        if (self.type_params.len == 0 or !field.type.containsGenericVariable(null)) {
             return try field.type.clone(alloc);
         }
 
-        if (self.type_params.len != instance.args.len) {
+        const args = instance.args orelse return error.ErasedTypeAccess;
+        if (self.type_params.len != args.len) {
             return error.InvalidTypeArgCount;
         }
 
         var bindings: TypeBindings = .init(alloc);
         defer bindings.deinit(alloc);
-        for (self.type_params, instance.args) |type_param, arg| {
+        for (self.type_params, args) |type_param, arg| {
             const owned_arg = try arg.clone(alloc);
             errdefer owned_arg.deinit(alloc);
             try bindings.put(type_param.id, owned_arg);
@@ -198,7 +199,10 @@ pub const RecordInfo = struct {
             );
         }
         for (self.fields.items[0..field_index]) |*field| {
-            const field_type = try self.resolveFieldType(field, instance, alloc);
+            const field_type = if (field.type == .type_variable or field.type == .@"union")
+                try self.resolveFieldType(field, instance, alloc)
+            else
+                try field.type.clone(alloc);
             defer field_type.deinit(alloc);
             offset += try field_type.sizeOfType();
         }

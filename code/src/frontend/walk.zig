@@ -50,7 +50,7 @@ const PyObject = c.PyObject;
 
 const ExprKind = enum { BinOp, UnaryOp, Compare, Constant, Name, Call, List, Tuple, Subscript, IfExp, Attribute, BoolOp, FString, Lambda, Dict, Unknown };
 
-const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, Char, GlobalIdx, Max, Exp, Exp2, Log, Cos, Sqrt, Rand, SRand, Type, Hash, ArrayEmpty, OpenAt, Read, Close };
+const BuiltinCall = enum { Print, Write, Range, Len, Int, I32, Float, F32, Char, GlobalIdx, Max, Exp, Exp2, Log, Cos, Sqrt, Rand, SRand, Type, Hash, ArrayEmpty, OpenAt, Read, Close, Cast };
 
 const BoolOp = enum { And, Or };
 
@@ -823,12 +823,10 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     } },
                 };
                 // declare function we will return
-                try ir_builder.emit(.{
-                    .function_ref = .{
-                        .dst = function_dst,
-                        .label = try alloc.dupe(u8, function.label),
-                    },
-                }, alloc);
+                try ir_builder.emit(.{ .lir = .{ .function_ref = .{
+                    .dst = function_dst,
+                    .label = try alloc.dupe(u8, function.label),
+                } } }, alloc);
                 return try function_dst.clone(alloc);
             }
             diagnostics.report(stmt, ir_builder.current_file, "unknown variable '{s}'", .{name});
@@ -991,7 +989,13 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 return error.DiagnosticReported;
             };
             const field = &class.kind.record.fields.items[field_index];
-            const resolved_field_type = try class.kind.record.resolveFieldType(field, instance, alloc);
+            const resolved_field_type = class.kind.record.resolveFieldType(field, instance, alloc) catch |err| switch (err) {
+                error.ErasedTypeAccess => {
+                    diagnostics.report(stmt, ir_builder.current_file, "cannot access field '{s}' through erased type '{s}'", .{ name, class.name });
+                    return error.DiagnosticReported;
+                },
+                else => return err,
+            };
 
             const dst: TypedOperand = .{
                 .operand = ir_builder.nextTemp(),
@@ -1176,9 +1180,9 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
             // lambda dont have explicit returns!
             const body = try walkExpr(body_obj, ir_builder, callable.returns.*, alloc);
             // handle null case as no return!
-            try ir_builder.emit(.{ .function_return = .{
+            try ir_builder.emit(.{ .lir = .{ .function_return = .{
                 .value = if (body.type != .none) body else null,
-            } }, alloc);
+            } } }, alloc);
 
             ir_builder.leaveFunction(function_context);
 
@@ -1241,9 +1245,9 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                     .instance => |instance| instance,
                     else => return error.TypeMismatch,
                 };
-                if (instance.args.len != 2) return error.TypeMismatch;
-                expected_key_type = instance.args[0];
-                expected_value_type = instance.args[1];
+                if (instance.args.?.len != 2) return error.TypeMismatch;
+                expected_key_type = instance.args.?[0];
+                expected_value_type = instance.args.?[1];
             }
             const keys = try walkArray(keys_obj, ir_builder, expected_key_type, alloc);
             const values = try walkArray(values_obj, ir_builder, expected_value_type, alloc);
@@ -1442,13 +1446,13 @@ fn walkNamedCall(
                             } }, alloc);
                             break :blk res;
                         };
-                        try ir_builder.emit(.{ .function_call = .{
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
                             .dst = null,
                             .callee = .{
                                 .direct = try alloc.dupe(u8, method.function_label),
                             },
                             .args = f_args,
-                        } }, alloc);
+                        } } }, alloc);
                     },
                     else => {
                         try ir_builder.emit(.{ .print = .{
@@ -1494,13 +1498,11 @@ fn walkNamedCall(
                         write_args[0] = fd;
                         write_args[1] = try data.clone(alloc);
                         write_args[2] = len;
-                        try ir_builder.emit(.{
-                            .function_call = .{
-                                .dst = null,
-                                .args = write_args,
-                                .callee = .{ .direct = try alloc.dupe(u8, "write") },
-                            },
-                        }, alloc);
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
+                            .dst = null,
+                            .args = write_args,
+                            .callee = .{ .direct = try alloc.dupe(u8, "write") },
+                        } } }, alloc);
                     },
                     .instance => |instance| {
                         const class = ir_builder.getClassRecord(instance.class_id);
@@ -1512,11 +1514,11 @@ fn walkNamedCall(
                         write_args[1] = fd;
                         write_args[2] = len;
 
-                        try ir_builder.emit(.{ .function_call = .{
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
                             .dst = null,
                             .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
                             .args = write_args,
-                        } }, alloc);
+                        } } }, alloc);
                     },
                     else => |e| {
                         std.debug.print("cant write type {s}\n", .{@tagName(e)});
@@ -1556,11 +1558,11 @@ fn walkNamedCall(
                             .operand = ir_builder.nextTemp(),
                             .type = .i32,
                         };
-                        try ir_builder.emit(.{ .function_call = .{
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
                             .dst = dst,
                             .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
                             .args = openat_args,
-                        } }, alloc);
+                        } } }, alloc);
                         return try dst.clone(alloc);
                     },
                     .array => {
@@ -1589,13 +1591,11 @@ fn walkNamedCall(
                         openat_args[1] = data;
                         openat_args[2] = flags;
                         openat_args[3] = mode;
-                        try ir_builder.emit(.{
-                            .function_call = .{
-                                .dst = dst,
-                                .args = openat_args,
-                                .callee = .{ .direct = try alloc.dupe(u8, "openat") },
-                            },
-                        }, alloc);
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
+                            .dst = dst,
+                            .args = openat_args,
+                            .callee = .{ .direct = try alloc.dupe(u8, "openat") },
+                        } } }, alloc);
                         return try dst.clone(alloc);
                     },
                     else => return error.InvalidPath,
@@ -1641,13 +1641,11 @@ fn walkNamedCall(
                             .operand = ir_builder.nextTemp(),
                             .type = .i64,
                         };
-                        try ir_builder.emit(.{
-                            .function_call = .{
-                                .dst = dst,
-                                .args = read_args,
-                                .callee = .{ .direct = try alloc.dupe(u8, "read") },
-                            },
-                        }, alloc);
+                        try ir_builder.emit(.{ .lir = .{ .function_call = .{
+                            .dst = dst,
+                            .args = read_args,
+                            .callee = .{ .direct = try alloc.dupe(u8, "read") },
+                        } } }, alloc);
                         return try dst.clone(alloc);
                     },
                     else => |e| {
@@ -1669,13 +1667,11 @@ fn walkNamedCall(
                     .operand = ir_builder.nextTemp(),
                     .type = .i32,
                 };
-                try ir_builder.emit(.{
-                    .function_call = .{
-                        .dst = dst,
-                        .args = close_args,
-                        .callee = .{ .direct = try alloc.dupe(u8, "close") },
-                    },
-                }, alloc);
+                try ir_builder.emit(.{ .lir = .{ .function_call = .{
+                    .dst = dst,
+                    .args = close_args,
+                    .callee = .{ .direct = try alloc.dupe(u8, "close") },
+                } } }, alloc);
                 return try dst.clone(alloc);
             },
             .Len => {
@@ -1957,6 +1953,23 @@ fn walkNamedCall(
                     .len = try value.clone(alloc),
                 } }, alloc);
 
+                return try dst.clone(alloc);
+            },
+            .Cast => {
+                std.debug.assert(c.PyList_Size(args) == 2);
+                const arg0 = c.PyList_GetItem(args, 0);
+                std.debug.assert(arg0 != null);
+                const target_type = try parseTypeAnnotation(arg0, ir_builder, alloc);
+                const arg1 = c.PyList_GetItem(args, 1);
+                const dst: TypedOperand = .{
+                    .operand = ir_builder.nextTemp(),
+                    .type = target_type,
+                };
+                const src = try walkExpr(arg1, ir_builder, target_type, alloc);
+                try ir_builder.emit(.{ .lir = .{ .move = .{
+                    .dst = dst,
+                    .src = .{ .top = src },
+                } } }, alloc);
                 return try dst.clone(alloc);
             },
         }
@@ -2630,11 +2643,11 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                         .operand = value,
                         .type = dst_type,
                     };
-                    try ir_builder_.emit(.{ .function_call = .{
+                    try ir_builder_.emit(.{ .lir = .{ .function_call = .{
                         .dst = dst.?,
                         .callee = .{ .direct = try alloc_.dupe(u8, method.function_label) },
                         .args = args,
-                    } }, alloc_);
+                    } } }, alloc_);
                 },
                 else => return error.CantIndexInto,
             }
@@ -2799,15 +2812,15 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
     // append return if we are missing one
     const block = ir_builder.currentBlock();
     const termianted = block.instructions.items.len > 0 and switch (block.instructions.items[block.instructions.items.len - 1]) {
-        .function_return => true,
         .lir => |lir| switch (lir) {
+            .function_return => true,
             .jump, .branch => true,
             else => false,
         },
         else => false,
     };
     if (!termianted and function.return_type == .none) {
-        try ir_builder.emit(.{ .function_return = .{ .value = null } }, alloc);
+        try ir_builder.emit(.{ .lir = .{ .function_return = .{ .value = null } } }, alloc);
     }
 }
 
@@ -2847,13 +2860,11 @@ fn emitResolvedCall(
         }
     else
         null;
-    try ir_builder.emit(.{
-        .function_call = .{
-            .callee = .{ .direct = try alloc.dupe(u8, function.label) },
-            .dst = maybe_dst,
-            .args = try arguments.toOwnedSlice(alloc),
-        },
-    }, alloc);
+    try ir_builder.emit(.{ .lir = .{ .function_call = .{
+        .callee = .{ .direct = try alloc.dupe(u8, function.label) },
+        .dst = maybe_dst,
+        .args = try arguments.toOwnedSlice(alloc),
+    } } }, alloc);
 
     if (maybe_dst) |dst| return try dst.clone(alloc);
     return .{ .operand = .unknown, .type = .none };
@@ -2873,9 +2884,9 @@ fn walkReturn(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     else
         try walkExpr(value, ir_builder, expected_type, alloc);
 
-    try ir_builder.emit(.{ .function_return = .{
+    try ir_builder.emit(.{ .lir = .{ .function_return = .{
         .value = return_top,
-    } }, alloc);
+    } } }, alloc);
 }
 
 fn wrapString(array: TypedOperand, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!TypedOperand {
@@ -3000,6 +3011,7 @@ fn getBuiltinCall(name: []const u8) ?BuiltinCall {
     if (std.mem.eql(u8, name, "type")) return .Type;
     if (std.mem.eql(u8, name, "hash")) return .Hash;
     if (std.mem.eql(u8, name, "array_empty")) return .ArrayEmpty;
+    if (std.mem.eql(u8, name, "cast")) return .Cast;
     return null;
 }
 

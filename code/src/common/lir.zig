@@ -14,7 +14,37 @@ const SeenValuePtr = @import("ir.zig").SeenValuePtr;
 const TypeInfo = @import("types.zig").TypeInfo;
 const TypedOperand = @import("alloc.zig").TypedOperand;
 
+pub const FunctionCallee = union(enum) {
+    /// a function name to call
+    direct: []const u8,
+    /// a value holding our function
+    indirect: TypedOperand,
+
+    pub fn clone(self: @This(), alloc: std.mem.Allocator) !@This() {
+        return switch (self) {
+            .direct => |d| .{ .direct = try alloc.dupe(u8, d) },
+            .indirect => |ind| .{ .indirect = try ind.clone(alloc) },
+        };
+    }
+};
+
+pub const FunctionCallInst = struct {
+    dst: ?TypedOperand,
+    callee: FunctionCallee,
+    args: []TypedOperand,
+};
+
 pub const Instruction = union(enum) {
+    function_call: FunctionCallInst,
+    function_return: struct {
+        value: ?TypedOperand,
+    },
+    // used to pass functions as value
+    function_ref: struct {
+        dst: TypedOperand,
+        // `module_name`__`function_name`
+        label: []const u8,
+    },
     store_local: struct {
         local: LocalInfo,
         src: TypedOperand,
@@ -80,6 +110,35 @@ pub const Instruction = union(enum) {
 
     pub fn printFn(self: @This()) !void {
         switch (self) {
+            .function_ref => |fr| {
+                fr.dst.operand.print();
+                debugPrint(" <- {s}\n", .{fr.label});
+            },
+            .function_call => |fc| {
+                if (fc.dst) |dst| {
+                    dst.operand.print();
+                    debugPrint(" <- ", .{});
+                }
+                switch (fc.callee) {
+                    .direct => |function_name| debugPrint("{s}(", .{function_name}),
+                    .indirect => |ind| {
+                        ind.operand.print();
+                        debugPrint("(", .{});
+                    },
+                }
+                for (fc.args, 0..) |arg, i| {
+                    if (i != 0) debugPrint(", ", .{});
+                    arg.operand.print();
+                }
+                debugPrint(")\n", .{});
+            },
+            .function_return => |fr| {
+                debugPrint("return ", .{});
+                if (fr.value) |value| {
+                    value.operand.print();
+                }
+                debugPrint("\n", .{});
+            },
             .binop => |binop| {
                 binop.dst.operand.print();
                 debugPrint(" <- {s} ", .{@tagName(binop.op)});
@@ -162,6 +221,17 @@ pub const Instruction = union(enum) {
 
     pub fn replaceUses(self: *@This(), old: Operand, new: Operand) void {
         switch (self.*) {
+            .function_call => |*fc| {
+                switch (fc.callee) {
+                    .direct => {},
+                    .indirect => |*dir| {
+                        if (dir.operand.equal(old)) dir.operand = new;
+                    },
+                }
+                for (fc.args) |*arg| {
+                    if (arg.operand.equal(old)) arg.operand = new;
+                }
+            },
             .store_local => |*sl| {
                 if (sl.src.operand.equal(old)) sl.src.operand = new;
             },
@@ -234,6 +304,13 @@ pub const Instruction = union(enum) {
 
     pub fn replaceDefines(self: *@This(), old: Operand, new: Operand) void {
         switch (self.*) {
+            .function_call => |*fc| {
+                if (fc.dst) |*op| {
+                    if (op.operand.equal(old)) {
+                        op.operand = new;
+                    }
+                }
+            },
             .binop => |*bop| {
                 if (bop.dst.operand.equal(old)) bop.dst.operand = new;
             },
@@ -267,6 +344,9 @@ pub const Instruction = union(enum) {
     /// are we generating a new temp for reg coloring
     pub fn getDefinePtrs(instruction: *Instruction) ?SeenValuePtr {
         return switch (instruction.*) {
+            .function_ref => |*fr| .{ .top = &fr.dst },
+            .function_call => |*fc| if (fc.dst) |*op| .{ .top = op } else null,
+            .function_return => null,
             .store_local => |*sl| .{ .local = &sl.local.id },
             .load_local => |*ll| .{ .top = &ll.dst },
             .binop => |*bop| .{ .top = &bop.dst },
@@ -305,6 +385,23 @@ pub const Instruction = union(enum) {
         errdefer res.deinit(alloc);
 
         switch (instruction.*) {
+            .function_ref => {},
+            .function_call => |*fc| {
+                switch (fc.callee) {
+                    .direct => {},
+                    .indirect => |*ind| {
+                        try res.append(alloc, .{ .top = ind });
+                    },
+                }
+                for (fc.args) |*arg| {
+                    try res.append(alloc, .{ .top = arg });
+                }
+            },
+            .function_return => |*fc| {
+                if (fc.value) |*top| {
+                    try res.append(alloc, .{ .top = top });
+                }
+            },
             .store_local => |*sl| {
                 try res.append(alloc, .{ .top = &sl.src });
             },
@@ -378,6 +475,26 @@ pub const Instruction = union(enum) {
 
     pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
         switch (self.*) {
+            .function_ref => |fr| {
+                fr.dst.type.deinit(alloc);
+                alloc.free(fr.label);
+            },
+            .function_call => |fc| {
+                if (fc.dst) |dst| {
+                    dst.deinit(alloc);
+                }
+                switch (fc.callee) {
+                    .direct => |d| alloc.free(d),
+                    .indirect => |ind| ind.deinit(alloc),
+                }
+                for (fc.args) |arg| {
+                    arg.deinit(alloc);
+                }
+                alloc.free(fc.args);
+            },
+            .function_return => |fr| {
+                if (fr.value) |val| val.deinit(alloc);
+            },
             .binop => |bop| {
                 bop.dst.deinit(alloc);
                 bop.lhs.deinit(alloc);
@@ -437,6 +554,26 @@ pub const Instruction = union(enum) {
 
     pub fn clone(self: *@This(), alloc: std.mem.Allocator) !@This() {
         return switch (self.*) {
+            .function_return => |fr| .{ .function_return = .{
+                .value = if (fr.value) |value| try value.clone(alloc) else null,
+            } },
+            .function_ref => |fr| .{ .function_ref = .{
+                .dst = try fr.dst.clone(alloc),
+                .label = try alloc.dupe(u8, fr.label),
+            } },
+            .function_call => |fc| blk: {
+                const args = try alloc.alloc(TypedOperand, fc.args.len);
+
+                for (fc.args, 0..) |arg, i| {
+                    args[i] = try arg.clone(alloc);
+                }
+
+                break :blk .{ .function_call = .{
+                    .dst = if (fc.dst) |value| try value.clone(alloc) else null,
+                    .args = args,
+                    .callee = try fc.callee.clone(alloc),
+                } };
+            },
             .store_local => |sl| .{ .store_local = .{
                 .local = try sl.local.clone(alloc),
                 .src = try sl.src.clone(alloc),

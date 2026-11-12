@@ -1,5 +1,5 @@
 
-def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
+def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]|None]:
     if node.op == Ops.BUFFER:
         return []
     elif node.op == Ops.ADD:
@@ -7,24 +7,31 @@ def grad_rule[T](node: Uop[T], incoming: Uop[T]) -> list[Uop[T]]:
     elif node.op == Ops.SUB:
         return [incoming, -incoming]
     elif node.op == Ops.MUL:
-        return [incoming * node.src[1], incoming * node.src[0]]
+        lhs = cast(Uop[T], node.src[0])
+        rhs = cast(Uop[T], node.src[1])
+        return [incoming * rhs, incoming * lhs]
     # lhs/rhs
     elif node.op == Ops.DIV:
-        lhs = node.src[0]
-        rhs = node.src[1]
+        lhs = cast(Uop[T], node.src[0])
+        rhs = cast(Uop[T], node.src[1])
         two_t: T = 2
         two = Uop.fill(rhs.shape, two_t)
         return [incoming/rhs, -(incoming * lhs)/(rhs**two)]
     elif node.op == Ops.MATMUL:
-        return [incoming @ node.src[1].transpose(), node.src[0].transpose() @ incoming]
+        lhs = cast(Uop[T], node.src[0])
+        rhs = cast(Uop[T], node.src[1])
+        return [incoming @ rhs.transpose(), lhs.transpose() @ incoming]
     elif node.op == Ops.WHERE:
-        mask = node.conditions[0]
+        mask = cast(Uop[bool], node.src[0])
         zero_t: T = 0
         zero = Uop.fill(node.shape, zero_t)
         return [
+            None,
             Uop.where(mask, incoming, zero),
             Uop.where(mask, zero, incoming)
         ]
+    elif node.op == Ops.GT:
+        pass
     elif node.op == Ops.EXP:
         # identity
         return [incoming * node]

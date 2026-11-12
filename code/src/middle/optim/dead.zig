@@ -79,12 +79,9 @@ fn runFunction(function: *Function, alloc_program: *const AllocProgram, alloc: s
 
 fn hasSideEffects(instruction: Instruction) bool {
     return switch (instruction) {
-        .function_call, .function_return => true,
         .lir => |l| {
             return switch (l) {
-                .jump,
-                .branch,
-                => true,
+                .function_call, .function_return, .jump, .branch => true,
                 else => false,
             };
         },

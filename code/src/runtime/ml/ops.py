@@ -15,3 +15,4 @@ class Ops(Enum):
     BROADCAST = 12
     TRANSPOSE = 13
     WHERE = 14
+    GT = 15

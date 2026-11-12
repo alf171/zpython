@@ -49,21 +49,24 @@ fn rewriteFunction(
         errdefer new_instructions.deinit(alloc);
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .function_call => |*fc| {
-                    switch (fc.callee) {
-                        .direct => |*name| {
-                            try specializeInvocation(
-                                name,
-                                program,
-                                pending,
-                                if (fc.dst) |*dst| dst else null,
-                                fc.args,
-                                alloc,
-                            );
-                        },
-                        else => {},
-                    }
-                    try new_instructions.append(alloc, instruction.*);
+                .lir => |*lir| switch (lir.*) {
+                    .function_call => |*fc| {
+                        switch (fc.callee) {
+                            .direct => |*name| {
+                                try specializeInvocation(
+                                    name,
+                                    program,
+                                    pending,
+                                    if (fc.dst) |*dst| dst else null,
+                                    fc.args,
+                                    alloc,
+                                );
+                            },
+                            else => {},
+                        }
+                        try new_instructions.append(alloc, instruction.*);
+                    },
+                    else => try new_instructions.append(alloc, instruction.*),
                 },
                 .gpu_launch => |*gl| {
                     try specializeInvocation(&gl.kernel, program, pending, null, gl.args, alloc);
@@ -226,10 +229,13 @@ fn remapFunctionLabel(
     for (function.blocks.items) |*block| {
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .function_ref => |*fr| {
-                    const new_label = labels.get(fr.label) orelse continue;
-                    alloc.free(fr.label);
-                    fr.label = try alloc.dupe(u8, new_label);
+                .lir => |*lir| switch (lir.*) {
+                    .function_ref => |*fr| {
+                        const new_label = labels.get(fr.label) orelse continue;
+                        alloc.free(fr.label);
+                        fr.label = try alloc.dupe(u8, new_label);
+                    },
+                    else => {},
                 },
                 else => {},
             }
@@ -246,9 +252,10 @@ fn specializeClassInstance(
         .instance => |instance| instance,
         else => return false,
     };
-    if (instance.args.len == 0) return false;
+    const args = instance.args orelse return false;
+    if (args.len == 0) return false;
 
-    const specialized_id = try specializeClass(program, instance.class_id, instance.args, alloc);
+    const specialized_id = try specializeClass(program, instance.class_id, args, alloc);
     const replacement: TypeInfo = .{ .instance = .{
         .class_id = specialized_id,
         .args = try alloc.alloc(TypeInfo, 0),

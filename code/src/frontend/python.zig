@@ -424,7 +424,9 @@ pub fn parseConstant(
     alloc: std.mem.Allocator,
 ) !ParsedConstant {
     const value_type = getPyType(value_obj);
-    if (std.mem.eql(u8, value_type, "int")) {
+    if (value_obj == c.Py_None()) {
+        return .{ .immediate = .none };
+    } else if (std.mem.eql(u8, value_type, "int")) {
         const value: ConstValue = .{ .i64 = c.PyLong_AsLong(value_obj) };
         return .{ .immediate = try value.coherce(expected_type, alloc) };
     } else if (std.mem.eql(u8, value_type, "float")) {
@@ -507,7 +509,10 @@ pub fn parseTypeAnnotation(
         if (irBuilder.findClass(annotation_name)) |class| {
             switch (class.kind) {
                 .record => |record| {
-                    if (record.type_params.len != 0) return error.InvalidTypeArgCount;
+                    // generics with erasure
+                    if (record.type_params.len != 0) {
+                        return .{ .instance = .{ .class_id = class.id, .args = null } };
+                    }
                 },
                 .@"enum" => return .{ .@"enum" = class.id },
             }

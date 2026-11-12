@@ -56,26 +56,26 @@ fn emitFunction(
         try out.print(alloc, "{s}_L{d}:\n", .{ function.label, block.id });
         for (block.instructions.items) |instruction| {
             switch (instruction) {
-                .function_ref => |fr| {
-                    const dst = try abi.regFor(fr.dst.operand);
-                    try out.print(alloc, "\tleaq {s}(%rip), %{s}\n", .{ fr.label, dst });
-                },
-                .function_call => |fc| {
-                    switch (fc.callee) {
-                        .direct => |function_name| {
-                            try out.print(alloc, "\tcallq {s}\n", .{function_name});
-                        },
-                        .indirect => |top| {
-                            const fn_op = try abi.regFor(top.operand);
-                            try out.print(alloc, "\tcallq *%{s}\n", .{fn_op});
-                        },
-                    }
-                },
-                .function_return => {
-                    try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.label});
-                },
                 .lir => |l| {
                     switch (l) {
+                        .function_ref => |fr| {
+                            const dst = try abi.regFor(fr.dst.operand);
+                            try out.print(alloc, "\tleaq {s}(%rip), %{s}\n", .{ fr.label, dst });
+                        },
+                        .function_call => |fc| {
+                            switch (fc.callee) {
+                                .direct => |function_name| {
+                                    try out.print(alloc, "\tcallq {s}\n", .{function_name});
+                                },
+                                .indirect => |top| {
+                                    const fn_op = try abi.regFor(top.operand);
+                                    try out.print(alloc, "\tcallq *%{s}\n", .{fn_op});
+                                },
+                            }
+                        },
+                        .function_return => {
+                            try out.print(alloc, "\tjmp {s}_epilogue\n", .{function.label});
+                        },
                         .move => |m| {
                             switch (m.src) {
                                 .constant => |c| {
@@ -153,7 +153,8 @@ fn emitFunction(
                                     std.debug.assert(top.type == .i64);
                                     const offset = try abi.regFor(top.operand);
                                     switch (so.src.type) {
-                                        .i64, .array, .instance => {
+                                        // HACK: unions shouldnt be here
+                                        .i64, .array, .instance, .@"union" => {
                                             try out.print(alloc, "\tmovq %{s}, (%{s},%{s})\n", .{ src, dst, offset });
                                         },
                                         .f64 => {
@@ -496,7 +497,8 @@ fn emitFunction(
                                         .f32 => {
                                             try out.print(alloc, "\tmovss (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
-                                        .i64, .array, .instance => {
+                                        // HACK: union shouldnt be here
+                                        .i64, .array, .instance, .@"union" => {
                                             try out.print(alloc, "\tmovq (%{s},%{s}), %{s}\n", .{ offset, src, dst });
                                         },
                                         .i32 => {

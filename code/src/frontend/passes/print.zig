@@ -74,11 +74,11 @@ fn rewriteFunction(program: *const Program, function: *Function, alloc: std.mem.
                             const method = class.findMethod("__print__") orelse {
                                 return error.CantPrintWithoutStr;
                             };
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         // HACK: union will just run the instance's print
                         // FIXME: ADD A TYPE PASS TO REMOVE UNIONs
@@ -97,54 +97,54 @@ fn rewriteFunction(program: *const Program, function: *Function, alloc: std.mem.
                             const method = class.findMethod("__print__") orelse {
                                 return error.CantPrintWithoutStr;
                             };
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, method.function_label) },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         .array => |l| {
                             if (l.element.* == .char) {
-                                try new_instructions.append(alloc, .{ .function_call = .{
+                                try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                     .dst = null,
                                     .callee = .{ .direct = try alloc.dupe(u8, "_print__print_string") },
                                     .args = args,
-                                } });
+                                } } });
                             } else if (l.element.* == .i64 or l.element.* == .i32) {
-                                try new_instructions.append(alloc, .{ .function_call = .{
+                                try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                     .dst = null,
                                     .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int_array") },
                                     .args = args,
-                                } });
+                                } } });
                             }
                         },
                         .bool => {
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "_print__print_bool") },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         .i64, .i32, .@"enum" => {
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "_print__print_int") },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         .f64, .f32 => {
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "_print__print_float") },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         .none => {
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = null,
                                 .callee = .{ .direct = try alloc.dupe(u8, "_print__print_none") },
                                 .args = args,
-                            } });
+                            } } });
                         },
                         else => |e| {
                             std.debug.print("dont support print of type {s}\n", .{@tagName(e)});

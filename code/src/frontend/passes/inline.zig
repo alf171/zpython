@@ -29,94 +29,98 @@ fn rewriteFunction(
 
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .function_call => |fc| {
-                    const function_name = switch (fc.callee) {
-                        .direct => |direct| direct,
-                        else => {
+                .lir => |lir| switch (lir) {
+                    .function_call => |fc| {
+                        const function_name = switch (fc.callee) {
+                            .direct => |direct| direct,
+                            else => {
+                                try new_instructions.append(alloc, instruction.*);
+                                continue;
+                            },
+                        };
+
+                        const callee = program.findFunction(function_name) orelse {
                             try new_instructions.append(alloc, instruction.*);
                             continue;
-                        },
-                    };
+                        };
 
-                    const callee = program.findFunction(function_name) orelse {
-                        try new_instructions.append(alloc, instruction.*);
-                        continue;
-                    };
-
-                    if (!callee.is_inline) {
-                        try new_instructions.append(alloc, instruction.*);
-                        continue;
-                    }
-                    // reduce scope temporarily :)
-                    if (callee.blocks.items.len != 1) return error.NonInlineableFunction;
-                    for (callee.blocks.items) |*callee_block| {
-                        for (callee_block.instructions.items) |*callee_instruction| {
-                            switch (callee_instruction.*) {
-                                .function_call => return error.NonInlineableFunction,
-                                .lir => |lir| switch (lir) {
-                                    .jump, .branch => return error.NonInlineableFunction,
+                        if (!callee.is_inline) {
+                            try new_instructions.append(alloc, instruction.*);
+                            continue;
+                        }
+                        // reduce scope temporarily :)
+                        if (callee.blocks.items.len != 1) return error.NonInlineableFunction;
+                        for (callee.blocks.items) |*callee_block| {
+                            for (callee_block.instructions.items) |*callee_instruction| {
+                                switch (callee_instruction.*) {
+                                    .lir => |l| switch (l) {
+                                        .function_call => return error.NonInlineableFunction,
+                                        .jump, .branch => return error.NonInlineableFunction,
+                                        else => {},
+                                    },
                                     else => {},
-                                },
-                                else => {},
+                                }
                             }
                         }
-                    }
 
-                    // old -> new temp
-                    var operands: HashMap(Operand, Operand) = .init(alloc);
-                    defer operands.deinit();
+                        // old -> new temp
+                        var operands: HashMap(Operand, Operand) = .init(alloc);
+                        defer operands.deinit();
 
-                    for (callee.blocks.items) |*callee_block| {
-                        for (callee_block.instructions.items) |*callee_instruction| {
-                            switch (callee_instruction.*) {
-                                .function_param => |param| {
-                                    try operands.put(param.dst.operand, fc.args[param.index].operand);
-                                },
-                                // x <- func(r0)
-                                // :becomes:
-                                // x <- temp<something>
-                                .function_return => |ret| {
-                                    const old_src = ret.value orelse continue;
-                                    const dst = fc.dst orelse return error.InvalidFunction;
+                        for (callee.blocks.items) |*callee_block| {
+                            for (callee_block.instructions.items) |*callee_instruction| {
+                                switch (callee_instruction.*) {
+                                    .function_param => |param| {
+                                        try operands.put(param.dst.operand, fc.args[param.index].operand);
+                                        continue;
+                                    },
+                                    .lir => |l| switch (l) {
+                                        .function_return => |ret| {
+                                            const old_src = ret.value orelse continue;
+                                            const dst = fc.dst orelse return error.InvalidFunction;
 
-                                    const mapped_src = operands.get(old_src.operand) orelse {
-                                        return error.InvalidFunction;
-                                    };
+                                            const mapped_src = operands.get(old_src.operand) orelse {
+                                                return error.InvalidFunction;
+                                            };
 
-                                    var src = try old_src.clone(alloc);
-                                    src.operand = mapped_src;
-                                    try new_instructions.append(alloc, .{ .lir = .{ .move = .{
-                                        .dst = try dst.clone(alloc),
-                                        .src = .{ .top = src },
-                                    } } });
-                                },
-                                else => {
-                                    var cloned = try callee_instruction.clone(alloc);
+                                            var src = try old_src.clone(alloc);
+                                            src.operand = mapped_src;
+                                            try new_instructions.append(alloc, .{ .lir = .{ .move = .{
+                                                .dst = try dst.clone(alloc),
+                                                .src = .{ .top = src },
+                                            } } });
+                                            continue;
+                                        },
+                                        else => {},
+                                    },
+                                    else => {},
+                                }
+                                var cloned = try callee_instruction.clone(alloc);
 
-                                    var it = operands.iterator();
-                                    while (it.next()) |entry| {
-                                        cloned.replaceUses(entry.key_ptr.*, entry.value_ptr.*);
+                                var it = operands.iterator();
+                                while (it.next()) |entry| {
+                                    cloned.replaceUses(entry.key_ptr.*, entry.value_ptr.*);
+                                }
+
+                                if (cloned.getDefines()) |define| {
+                                    switch (define) {
+                                        .top => |top| {
+                                            const new_temp = operands.get(top.operand) orelse blk: {
+                                                const fresh = function.nextTemp();
+                                                try operands.put(top.operand, fresh);
+                                                break :blk fresh;
+                                            };
+                                            cloned.replaceDefines(top.operand, new_temp);
+                                        },
+                                        .local => {},
                                     }
-
-                                    if (cloned.getDefines()) |define| {
-                                        switch (define) {
-                                            .top => |top| {
-                                                const new_temp = operands.get(top.operand) orelse blk: {
-                                                    const fresh = function.nextTemp();
-                                                    try operands.put(top.operand, fresh);
-                                                    break :blk fresh;
-                                                };
-                                                cloned.replaceDefines(top.operand, new_temp);
-                                            },
-                                            .local => {},
-                                        }
-                                    }
-                                    try new_instructions.append(alloc, cloned);
-                                },
+                                }
+                                try new_instructions.append(alloc, cloned);
                             }
                         }
-                    }
-                    instruction.deinit(alloc);
+                        instruction.deinit(alloc);
+                    },
+                    else => try new_instructions.append(alloc, instruction.*),
                 },
                 else => try new_instructions.append(alloc, instruction.*),
             }

@@ -52,11 +52,11 @@ fn rewriteFunction(
                             const fargs = try alloc.alloc(TypedOperand, 1);
                             fargs[0] = try h.src.clone(alloc);
 
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = try h.dst.clone(alloc),
                                 .callee = .{ .direct = try alloc.dupe(u8, f.label) },
                                 .args = fargs,
-                            } });
+                            } } });
                             instruction.deinit(alloc);
                         },
                         else => |e| {

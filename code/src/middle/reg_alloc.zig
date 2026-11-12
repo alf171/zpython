@@ -88,9 +88,9 @@ fn appendBlocks(
             errdefer line.deinit();
             // set move flag and store locals for later use
             switch (instruction) {
-                .function_call => line.clobber_caller_saved = true,
                 .lir => |lir| {
                     switch (lir) {
+                        .function_call => line.clobber_caller_saved = true,
                         .store_local => |sl| {
                             try locals.put(sl.local.id, sl.src);
                         },

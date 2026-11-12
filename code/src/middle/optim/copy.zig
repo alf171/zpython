@@ -39,21 +39,21 @@ pub fn runFunction(function: *Function, alloc: std.mem.Allocator) !void {
             }
 
             switch (instruction.*) {
-                // function param regs could be dirty
-                .function_call => {
-                    var removals: ArrayList(Operand) = .init(alloc);
-
-                    var it = copyMap.iterator();
-                    while (it.next()) |entry| {
-                        if (try dependsOnBuiltinReg(entry.value_ptr.*, &copyMap, alloc)) {
-                            try removals.append(entry.key_ptr.*);
-                        }
-                    }
-                    for (removals.items) |removal| {
-                        _ = copyMap.remove(removal);
-                    }
-                },
                 .lir => |lir| switch (lir) {
+                    // function param regs could be dirty
+                    .function_call => {
+                        var removals: ArrayList(Operand) = .init(alloc);
+
+                        var it = copyMap.iterator();
+                        while (it.next()) |entry| {
+                            if (try dependsOnBuiltinReg(entry.value_ptr.*, &copyMap, alloc)) {
+                                try removals.append(entry.key_ptr.*);
+                            }
+                        }
+                        for (removals.items) |removal| {
+                            _ = copyMap.remove(removal);
+                        }
+                    },
                     .move => |mov| {
                         if (mov.dst.operand == .temp) {
                             switch (mov.src) {
@@ -91,6 +91,15 @@ fn rewriteUses(instruction: *Instruction, copyMap: *HashMap(Operand, ValueRef)) 
     switch (instruction.*) {
         .lir => |*l| {
             switch (l.*) {
+                .function_call => |*fc| {
+                    switch (fc.callee) {
+                        .direct => {},
+                        .indirect => {},
+                    }
+                    for (fc.args) |*arg| {
+                        arg.*.operand = try resolveOperand(arg.*.operand, copyMap);
+                    }
+                },
                 .binop => |*bop| {
                     bop.lhs.operand = try resolveOperand(bop.lhs.operand, copyMap);
                     bop.rhs.operand = try resolveOperand(bop.rhs.operand, copyMap);
@@ -136,15 +145,6 @@ fn rewriteUses(instruction: *Instruction, copyMap: *HashMap(Operand, ValueRef)) 
                     .top => |*top| top.*.operand = try resolveOperand(top.*.operand, copyMap),
                     .constant => {},
                 }
-            }
-        },
-        .function_call => |*fc| {
-            switch (fc.callee) {
-                .direct => {},
-                .indirect => {},
-            }
-            for (fc.args) |*arg| {
-                arg.*.operand = try resolveOperand(arg.*.operand, copyMap);
             }
         },
         .global_idx => |*gi| {

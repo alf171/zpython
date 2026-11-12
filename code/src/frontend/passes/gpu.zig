@@ -277,13 +277,11 @@ fn rewriteFunction(
                             .elements = kernel_elements,
                         },
                     });
-                    try new_instructions.append(alloc, .{
-                        .function_call = .{
-                            .dst = null,
-                            .args = try new_args.toOwnedSlice(alloc),
-                            .callee = .{ .direct = try alloc.dupe(u8, "gpu_launch") },
-                        },
-                    });
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                        .dst = null,
+                        .args = try new_args.toOwnedSlice(alloc),
+                        .callee = .{ .direct = try alloc.dupe(u8, "gpu_launch") },
+                    } } });
 
                     instruction.deinit(alloc);
                 },

@@ -60,7 +60,8 @@ pub const TypeBindings = struct {
 pub const ClassInstance = struct {
     class_id: ClassId,
     /// used for generics
-    args: []const TypeInfo,
+    /// null when we have erasure
+    args: ?[]const TypeInfo,
 };
 
 // use a pointer on element type for recursive purposes
@@ -133,10 +134,12 @@ pub const TypeInfo = union(enum) {
                 alloc.destroy(@constCast(callable.returns));
             },
             .instance => |instance| {
-                for (instance.args) |arg| {
-                    arg.deinit(alloc);
+                if (instance.args) |args| {
+                    for (args) |arg| {
+                        arg.deinit(alloc);
+                    }
+                    alloc.free(args);
                 }
-                alloc.free(instance.args);
             },
             .@"union" => |u| {
                 for (u.members) |member| {
@@ -189,13 +192,19 @@ pub const TypeInfo = union(enum) {
                 } };
             },
             .instance => |instance| {
-                var args = try alloc.alloc(TypeInfo, instance.args.len);
+                if (instance.args == null) {
+                    return .{ .instance = .{
+                        .class_id = instance.class_id,
+                        .args = null,
+                    } };
+                }
+                var args = try alloc.alloc(TypeInfo, instance.args.?.len);
                 var initialized: usize = 0;
                 errdefer {
                     for (args[0..initialized]) |t| t.deinit(alloc);
                     alloc.free(args);
                 }
-                for (instance.args, 0..) |arg, i| {
+                for (instance.args.?, 0..) |arg, i| {
                     args[i] = try arg.clone(alloc);
                     initialized += 1;
                 }
@@ -296,9 +305,9 @@ pub const TypeInfo = union(enum) {
             .type_variable => |tv| {
                 if (bindings.get(tv)) |resolves| {
                     if (!resolves.equal(expected)) {
-                        const lhs = try resolves.toString(alloc);
+                        const lhs = try resolves.toDisplayName(program, alloc);
                         defer alloc.free(lhs);
-                        const rhs = try expected.toString(alloc);
+                        const rhs = try expected.toDisplayName(program, alloc);
                         defer alloc.free(rhs);
                         std.debug.print("cant unify {s} with {s}\n", .{ lhs, rhs });
                         return error.TypeMismatch;
@@ -325,10 +334,13 @@ pub const TypeInfo = union(enum) {
                     if (instance.class_id != expected_i.class_id) {
                         return error.TypeMismatch;
                     }
-                    if (instance.args.len != expected_i.args.len) {
+                    // instance.args catch return instead!
+                    const args = instance.args orelse return;
+                    const expected_args = expected_i.args orelse return error.TypeMisMatch;
+                    if (args.len != expected_args.len) {
                         return error.TypeMismatch;
                     }
-                    for (instance.args, expected_i.args) |actual_arg, expected_arg| {
+                    for (args, expected_args) |actual_arg, expected_arg| {
                         try unify(actual_arg, expected_arg, bindings, program, alloc);
                     }
                 },
@@ -430,7 +442,13 @@ pub const TypeInfo = union(enum) {
             },
             // substitutes fields not methods
             .instance => |i| {
-                var args = try alloc.alloc(TypeInfo, i.args.len);
+                const source_args = i.args orelse {
+                    return .{ .instance = .{
+                        .class_id = i.class_id,
+                        .args = null,
+                    } };
+                };
+                const args = try alloc.alloc(TypeInfo, source_args.len);
                 var initialized: usize = 0;
                 errdefer {
                     for (args[0..initialized]) |arg| {
@@ -438,7 +456,7 @@ pub const TypeInfo = union(enum) {
                     }
                     alloc.free(args);
                 }
-                for (i.args, 0..) |arg, arg_i| {
+                for (source_args, 0..) |arg, arg_i| {
                     args[arg_i] = try arg.substitute(bindings, alloc);
                     initialized += 1;
                 }
@@ -485,17 +503,19 @@ pub const TypeInfo = union(enum) {
                 return c.returns.*.containsGenericVariable(wanted);
             },
             .instance => |i| {
-                for (i.args) |arg| {
-                    if (arg.containsGenericVariable(wanted)) return true;
+                if (i.args) |args| {
+                    for (args) |arg| {
+                        if (arg.containsGenericVariable(wanted)) return true;
+                    }
                 }
                 return false;
             },
-            // .@"union" => |u| {
-            //     for (u.members) |member| {
-            //         if (member.containsGenericVariable(wanted)) return true;
-            //     }
-            //     return false;
-            // },
+            .@"union" => |u| {
+                for (u.members) |member| {
+                    if (member.containsGenericVariable(wanted)) return true;
+                }
+                return false;
+            },
             else => |e| {
                 std.debug.print("cant handle {s}\n", .{@tagName(e)});
                 unreachable;
@@ -570,13 +590,25 @@ pub const TypeInfo = union(enum) {
                 const class_id = try std.fmt.allocPrint(alloc, "{d}", .{instance.class_id});
                 defer alloc.free(class_id);
                 try out.appendSlice(alloc, class_id);
-                if (instance.args.len > 0) {
+                if (instance.args != null and instance.args.?.len > 0) {
                     try out.appendSlice(alloc, "_");
-                    for (instance.args) |arg| {
+                    for (instance.args.?) |arg| {
                         const arg_name = try arg.toString(alloc);
                         defer alloc.free(arg_name);
                         try out.appendSlice(alloc, arg_name);
                     }
+                }
+                break :blk out.toOwnedSlice(alloc);
+            },
+            .@"union" => |u| blk: {
+                var out: std.ArrayList(u8) = .empty;
+                errdefer out.deinit(alloc);
+                try out.appendSlice(alloc, "union_");
+                for (u.members, 0..) |member, i| {
+                    if (i != 0) try out.append(alloc, '_');
+                    const name = try member.toString(alloc);
+                    defer alloc.free(name);
+                    try out.appendSlice(alloc, name);
                 }
                 break :blk out.toOwnedSlice(alloc);
             },
@@ -611,9 +643,9 @@ pub const TypeInfo = union(enum) {
                 var out: std.ArrayList(u8) = .empty;
                 errdefer out.deinit(alloc);
                 try out.appendSlice(alloc, class.name);
-                if (instance.args.len > 0) {
+                if (instance.args != null and instance.args.?.len > 0) {
                     try out.append(alloc, '[');
-                    for (instance.args, 0..) |arg, i| {
+                    for (instance.args.?, 0..) |arg, i| {
                         if (i != 0) try out.appendSlice(alloc, ", ");
                         const name = try arg.toDisplayName(program, alloc);
                         defer alloc.free(name);

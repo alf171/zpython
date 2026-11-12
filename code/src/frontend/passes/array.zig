@@ -223,13 +223,13 @@ fn lowerArrayAlloc(
     const args = try alloc.dupe(TypedOperand, &.{
         .{ .operand = size_temp, .type = .i64 },
     });
-    try new_instructions.append(alloc, .{ .function_call = .{
+    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
         .dst = try dst.clone(alloc),
         .callee = .{
             .direct = try alloc.dupe(u8, "arena_malloc"),
         },
         .args = args,
-    } });
+    } } });
     // store array size
     {
         const src = function.nextTemp();

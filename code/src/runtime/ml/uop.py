@@ -4,10 +4,9 @@ from ml.eval import evaluate
 
 # FIXME: support tagged unions to remove args like axis
 class Uop[T]():
-    def __init__(self, src: list[Uop[T]], op: Ops, shape: tuple[i32, i32], axis: i32) -> None:
-        self.src: list[Uop[T]] = src
+    def __init__(self, src: list[Uop], op: Ops, shape: tuple[i32, i32], axis: i32) -> None:
+        self.src: list[Uop] = src
         self.buffers: list[TensorData[T]] = []
-        self.conditions: list[Uop[bool]] = []
         self.op: Ops = op
         self.shape: tuple[i32, i32] = shape
         self.axis: i32 = axis
@@ -17,18 +16,18 @@ class Uop[T]():
     @staticmethod
     def from_data[U](data: TensorData[U]) -> Uop[U]:
         sources: list[Uop[U]] = []
-        node = Uop(sources, Ops.BUFFER, (data.rows, data.cols), 0)
+        node: Uop[U] = Uop(sources, Ops.BUFFER, (data.rows, data.cols), 0)
         node.buffers.append(data)
         return node
 
-    def toposort(self) -> list[Uop[T]]:
-        visited: dict[Uop[T], bool] = {}
-        order: list[Uop[T]] = []
+    def toposort(self) -> list[Uop]:
+        visited: dict[Uop, bool] = {}
+        order: list[Uop] = []
         Uop._visit(self, visited, order)
         return order
 
     @staticmethod
-    def _visit[U](self: Uop[U], visited: dict[Uop[U], bool], order: list[Uop[U]]) -> None:
+    def _visit(self: Uop, visited: dict[Uop, bool], order: list[Uop]) -> None:
         if self in visited:
             return
 
@@ -47,8 +46,7 @@ class Uop[T]():
         print(evaluate(self), end=end)
 
     def __gt__(self, other: Uop[T]) -> Uop[bool]:
-        view = evaluate(self) > evaluate(other)
-        return Uop.from_data(view)
+        return Uop([self, other], Ops.GT, self.shape, 0)
 
     def __ge__(self, other: Uop[T]) -> Uop[bool]:
         view = evaluate(self) >= evaluate(other)
@@ -79,9 +77,7 @@ class Uop[T]():
 
     @staticmethod
     def where[U](condition: Uop[bool], lhs: Uop[U], rhs: Uop[U]) -> Uop[U]:
-        result = Uop([lhs, rhs], Ops.WHERE, lhs.shape, 0)
-        result.conditions.append(condition)
-        return result
+        return Uop([condition, lhs, rhs], Ops.WHERE, lhs.shape, 0)
 
     def __mul__(self, other: Uop[T]) -> Uop[T]:
         return Uop([self, other], Ops.MUL, self.shape, 0)

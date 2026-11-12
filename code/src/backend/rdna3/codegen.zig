@@ -83,6 +83,11 @@ pub fn emit(
                         }
                     },
                     .lir => |lir| switch (lir) {
+                        .function_return => |fr| {
+                            if (fr.value != null) return error.UnsupportedGpu;
+                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0) lgkmcnt(0)\n");
+                            try out.appendSlice(alloc, "\ts_endpgm\n");
+                        },
                         .move => |m| {
                             const dst = try abi.regFor(m.dst.operand);
                             if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
@@ -523,11 +528,6 @@ pub fn emit(
                             std.debug.print("cant handle {s}\n", .{@tagName(e)});
                             return error.NotImpl;
                         },
-                    },
-                    .function_return => |fr| {
-                        if (fr.value != null) return error.UnsupportedGpu;
-                        try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0) lgkmcnt(0)\n");
-                        try out.appendSlice(alloc, "\ts_endpgm\n");
                     },
                     else => |e| {
                         std.debug.print("cant handle {s}\n", .{@tagName(e)});

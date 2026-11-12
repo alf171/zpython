@@ -33,7 +33,7 @@ class Tensor[T]:
 
     def assign(self, value: Tensor[T]) -> Tensor[T]:
         data = evaluate(value.uop)
-        uop = Uop.from_data(data)
+        uop: Uop[T] = Uop.from_data(data)
         self.uop = uop
         uop.owners.append(self)
         return self
@@ -44,23 +44,28 @@ class Tensor[T]:
         i = len(uops)
         while i > 0:
             i -= 1
-            node = uops[i]
+            node = cast(Uop[T], uops[i])
             # skip non differentiable stuff
-            if node not in grads:
-                continue
-            
-            contributions = grad_rule(node, grads[node])
-            for j in range(len(contributions)):
-                source = node.src[j]
-                incoming = contributions[j]
+            # FIXME: get continue working better
+            if node in grads:
+                contributions = grad_rule(node, grads[node])
+                # assert len(contributions) == len(node.src)
+                for j in range(len(contributions)):
+                    contribution = contributions[j]
+                    # FIXME: get continue working better
+                    if contribution is not None:
+                        incoming = cast(Uop[T], contribution)
+                        source = cast(Uop[T], node.src[j])
 
-                if source in grads:
-                    grads[source] = Uop([grads[source], incoming], Ops.ADD, source.shape, 0)
-                else:
-                    grads[source] = incoming
+                        if source in grads:
+                            acc: Uop[T] = Uop([grads[source], incoming], Ops.ADD, source.shape, 0)
+                            grads[source] = acc
+                        else:
+                            grads[source] = incoming
 
         targets: list[Tensor[T]] = []
-        for node in uops:
+        for enode in uops:
+            node = cast(Uop[T], enode)
             for owner in node.owners:
                 targets.append(owner)
 
@@ -100,22 +105,19 @@ class Tensor[T]:
         return Tensor._init(self.uop.ne(other.uop))
 
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
-        uop = Uop([self.uop, other.uop], Ops.ADD, self.uop.shape, 0)
-        res = Tensor._init(uop)
-        return res
+        uop: Uop[T] = Uop([self.uop, other.uop], Ops.ADD, self.uop.shape, 0)
+        return Tensor._init(uop)
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
-        uop = Uop([self.uop, other.uop], Ops.SUB, self.uop.shape, 0)
-        res = Tensor._init(uop)
-        return res
+        uop: Uop[T] = Uop([self.uop, other.uop], Ops.SUB, self.uop.shape, 0)
+        return Tensor._init(uop)
 
     def __mul__(self, other: Tensor[T]) -> Tensor[T]:
         res = Tensor._init(self.uop * other.uop)
         return res
 
     def __truediv__(self, other: Tensor[T]) -> Tensor[T]:
-        res = Tensor._init(self.uop / other.uop)
-        return res
+        return Tensor._init(self.uop / other.uop)
 
     def __matmul__(self, other: Tensor[T]) -> Tensor[T]:
         return Tensor._init(self.uop @ other.uop)
@@ -133,7 +135,7 @@ class Tensor[T]:
         return Tensor.where(self > zeros, self, zeros)
 
     def exp(self) -> Tensor[T]:
-        uop = Uop([self.uop], Ops.EXP, self.uop.shape, 0)
+        uop: Uop[T] = Uop([self.uop], Ops.EXP, self.uop.shape, 0)
         res = Tensor._init(uop)
         return res
 

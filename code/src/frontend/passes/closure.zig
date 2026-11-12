@@ -50,42 +50,37 @@ fn rewriteFunction(
 
         for (block.instructions.items) |*instruction| {
             switch (instruction.*) {
-                .function_call => |fc| {
-                    const callee_label = switch (fc.callee) {
-                        .direct => |label| label,
-                        .indirect => {
-                            try new_instructions.append(alloc, instruction.*);
-                            continue;
-                        },
-                    };
-                    for (fc.args, 0..) |arg, i| {
-                        if (arg.type != .callable) continue;
-
-                        const target = known_targets.get(arg.operand) orelse {
-                            return error.CantFindFunction;
+                .lir => |lir| switch (lir) {
+                    .function_call => |fc| {
+                        const callee_label = switch (fc.callee) {
+                            .direct => |label| label,
+                            .indirect => {
+                                try new_instructions.append(alloc, instruction.*);
+                                continue;
+                            },
                         };
+                        for (fc.args, 0..) |arg, i| {
+                            if (arg.type != .callable) continue;
 
-                        const entry = try incoming_targets.getOrPut(callee_label);
-                        if (!entry.found_existing) {
-                            entry.value_ptr.* = .init(alloc);
-                        }
+                            const target = known_targets.get(arg.operand) orelse {
+                                return error.CantFindFunction;
+                            };
 
-                        std.debug.assert(!entry.value_ptr.contains(i));
-                        try entry.value_ptr.put(i, try alloc.dupe(u8, target));
-                    }
-                    try new_instructions.append(alloc, instruction.*);
-                },
-                .function_param => |param| {
-                    if (incoming_targets.get(param.label)) |params| {
-                        if (params.get(param.index)) |target| {
-                            try known_targets.put(param.dst.operand, try alloc.dupe(u8, target));
+                            const entry = try incoming_targets.getOrPut(callee_label);
+                            if (!entry.found_existing) {
+                                entry.value_ptr.* = .init(alloc);
+                            }
+
+                            std.debug.assert(!entry.value_ptr.contains(i));
+                            try entry.value_ptr.put(i, try alloc.dupe(u8, target));
                         }
-                    }
-                    try new_instructions.append(alloc, instruction.*);
-                },
-                .function_ref => |fr| {
-                    try known_targets.put(fr.dst.operand, try alloc.dupe(u8, fr.label));
-                    try new_instructions.append(alloc, instruction.*);
+                        try new_instructions.append(alloc, instruction.*);
+                    },
+                    .function_ref => |fr| {
+                        try known_targets.put(fr.dst.operand, try alloc.dupe(u8, fr.label));
+                        try new_instructions.append(alloc, instruction.*);
+                    },
+                    else => try new_instructions.append(alloc, instruction.*),
                 },
                 // dst = load_offset env, (index+1)*8
                 // we'll hardcode 8 for now to avoid generics
@@ -101,10 +96,10 @@ fn rewriteFunction(
                 .closure_create => |cc| {
                     try known_targets.put(cc.dst.operand, try alloc.dupe(u8, cc.label));
                     if (cc.captures.len == 0) {
-                        try new_instructions.append(alloc, .{ .function_ref = .{
+                        try new_instructions.append(alloc, .{ .lir = .{ .function_ref = .{
                             .dst = try cc.dst.clone(alloc),
                             .label = try alloc.dupe(u8, cc.label),
-                        } });
+                        } } });
                         instruction.deinit(alloc);
                         continue;
                     }
@@ -116,13 +111,13 @@ fn rewriteFunction(
                     const args = try alloc.dupe(TypedOperand, &.{
                         .{ .operand = size_temp, .type = .i64 },
                     });
-                    try new_instructions.append(alloc, .{ .function_call = .{
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                         .dst = try cc.dst.clone(alloc),
                         .callee = .{
                             .direct = try alloc.dupe(u8, "arena_malloc"),
                         },
                         .args = args,
-                    } });
+                    } } });
                     const closure_fn: TypedOperand = .{
                         .operand = function.nextTemp(),
                         .type = try cc.dst.type.clone(alloc),
@@ -130,10 +125,10 @@ fn rewriteFunction(
                     const closure_type = try closure_fn.type.toString(alloc);
                     defer alloc.free(closure_type);
                     // std.debug.print("closure type for {s}: {s}\n", .{ cc.label, closure_type });
-                    try new_instructions.append(alloc, .{ .function_ref = .{
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_ref = .{
                         .dst = closure_fn,
                         .label = try alloc.dupe(u8, cc.label),
-                    } });
+                    } } });
                     try new_instructions.append(alloc, .{ .lir = .{ .store_offset = .{
                         .dst = try cc.dst.clone(alloc),
                         .src = try closure_fn.clone(alloc),
@@ -161,11 +156,11 @@ fn rewriteFunction(
                                 args[i] = try arg.clone(alloc);
                             }
 
-                            try new_instructions.append(alloc, .{ .function_call = .{
+                            try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
                                 .dst = if (cc.dst) |dst| try dst.clone(alloc) else null,
                                 .callee = .{ .direct = try alloc.dupe(u8, target.label) },
                                 .args = args,
-                            } });
+                            } } });
                             instruction.deinit(alloc);
                             continue;
                         }
@@ -185,14 +180,20 @@ fn rewriteFunction(
                     for (cc.args, 0..) |arg, i| {
                         args[i + 1] = try arg.clone(alloc);
                     }
-                    try new_instructions.append(alloc, .{
-                        .function_call = .{
-                            .dst = if (cc.dst) |dst| try dst.clone(alloc) else null,
-                            .callee = .{ .indirect = fn_ptr },
-                            .args = args,
-                        },
-                    });
+                    try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
+                        .dst = if (cc.dst) |dst| try dst.clone(alloc) else null,
+                        .callee = .{ .indirect = fn_ptr },
+                        .args = args,
+                    } } });
                     instruction.deinit(alloc);
+                },
+                .function_param => |param| {
+                    if (incoming_targets.get(param.label)) |params| {
+                        if (params.get(param.index)) |target| {
+                            try known_targets.put(param.dst.operand, try alloc.dupe(u8, target));
+                        }
+                    }
+                    try new_instructions.append(alloc, instruction.*);
                 },
                 else => try new_instructions.append(alloc, instruction.*),
             }
