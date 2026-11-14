@@ -48,6 +48,8 @@ fn rewriteFunction(
                             try new_instructions.append(alloc, instruction.*);
                             continue;
                         }
+                        try rewriteFunction(callee, program, alloc);
+
                         // reduce scope temporarily :)
                         if (callee.blocks.items.len != 1) return error.NonInlineableFunction;
                         for (callee.blocks.items) |*callee_block| {

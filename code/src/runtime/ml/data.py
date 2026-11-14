@@ -44,15 +44,23 @@ class TensorData[T]:
     def transpose(self) -> TensorData[T]:
         return TensorData._view(self.data, self.cols, self.rows, self.col_stride, self.row_stride)
 
+    @inline
     def __getitem__(self, idxs: tuple[i32, i32]) -> T:
-        row = idxs[0]
-        col = idxs[1]
+        return self.load(idxs[0], idxs[1])
+
+    # HACK: tuple on gpu doesn't work b/c it requires a function call to malloc
+    @inline
+    def load(self, row: i32, col: i32) -> T:
         index = index_2d(row, col, self.row_stride, self.col_stride)
         return self.data[index]
 
+    @inline
     def __setitem__(self, idxs: tuple[i32, i32], value: T) -> None:
-        row = idxs[0]
-        col = idxs[1]
+        self.store(idxs[0], idxs[1], value)
+
+    # HACK: tuple on gpu doesn't work b/c it requires a function call to malloc
+    @inline
+    def store(self, row: i32, col: i32, value: T) -> None:
         index = index_2d(row, col, self.row_stride, self.col_stride)
         self.data[index] = value
 

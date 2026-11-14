@@ -5,101 +5,61 @@ from ml.indexing import index_2d
 def gt[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] > b.data[b_i]
+    out.store(row, col, a.load(row, col) > b.load(row, col))
 
 @gpu
 def ge[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] >= b.data[b_i]
+    out.store(row, col, a.load(row, col) >= b.load(row, col))
 
 @gpu
 def lt[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] < b.data[b_i]
+    out.store(row, col, a.load(row, col) < b.load(row, col))
 
 @gpu
 def le[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] <= b.data[b_i]
+    out.store(row, col, a.load(row, col) <= b.load(row, col))
 
 @gpu
 def eq[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] == b.data[b_i]
+    out.store(row, col, a.load(row, col) == b.load(row, col))
 
 @gpu
 def ne[U](out: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] != b.data[b_i]
+    out.store(row, col, a.load(row, col) != b.load(row, col))
 
 @gpu
 def add[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] + b.data[b_i]
+    out.store(row, col, a.load(row, col) + b.load(row, col))
 
 @gpu
 def sub[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] - b.data[b_i]
+    out.store(row, col, a.load(row, col) - b.load(row, col))
 
 @gpu
 def mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] * b.data[b_i]
+    out.store(row, col, a.load(row, col) * b.load(row, col))
 
 @gpu
 def div[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-    out.data[out_i] = a.data[a_i] / b.data[b_i]
+    out.store(row, col, a.load(row, col) / b.load(row, col))
 
 @gpu
 # (i, j) @ (j,k) = (i,k)
@@ -109,25 +69,17 @@ def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
 
     acc: U = 0
     for j in range(a.cols):
-        a_i = index_2d(i, j, a.row_stride, a.col_stride)
-        b_i = index_2d(j, k, b.row_stride, b.col_stride) 
-        acc += a.data[a_i] * b.data[b_i]
+        acc += a.load(i, j) * b.load(j, k)
 
     # (i, k)
-    out_i = index_2d(i, k, out.row_stride, out.col_stride)
-    out.data[out_i] = acc
+    out.store(i, k, acc)
 
 @gpu
 def where[U](out: TensorData[U], mask: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
-
-    out_i = index_2d(row, col, out.row_stride, out.col_stride)
-    mask_i = index_2d(row, col, mask.row_stride, mask.col_stride)
-    a_i = index_2d(row, col, a.row_stride, a.col_stride)
-    b_i = index_2d(row, col, b.row_stride, b.col_stride)
-
-    out.data[out_i] = a.data[a_i] if mask.data[mask_i] else b.data[b_i]
+    value = a.load(row, col) if mask.load(row, col) else b.load(row, col)
+    out.store(row, col, value)
 
 @gpu
 # a bit hacky for rdna3 :)
@@ -142,7 +94,7 @@ def sum_cols[U](out: array[U], a: TensorData[U]) -> None:
     total: U = 0
 
     for row in range(a.rows):
-        total += a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        total += a.load(row, col)
 
     out[col] = total
 
@@ -152,38 +104,38 @@ def sum_rows[U](out: array[U], a: TensorData[U]) -> None:
     total: U = 0
 
     for col in range(a.cols):
-        total += a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        total += a.load(row, col)
 
     out[row] = total
 
 @gpu
 def max_cols[U](out: array[U], a: TensorData[U]) -> None:
     col = global_id(0)
-    best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
+    best: U = a.load(0, col)
 
     for row in range(1, a.rows):
-        best = max(best, a.data[index_2d(row, col, a.row_stride, a.col_stride)])
+        best = max(best, a.load(row, col))
 
     out[col] = best
 
 @gpu
 def max_rows[U](out: array[U], a: TensorData[U]) -> None:
     row = global_id(0)
-    best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
+    best: U = a.load(row, 0)
 
     for col in range(1, a.cols):
-        best = max(best, a.data[index_2d(row, col, a.row_stride, a.col_stride)])
+        best = max(best, a.load(row, col))
 
     out[row] = best
 
 @gpu
 def argmax_cols[U](out: array[i32], a: TensorData[U]) -> None:
     col = global_id(0)
-    best: U = a.data[index_2d(0, col, a.row_stride, a.col_stride)]
+    best: U = a.load(0, col)
     best_index: i32 = 0
 
     for row in range(1, a.rows):
-        value = a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        value = a.load(row, col)
         if value > best:
             best = value
             best_index = row
@@ -193,11 +145,11 @@ def argmax_cols[U](out: array[i32], a: TensorData[U]) -> None:
 @gpu
 def argmax_rows[U](out: array[i32], a: TensorData[U]) -> None:
     row = global_id(0)
-    best: U = a.data[index_2d(row, 0, a.row_stride, a.col_stride)]
+    best: U = a.load(row, 0)
     best_index: i32 = 0
 
     for col in range(1, a.cols):
-        value = a.data[index_2d(row, col, a.row_stride, a.col_stride)]
+        value = a.load(row, col)
         if value > best:
             best = value
             best_index = col
