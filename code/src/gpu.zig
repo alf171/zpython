@@ -1,8 +1,6 @@
 const std = @import("std");
-const hsa = @cImport({
-    @cInclude("hsa/hsa.h");
-    @cInclude("hsa/hsa_ext_amd.h");
-});
+const HsaAlloc = @import("hsa_alloc.zig");
+const hsa = @import("hsa.zig").c;
 const libc = @cImport({
     @cUndef("_FORTIFY_SOURCE");
     @cDefine("_FORTIFY_SOURCE", "0");
@@ -26,7 +24,8 @@ pub const GpuRuntime = struct {
     agent: hsa.hsa_agent_t,
     executable: hsa.hsa_executable_t,
     queue: ?*hsa.hsa_queue_t,
-    kernelarg_region: hsa.hsa_region_t,
+    hsa_alloc: HsaAlloc,
+    arena: std.heap.ArenaAllocator,
 };
 
 fn check(status: hsa.hsa_status_t, operation: []const u8) void {
@@ -79,7 +78,13 @@ fn find_kernarg_region(region: hsa.hsa_region_t, data: ?*anyopaque) callconv(.c)
     return status;
 }
 
-var runtime: GpuRuntime = std.mem.zeroes(GpuRuntime);
+var runtime: GpuRuntime = .{
+    .agent = .{ .handle = 0 },
+    .executable = .{ .handle = 0 },
+    .queue = null,
+    .hsa_alloc = .{ .region = .{ .handle = 0 } },
+    .arena = undefined,
+};
 var initialized = false;
 
 fn shutdown_hsa() callconv(.c) void {
@@ -87,6 +92,7 @@ fn shutdown_hsa() callconv(.c) void {
         check(hsa.hsa_queue_destroy(runtime.queue), "hsa_queue_destroy");
     }
     check(hsa.hsa_executable_destroy(runtime.executable), "hsa_executable_destroy");
+    runtime.arena.deinit();
     check(hsa.hsa_shut_down(), "hsa_shut_down");
 }
 
@@ -123,12 +129,12 @@ fn ensure_hsa_initialized() void {
     var queue_max_size: u32 = 0;
     check(hsa.hsa_agent_get_info(runtime.agent, hsa.HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_max_size), "hsa_agent_get_info");
     check(hsa.hsa_queue_create(runtime.agent, queue_max_size, hsa.HSA_QUEUE_TYPE_SINGLE, null, null, std.math.maxInt(u32), std.math.maxInt(u32), &runtime.queue), "hsa_queue_create");
-    // get kernel arg region
-    check(hsa.hsa_agent_iterate_regions(runtime.agent, find_kernarg_region, &runtime.kernelarg_region), "hsa_agent_iterate_regions");
-
-    if (runtime.kernelarg_region.handle == 0) {
+    // prepare allocator
+    check(hsa.hsa_agent_iterate_regions(runtime.agent, find_kernarg_region, &runtime.hsa_alloc.region), "hsa_agent_iterate_regions");
+    if (runtime.hsa_alloc.region.handle == 0) {
         @panic("No kernarg region found\n");
     }
+    runtime.arena = std.heap.ArenaAllocator.init(runtime.hsa_alloc.allocate());
 
     initialized = true;
 }
@@ -204,8 +210,11 @@ export fn gpu_launch(
     check(hsa.hsa_signal_create(1, 0, null, &completion_signal), "hsa_signal_create");
     // fprintf(stderr, "Created queue: id=%ld size=%u signal=%lu\n", shared_queue->id, shared_queue->size, completion_signal.handle);
 
-    var kernel_args: [*c]u64 = null;
-    check(hsa.hsa_memory_allocate(runtime.kernelarg_region, arg_count * @sizeOf(u64), @ptrCast(&kernel_args)), "hsa_memory_allocate");
+    const alloc = runtime.arena.allocator();
+    const kernel_args = alloc.alloc(u64, @intCast(arg_count)) catch {
+        @panic("kernel allocation failed");
+    };
+    defer _ = runtime.arena.reset(.retain_capacity);
     // const argument_device_ptrs: [*c]?*anyopaque = libc.calloc(arg_count, @sizeOf(argument_device_ptrs));
     const argument_device_ptrs: [*c]?*anyopaque = @ptrCast(@alignCast(libc.calloc(@intCast(arg_count), @sizeOf(?*anyopaque)) orelse {
         @panic("calloc failed");
@@ -262,7 +271,7 @@ export fn gpu_launch(
     packet.group_segment_size = 0;
 
     packet.kernel_object = kernel_object;
-    packet.kernarg_address = kernel_args;
+    packet.kernarg_address = kernel_args.ptr;
     packet.completion_signal = completion_signal;
 
     const header: u16 =
@@ -292,13 +301,6 @@ export fn gpu_launch(
         }
     }
     libc.free(@ptrCast(argument_device_ptrs));
-
-    // fprintf(
-    //     stderr,
-    //     "Kernel completed: signal=%ld\n",
-    //     completion);
-
-    check(hsa.hsa_memory_free(kernel_args), "hsa_memory_free(kernel_args)");
 
     check(hsa.hsa_signal_destroy(completion_signal), "hsa_signal_destroy");
 }
