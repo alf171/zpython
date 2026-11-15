@@ -29,13 +29,17 @@ pub fn run(request: AssemblerRequest, io: std.Io, alloc: std.mem.Allocator) !voi
         defer alloc.free(hsa_include);
         // clang -I ($HSA_RUNTIME_PATH)/include -c src/gpu.c -o /tmp/gpu.o
         const gpu_result = try runCommand(alloc, io, &.{
-            "clang",
+            "zig",
+            "build-obj",
+            "src/gpu.zig",
             "-I",
             hsa_include,
-            "-c",
-            "src/gpu.c",
-            "-o",
-            "/tmp/gpu.o",
+            "-I",
+            "src",
+            "-lc",
+            "-OReleaseSafe",
+            "-fno-stack-check",
+            "-femit-bin=/tmp/gpu.o",
         });
         defer alloc.free(gpu_result.stdout);
         defer alloc.free(gpu_result.stderr);
