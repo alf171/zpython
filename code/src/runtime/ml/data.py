@@ -67,41 +67,49 @@ class TensorData[T]:
         self.data[index] = value
 
     def __gt__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _gt_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __ge__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _ge_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __lt__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _lt_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __le__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _le_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __eq__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _eq_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __ne__(self, other: TensorData[T]) -> TensorData[bool]:
-        res = TensorData.fill((self.rows, self.cols), False)
+        res = TensorData.empty((self.rows, self.cols), False)
         _ne_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
+    # full
     @staticmethod
     def fill[U](shape: tuple[i32, i32], value: U) -> TensorData[U]:
         count: int = shape[0] * shape[1]
         data: array[U] = array_empty(count)
         for i in range(count):
             data[i] = value
+        return TensorData(data, shape)
+
+    # empty
+    @staticmethod
+    def empty[U](shape: tuple[i32, i32], t: U) -> TensorData[U]:
+        count: int = shape[0] * shape[1]
+        data: array[U] = array_empty(count)
         return TensorData(data, shape)
 
     @staticmethod
@@ -114,59 +122,59 @@ class TensorData[T]:
 
     def __add__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _add_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __sub__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _sub_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __mul__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _mul_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     # res = a - (b * c)
     def sub_mul(self, b: TensorData[T], c: TensorData[T]) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _sub_mul_gpu(res, self, b, c, (self.rows, self.cols, 1))
         return res
 
     def __truediv__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _div_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
     def __matmul__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
         # (i, k)
-        res = TensorData.fill((self.rows, other.cols), zero)
+        res = TensorData.empty((self.rows, other.cols), zero)
         _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
         return res
 
     @staticmethod
     def where[U](condition: TensorData[bool], lhs: TensorData[U], rhs: TensorData[U]) -> TensorData[U]:
         zero: U = 0
-        res = TensorData.fill((lhs.rows, lhs.cols), zero)
+        res = TensorData.empty((lhs.rows, lhs.cols), zero)
         _where_gpu(res, condition, lhs, rhs, (lhs.rows, lhs.cols, 1))
         return res
 
     @staticmethod
     def where_gt[U, V](a: TensorData[V], b: TensorData[V], x: TensorData[U], y: TensorData[U]) -> TensorData[U]:
         zero: U = 0
-        res = TensorData.fill((a.rows, a.cols), zero)
+        res = TensorData.empty((x.rows, x.cols), zero)
         _where_gt_gpu(res, a, b, x, y, (a.rows, a.cols, 1))
         return res
 
     def exp(self) -> TensorData[T]:
         zero: T = 0
-        res = TensorData.fill((self.rows, self.cols), zero)
+        res = TensorData.empty((self.rows, self.cols), zero)
         _exp_gpu(res.data, self.data, (self.rows * self.cols, 1, 1))
         return res
 
