@@ -56,6 +56,12 @@ def mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     out.store(row, col, a.load(row, col) * b.load(row, col))
 
 @gpu
+def sub_mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U], c: TensorData[U]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+    out.store(row, col, a.load(row, col) - (b.load(row, col) * c.load(row, col)))
+
+@gpu
 def div[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
@@ -79,6 +85,14 @@ def where[U](out: TensorData[U], mask: TensorData[bool], a: TensorData[U], b: Te
     row = global_id(0)
     col = global_id(1)
     value = a.load(row, col) if mask.load(row, col) else b.load(row, col)
+    out.store(row, col, value)
+
+@gpu
+def where_gt[T, U](out: TensorData[T], a: TensorData[U], b: TensorData[U], x: TensorData[T], y: TensorData[T]) -> None:
+    row = global_id(0)
+    col = global_id(1)
+    condition = a.load(row, col) > b.load(row, col)
+    value = x.load(row, col) if condition else y.load(row, col)
     out.store(row, col, value)
 
 @gpu

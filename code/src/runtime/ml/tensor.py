@@ -105,16 +105,13 @@ class Tensor[T]:
         return Tensor._init(self.uop.ne(other.uop))
 
     def __add__(self, other: Tensor[T]) -> Tensor[T]:
-        uop: Uop[T] = Uop([self.uop, other.uop], Ops.ADD, self.uop.shape, 0)
-        return Tensor._init(uop)
+        return Tensor._init(self.uop + other.uop)
 
     def __sub__(self, other: Tensor[T]) -> Tensor[T]:
-        uop: Uop[T] = Uop([self.uop, other.uop], Ops.SUB, self.uop.shape, 0)
-        return Tensor._init(uop)
+        return Tensor._init(self.uop - other.uop)
 
     def __mul__(self, other: Tensor[T]) -> Tensor[T]:
-        res = Tensor._init(self.uop * other.uop)
-        return res
+        return Tensor._init(self.uop * other.uop)
 
     def __truediv__(self, other: Tensor[T]) -> Tensor[T]:
         return Tensor._init(self.uop / other.uop)
@@ -145,8 +142,8 @@ class Tensor[T]:
     def max(self, axis: i32) -> Tensor[T]:
         return Tensor._init(self.uop.max(axis))
 
+    # HACK: eager
     def argmax(self, axis: i32) -> Tensor[i32]:
-        # HACK: eager
         values = evaluate(self.uop)
         indicies = values.argmax(axis)
         return Tensor._init(Uop.from_data(indicies))

@@ -74,6 +74,12 @@ class Uop[T]():
     def where[U](condition: Uop[bool], lhs: Uop[U], rhs: Uop[U]) -> Uop[U]:
         return Uop([condition, lhs, rhs], Ops.WHERE, lhs.shape, 0)
 
+    def __add__(self, other: Uop[T]) -> Uop[T]:
+        return Uop([self, other], Ops.ADD, self.shape, 0)
+
+    def __sub__(self, other: Uop[T]) -> Uop[T]:
+        return Uop([self, other], Ops.SUB, self.shape, 0)
+
     def __mul__(self, other: Uop[T]) -> Uop[T]:
         return Uop([self, other], Ops.MUL, self.shape, 0)
 

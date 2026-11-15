@@ -1018,28 +1018,36 @@ pub fn walkExpr(stmt: *PyObject, ir_builder: *IrBuilder, expected_type: ?TypeInf
                 .And => {
                     const values_obj = c.PyObject_GetAttrString(stmt, "values");
                     std.debug.assert(values_obj != null);
-                    std.debug.assert(c.PyList_Size(values_obj) == 2);
+                    const size = c.PyList_Size(values_obj);
+                    std.debug.assert(size >= 2);
+
                     const lhs_obj = c.PyList_GetItem(values_obj, 0);
                     std.debug.assert(lhs_obj != null);
                     const lhs = try walkExpr(lhs_obj, ir_builder, null, alloc);
                     std.debug.assert(lhs.type == .bool);
-                    const rhs_obj = c.PyList_GetItem(values_obj, 1);
-                    std.debug.assert(rhs_obj != null);
-                    const rhs = try walkExpr(rhs_obj, ir_builder, null, alloc);
-                    std.debug.assert(rhs.type == .bool);
-                    const dst: TypedOperand = .{
-                        .operand = ir_builder.nextTemp(),
-                        .type = .bool,
-                    };
-                    try ir_builder.emit(.{
-                        .lir = .{ .select = .{
-                            .dst = dst,
-                            .condition = lhs,
-                            .if_value = .{ .top = rhs },
-                            .else_value = .{ .constant = .{ .bool = false } },
-                        } },
-                    }, alloc);
-                    return try dst.clone(alloc);
+                    var result = lhs;
+                    var i: isize = 1;
+                    while (i < size) : (i += 1) {
+                        // FIXME: we should use phis for short circuit semantics
+                        const rhs_obj = c.PyList_GetItem(values_obj, i);
+                        std.debug.assert(rhs_obj != null);
+                        const rhs = try walkExpr(rhs_obj, ir_builder, null, alloc);
+                        std.debug.assert(rhs.type == .bool);
+                        const dst: TypedOperand = .{
+                            .operand = ir_builder.nextTemp(),
+                            .type = .bool,
+                        };
+                        try ir_builder.emit(.{
+                            .lir = .{ .select = .{
+                                .dst = dst,
+                                .condition = result,
+                                .if_value = .{ .top = rhs },
+                                .else_value = .{ .constant = .{ .bool = false } },
+                            } },
+                        }, alloc);
+                        result = dst;
+                    }
+                    return try result.clone(alloc);
                 },
                 else => return error.NotImpl,
             }

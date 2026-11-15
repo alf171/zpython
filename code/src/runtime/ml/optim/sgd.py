@@ -1,9 +1,4 @@
 
-# HACK: a: <type> = <coercable type> doesn't work today
-@inline
-def coerce[U](t:Tensor[U]|None) -> Tensor[U]:
-    return t
-
 class SGD[T]:
     def __init__(self, params: list[Tensor[T]], lr: T) -> None:
         self.params: list[Tensor[T]] = params
@@ -18,5 +13,6 @@ class SGD[T]:
             grad = param.grad
             if grad is not None:
                 rate = Tensor.fill(param.uop.shape, self.lr)
+                g = cast(Tensor[T], grad)
                 # param -= lr * grad
-                param.assign(param - rate * coerce(grad))
+                param.assign(param - rate * g)

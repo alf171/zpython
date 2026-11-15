@@ -8,9 +8,11 @@ from ml.kernels import ne as _ne_gpu
 from ml.kernels import add as _add_gpu
 from ml.kernels import sub as _sub_gpu
 from ml.kernels import mul as _mul_gpu
+from ml.kernels import sub_mul as _sub_mul_gpu
 from ml.kernels import div as _div_gpu
 from ml.kernels import matmul as _matmul_gpu
 from ml.kernels import where as _where_gpu
+from ml.kernels import where_gt as _where_gt_gpu
 from ml.kernels import exp as _exp_gpu
 from ml.kernels import sum_rows as _sum_rows_gpu
 from ml.kernels import sum_cols as _sum_cols_gpu
@@ -128,6 +130,13 @@ class TensorData[T]:
         _mul_gpu(res, self, other, (self.rows, self.cols, 1))
         return res
 
+    # res = a - (b * c)
+    def sub_mul(self, b: TensorData[T], c: TensorData[T]) -> TensorData[T]:
+        zero: T = 0
+        res = TensorData.fill((self.rows, self.cols), zero)
+        _sub_mul_gpu(res, self, b, c, (self.rows, self.cols, 1))
+        return res
+
     def __truediv__(self, other: TensorData[T]) -> TensorData[T]:
         zero: T = 0
         res = TensorData.fill((self.rows, self.cols), zero)
@@ -146,6 +155,13 @@ class TensorData[T]:
         zero: U = 0
         res = TensorData.fill((lhs.rows, lhs.cols), zero)
         _where_gpu(res, condition, lhs, rhs, (lhs.rows, lhs.cols, 1))
+        return res
+
+    @staticmethod
+    def where_gt[U, V](a: TensorData[V], b: TensorData[V], x: TensorData[U], y: TensorData[U]) -> TensorData[U]:
+        zero: U = 0
+        res = TensorData.fill((a.rows, a.cols), zero)
+        _where_gt_gpu(res, a, b, x, y, (a.rows, a.cols, 1))
         return res
 
     def exp(self) -> TensorData[T]:
