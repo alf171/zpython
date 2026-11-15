@@ -80,6 +80,23 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    var gpu_object: ?std.Build.LazyPath = null;
+    if (b.graph.environ_map.get("HSA_RUNTIME_PATH")) |hsa_path| {
+        const gpu = b.addObject(.{ .name = "gpu", .root_module = b.createModule(.{
+            .root_source_file = b.path("src/gpu.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }) });
+        gpu_object = gpu.getEmittedBin();
+        gpu.root_module.addIncludePath(.{
+            .cwd_relative = b.pathJoin(&.{ hsa_path, "include" }),
+        });
+        gpu.root_module.addIncludePath(b.path("src"));
+        const gpu_step = b.step("gpu", "compile rdna3 runtime");
+        gpu_step.dependOn(&gpu.step);
+    }
+
     // share irs between stages
     frontend.root_module.addImport("common", common);
     frontend_mod.addImport("common", common);
@@ -145,6 +162,9 @@ pub fn build(b: *std.Build) void {
     const integration_test_step = b.step("integration-test", "run integration test");
     integration_test_step.dependOn(&run_integration_tests.step);
     if (b.args) |args| run_integration_tests.addArgs(args);
+    if (gpu_object) |path| {
+        run_integration_tests.addPrefixedFileArg("--gpu-object=", path);
+    }
 
     // snapshot test using integration
     const run_snapshot_tests = b.addRunArtifact(snapshot_test);

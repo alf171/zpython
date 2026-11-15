@@ -10,8 +10,6 @@ pub const AssemblerRequest = struct {
     output_file: []const u8,
     // platform we are linking for
     target: Target,
-    // optional arg if target uses HSA
-    hsa_runtime_path: ?[]const u8,
 };
 
 pub const Assembler = union(enum) {
@@ -27,7 +25,7 @@ pub const Assembler = union(enum) {
         alloc: std.mem.Allocator,
     ) !void {
         switch (self) {
-            .clang => try clang.run(request, io, alloc),
+            .clang => try clang.assemble(request, io, alloc),
             // TODO: rename to native
             else => try elf.run(request, io, alloc),
         }

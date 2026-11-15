@@ -82,6 +82,7 @@ pub fn main(init: std.process.Init) !void {
         .host = .X86,
         .device = .gfx1103,
     };
+    var gpu_object: ?[]const u8 = null;
     for (args[3..]) |arg| {
         if (std.mem.eql(u8, arg, "--run")) should_run = true;
         if (std.mem.eql(u8, arg, "--live")) live_output = true;
@@ -97,6 +98,7 @@ pub fn main(init: std.process.Init) !void {
         if (std.mem.eql(u8, arg, "--host=x86")) target.host = .X86;
         if (std.mem.eql(u8, arg, "--device=host")) target.device = .host;
         if (std.mem.eql(u8, arg, "--device=gfx1103")) target.device = .gfx1103;
+        if (std.mem.startsWith(u8, arg, "--gpu-object=")) gpu_object = arg["--gpu-object=".len..];
     }
 
     // walk user program
@@ -107,7 +109,7 @@ pub fn main(init: std.process.Init) !void {
     defer ir_program.deinit(alloc);
 
     // rewrite layer
-    var timer = TimerMetrics.init();
+    var timer: TimerMetrics = .init();
     timer.begin(.frontend_total, io);
     try func.rewrite(&ir_program, alloc);
     try class.lowerCalls(&ir_program, alloc);
@@ -326,12 +328,10 @@ pub fn main(init: std.process.Init) !void {
         const obj_file = try std.fs.path.join(alloc, &.{ dir, obj_name });
         defer alloc.free(obj_file);
 
-        const hsa_runtime_path = init.environ_map.get("HSA_RUNTIME_PATH");
         try Assembler.run(.clang, .{
             .input_file = output_file,
             .output_file = obj_file,
             .target = target,
-            .hsa_runtime_path = hsa_runtime_path,
         }, io, alloc);
         timer.finish(.backend_assemble, io);
 
@@ -353,7 +353,7 @@ pub fn main(init: std.process.Init) !void {
                 "clang",
                 obj_file,
                 "/tmp/malloc.o",
-                "/tmp/gpu.o",
+                gpu_object.?,
                 "-lhsa-runtime64",
                 // link against libm
                 "-lm",
