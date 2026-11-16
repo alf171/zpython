@@ -227,6 +227,6 @@ pub fn walkLoop(
     // naively restore since we dont support walrus
     try ir_builder.currentScope().restoreLocalValues(&loop_values, alloc);
     if (orelse_) |orelse_val| {
-        try walkStmtList(orelse_val, ir_builder, alloc);
+        _ = try walkStmtList(orelse_val, ir_builder, alloc);
     }
 }

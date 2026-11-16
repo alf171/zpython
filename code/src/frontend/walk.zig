@@ -65,17 +65,29 @@ pub fn walkAstIntoBuilder(obj: ?*c.PyObject, ir_builder: *IrBuilder, alloc: std.
     const body = c.PyObject_GetAttrString(obj, "body");
     std.debug.assert(body != null);
 
-    try walkStmtList(body, ir_builder, alloc);
+    _ = try walkStmtList(body, ir_builder, alloc);
 }
 
-pub fn walkStmtList(stmts: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!void {
+pub fn walkStmtList(stmts: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!bool {
     const n = c.PyList_Size(stmts);
     var i: isize = 0;
 
     while (i < n) : (i += 1) {
         const raw_stmt = c.PyList_GetItem(stmts, i);
         try walkStmt(raw_stmt, ir_builder, alloc);
+
+        const instructions = ir_builder.currentBlock().instructions.items;
+        if (instructions.len == 0) continue;
+        // stop walking once we've hit a jump or return (its dead code)
+        switch (instructions[instructions.len - 1]) {
+            .lir => |lir| switch (lir) {
+                .function_return, .jump => return true,
+                else => {},
+            },
+            else => {},
+        }
     }
+    return false;
 }
 
 pub fn walkStmt(raw_stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator) anyerror!void {
@@ -2411,21 +2423,23 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     ir_builder.setCurrentBlock(then_block);
     // restore in case condition set variables
     try ir_builder.currentScope().restoreLocalValues(&before_values, alloc);
-    try walkStmtList(body, ir_builder, alloc);
+    const then_termiantes_early = try walkStmtList(body, ir_builder, alloc);
     const then_exit_block = ir_builder.current_block;
     // save then locals
     var then_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer then_values.deinit(alloc);
-    try ir_builder.emit(.{ .lir = .{
-        .jump = .{ .target = merge_block },
-    } }, alloc);
-    try ir_builder.addSuccessor(then_exit_block, merge_block, alloc);
+    if (!then_termiantes_early) {
+        try ir_builder.emit(.{ .lir = .{
+            .jump = .{ .target = merge_block },
+        } }, alloc);
+        try ir_builder.addSuccessor(then_exit_block, merge_block, alloc);
+    }
 
     // else block
     ir_builder.setCurrentBlock(else_block);
     // restore in case condition set variables
     try ir_builder.currentScope().restoreLocalValues(&before_values, alloc);
-    try walkStmtList(orelse_, ir_builder, alloc);
+    _ = try walkStmtList(orelse_, ir_builder, alloc);
     // save else locals
     const else_exit_block = ir_builder.current_block;
     var else_values = try ir_builder.currentScope().local_values.clone(alloc);
@@ -2516,7 +2530,7 @@ pub fn walkWhile(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocat
                 .stmt_list => |sl| sl,
                 else => return error.BadState,
             };
-            try walkStmtList(body_, ir_builder_, alloc_);
+            _ = try walkStmtList(body_, ir_builder_, alloc_);
         }
     };
 
@@ -2678,7 +2692,7 @@ pub fn walkFor(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator
                 .src = try dst.?.clone(alloc_),
             } } }, alloc_);
 
-            try walkStmtList(body_.stmt_list, ir_builder_, alloc_);
+            _ = try walkStmtList(body_.stmt_list, ir_builder_, alloc_);
             // index += 1
             const one: TypedOperand = .{
                 .operand = ir_builder_.nextTemp(),
@@ -2815,7 +2829,7 @@ fn walkFuncDef(stmt: *PyObject, ir_builder: *IrBuilder, class_id: ?ClassId, allo
 
     const body = c.PyObject_GetAttrString(stmt, "body");
     std.debug.assert(body != null);
-    try walkStmtList(body, ir_builder, alloc);
+    _ = try walkStmtList(body, ir_builder, alloc);
 
     // append return if we are missing one
     const block = ir_builder.currentBlock();

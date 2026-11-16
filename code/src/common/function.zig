@@ -10,6 +10,7 @@ const ScopeId = @import("ir.zig").ScopeId;
 const ValueRef = @import("ir.zig").ValueRef;
 const BasicBlock = @import("ir.zig").BasicBlock;
 const BlockId = @import("ir.zig").BlockId;
+const AllocProgram = @import("alloc.zig").AllocProgram;
 const Operand = @import("alloc.zig").Operand;
 
 pub const ParsedConstant = union(enum) {
@@ -85,8 +86,8 @@ pub const TypeParam = struct {
 // compiler defined variable
 pub const TempId = u16;
 
-/// we only permit 255 spills per program
-pub const MemoryId = u8;
+/// we only permit 65k spills per program
+pub const MemoryId = u16;
 
 pub const FunctionType = enum {
     runtime,
@@ -326,5 +327,25 @@ pub const Function = struct {
             .type = captured_type,
         });
         return index;
+    }
+
+    pub fn dumpLiveness(self: *const @This(), program: *const AllocProgram) !void {
+        std.debug.print("\n{s}\n", .{self.label});
+        for (self.blocks.items, program.blocks.items) |block, alloc_block| {
+            std.debug.print("block{d}\n", .{block.id});
+            const lines = program.lines.items[alloc_block.start..alloc_block.end];
+            for (block.instructions.items, lines) |instruction, line| {
+                std.debug.print("  liveout={{", .{});
+                var it = line.live_out.ops.keyIterator();
+                var first = true;
+                while (it.next()) |operand| {
+                    if (!first) std.debug.print(", ", .{});
+                    operand.*.print();
+                    first = false;
+                }
+                std.debug.print("}} | ", .{});
+                try instruction.printFn();
+            }
+        }
     }
 };
