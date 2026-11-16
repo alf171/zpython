@@ -67,5 +67,6 @@ def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
   - [rdna3](https://rocm.blogs.amd.com/software-tools-optimization/amdgcn-isa/README.html)
   - [cuda memory swizzling](https://leimao.github.io/blog/CUDA-Shared-Memory-Swizzling/)
   - [more swizzling](https://mlc.ai/modern-gpu-programming-for-mlsys/chapter_data_layout/index.html#swizzle-layout)
+  - [rdna3 llvm docs](https://llvm.org/docs/AMDGPUUsage.html)
 - LLMs
   - [inference paper](https://arxiv.org/pdf/2607.02521)
