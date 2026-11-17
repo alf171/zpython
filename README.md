@@ -51,6 +51,14 @@ def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
     out.data[out_i] = acc
 ```
 
+## mnist results
+- Model: 784 → 64 → 10, trained with SGD at learning rate 0.01
+- Hardware: AMD Radeon 780M (`gfx1103`), Ryzen 9 PRO 8945HS
+- Code: `tst/python/torch/mnist.py` and `src/runtime/ml/*`
+- Run: batch size 8, 60,000 images, 7,500 optimizer steps
+- Result: 17.86 s execution; about 93% accuracy on training batches
+- Profile [AI generated]: 157,502 launches, 12.31 s total kernel time—matmul 9.64 s (78%), including 7.26 s for (8, 64) outputs; fused subtract/multiply 1.81 s (15%); all others 0.86 s (7%)
+
 ## Reading Materials
 - user scheduling lanuage
   - [exo1](https://dl.acm.org/doi/epdf/10.1145/3519939.3523446)
