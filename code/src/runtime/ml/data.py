@@ -11,6 +11,7 @@ from ml.kernels import mul as _mul_gpu
 from ml.kernels import sub_mul as _sub_mul_gpu
 from ml.kernels import div as _div_gpu
 from ml.kernels import matmul as _matmul_gpu
+from ml.kernels import matmul_tile as _matmul_tile_gpu
 from ml.kernels import where as _where_gpu
 from ml.kernels import where_gt as _where_gt_gpu
 from ml.kernels import exp as _exp_gpu
@@ -156,6 +157,7 @@ class TensorData[T]:
         # (i, k)
         res = TensorData.empty((self.rows, other.cols), zero)
         _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
+        # _matmul_tile_gpu(res, self, other, (self.rows, other.cols // 2, 1))
         return res
 
     @staticmethod

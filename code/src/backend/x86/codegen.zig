@@ -402,6 +402,9 @@ fn emitFunction(
                                     .i64 => {
                                         try out.print(alloc, "\tmovslq %{s}, %{s}\n", .{ reg32(src), dst });
                                     },
+                                    .f32 => {
+                                        try out.print(alloc, "\tcvtsi2ssl %{s}, %{s}\n", .{ reg32(src), dst });
+                                    },
                                     else => {
                                         std.debug.print("unsupported cast: {s} -> {s}\n", .{
                                             @tagName(c.src.type),
@@ -457,6 +460,9 @@ fn emitFunction(
                                 .char => switch (c.dst.type) {
                                     .i64 => {
                                         try out.print(alloc, "\tmovzbq %{s}, %{s}\n", .{ reg8(src), dst });
+                                    },
+                                    .i32 => {
+                                        try out.print(alloc, "\tmovzbl %{s}, %{s}\n", .{ reg8(src), reg32(dst) });
                                     },
                                     .f32 => {
                                         const scratch = try abi.scratchReg(0, .gp);

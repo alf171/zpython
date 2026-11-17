@@ -1,5 +1,7 @@
+# https://github.com/tinygrad/tinygrad/blob/master/examples/beautiful_mnist.py
 srand(42)
-
+batch_size: i32 = 8
+learning_rate: f32 = 0.01
 
 def xavier_normal(f_in: i32, f_out: i32) -> Tensor[f32]:
     shape = (f_out, f_in)
@@ -8,10 +10,17 @@ def xavier_normal(f_in: i32, f_out: i32) -> Tensor[f32]:
     scale = Tensor.fill(shape, std)
     return sample * scale
 
+def print_accuracy(step: i32, correct: i32, runs: i32) -> None:
+    print("[step: ", end="")
+    print(step, end="")
+    print("] accuracy of ", end="")
+    accuracy = 100.0 * float(correct)/float(runs)
+    print(accuracy, end="")
+    print("%")
 
 # batch size 1
-data = xavier_normal(16, 1)
-weight1 = xavier_normal(16, 64)
+# data = xavier_normal(16, 1)
+weight1 = xavier_normal(784, 64)
 bias1 = Tensor.fill((1, 64), f32(0))
 # 16 -> 64
 layer1 = Linear(weight1, bias1)
@@ -22,19 +31,33 @@ layer2 = Linear(weight2, bias2)
 # softmax
 softmax = Softmax[f32]()
 # optim step
-optimizer = SGD([weight1, bias1, weight2, bias2], 0.001)
+optimizer = SGD([weight1, bias1, weight2, bias2], learning_rate)
 
-target_data: array[f32] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-target = Tensor(target_data, (1,10))
-seed = Tensor.fill((1,1), f32(1))
+report_every: i32 = 6400
+report_batches: i32 = (report_every + batch_size - 1) // batch_size
 
-for step in range(25):
+dataset = MNIST("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", batch_size)
+seed = Tensor.fill((1,1), f32(1) / f32(batch_size))
+
+runs = 60_000
+correct = 0
+for step in range(runs // batch_size):
+    data, target = dataset.next()
     optimizer.zero_grad()
     y1 = layer1.forward(data)
     y2 = y1.relu()
     y3 = layer2.forward(y2)
+    prediction = y3.argmax(i32(1))
+    expected = target.argmax(i32(1))
+    for row in range(batch_size):
+        if prediction[row,0] == expected[row,0]:
+            correct += 1
+    if (step+1)%report_batches == 0:
+        print_accuracy(step+1, correct, report_batches * batch_size)
+        correct = 0
     diff = y3 - target
     loss = (diff*diff).sum(1).sum(0)
-    print(loss)
     loss.backward(seed)
     optimizer.step()
+
+dataset.close()

@@ -20,6 +20,8 @@ const Writer = std.Io.Writer;
 
 pub const RunResult = struct {
     spill_rounds: std.EnumArray(FunctionType, usize),
+    spill_before_color: usize,
+    spill_after_color: usize,
     graph: color.ColoredGraph,
 };
 
@@ -35,6 +37,8 @@ pub fn run(
     alloc: Allocator,
 ) !RunResult {
     var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
+    var spill_before_color: usize = 0;
+    var spill_after_color: usize = 0;
     while (true) {
         timer.begin(.middle_igraph, io);
         var graph = try igraph.createIgraph(
@@ -58,9 +62,16 @@ pub fn run(
                 return .{
                     .graph = colored,
                     .spill_rounds = spill_rounds,
+                    .spill_before_color = spill_before_color,
+                    .spill_after_color = spill_after_color,
                 };
             },
-            .spill_register => |spilled| {
+            .spill_before_color, .spill_after_color => |spilled| {
+                switch (std.meta.activeTag(attempt)) {
+                    .spill_before_color => spill_before_color += 1,
+                    .spill_after_color => spill_after_color += 1,
+                    else => unreachable,
+                }
                 spill_rounds.getPtr(function.origin).* += 1;
                 // spill in ir
                 timer.begin(.middle_spill_reg, io);

@@ -130,7 +130,11 @@ pub const ColoredGraph = struct {
     }
 };
 
-const ColorGraphAttempt = union(enum) { graph: ColoredGraph, spill_register: Operand };
+const ColorGraphAttempt = union(enum) {
+    graph: ColoredGraph,
+    spill_before_color: Operand,
+    spill_after_color: Operand,
+};
 
 /// color a graph and generate a new graph via spilling if needed
 /// at what layer of abstraction should we do all of this is still being decided
@@ -195,7 +199,7 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
             //     },
             // );
             new_graph.deinit();
-            return .{ .spill_register = id };
+            return .{ .spill_before_color = id };
         }
     }
 
@@ -212,7 +216,7 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
             defer allocator.free(str);
             std.debug.print("couldn't find register for {s}\n", .{str});
             new_graph.deinit();
-            return .{ .spill_register = id };
+            return .{ .spill_after_color = id };
         };
         graph_node.register = reg;
     }

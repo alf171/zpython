@@ -81,6 +81,23 @@ def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     out.store(i, k, acc)
 
 @gpu
+# (i, j) @ (j,k) = (i,k)
+def matmul_tile[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
+    i = global_id(0)
+    k = global_id(1) * 2
+
+    acc0: U = 0
+    acc1: U = 0
+    for j in range(a.cols):
+        av = a.load(i, j)
+        acc0 += av * b.load(j, k)
+        acc1 += av * b.load(j, k + 1)
+
+    # (i, k)
+    out.store(i, k, acc0)
+    out.store(i, k + 1, acc1)
+
+@gpu
 def where[U](out: TensorData[U], mask: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
     row = global_id(0)
     col = global_id(1)
@@ -150,9 +167,10 @@ def argmax_cols[U](out: array[i32], a: TensorData[U]) -> None:
 
     for row in range(1, a.rows):
         value = a.load(row, col)
-        if value > best:
-            best = value
-            best_index = row
+        # FIXME: or we could use if statement?
+        better = value > best
+        best = value if better else best
+        best_index = row if better else best_index
 
     out[col] = best_index
 
@@ -164,8 +182,9 @@ def argmax_rows[U](out: array[i32], a: TensorData[U]) -> None:
 
     for col in range(1, a.cols):
         value = a.load(row, col)
-        if value > best:
-            best = value
-            best_index = col
+        # FIXME: or we could use if statement?
+        better = value > best
+        best = value if better else best
+        best_index = col if better else best_index
 
     out[row] = best_index

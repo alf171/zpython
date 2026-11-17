@@ -72,6 +72,7 @@ pub fn main(init: std.process.Init) !void {
     var live_output = false;
     var should_optim = false;
     var should_dump_ir = false;
+    var should_dump_live = false;
     var should_dump_stats = false;
     var should_dump_user_stats = false;
     var should_dump_time = false;
@@ -88,6 +89,7 @@ pub fn main(init: std.process.Init) !void {
         if (std.mem.eql(u8, arg, "--live")) live_output = true;
         if (std.mem.eql(u8, arg, "--optim")) should_optim = true;
         if (std.mem.eql(u8, arg, "--dump-ir")) should_dump_ir = true;
+        if (std.mem.eql(u8, arg, "--dump-live")) should_dump_live = true;
         if (std.mem.eql(u8, arg, "--dump-stats")) should_dump_stats = true;
         if (std.mem.eql(u8, arg, "--dump-user-stats")) should_dump_user_stats = true;
         if (std.mem.eql(u8, arg, "--dump-time")) should_dump_time = true;
@@ -189,6 +191,8 @@ pub fn main(init: std.process.Init) !void {
     var host_colors: color.ColoredGraph = .initEmpty(alloc);
     defer host_colors.deinit();
     var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
+    var spills_before_color: usize = 0;
+    var spills_after_color: usize = 0;
     // FIXME: move this logic somewhere
     for (0..ir_program.functions.items.len + 1) |i| {
         const function = if (i == 0) &ir_program.main else &ir_program.functions.items[i - 1];
@@ -219,7 +223,10 @@ pub fn main(init: std.process.Init) !void {
             inline for (std.meta.tags(FunctionType)) |function_type| {
                 spill_rounds.getPtr(function_type).* += result.spill_rounds.get(function_type);
             }
+            spills_before_color += result.spill_before_color;
+            spills_after_color += result.spill_after_color;
         }
+        if (should_dump_live) try function.dumpLiveness(&alloc_program);
     }
 
     // dump colored graph
@@ -263,6 +270,7 @@ pub fn main(init: std.process.Init) !void {
                     defer result.graph.deinit();
                     try device_colors.absorb(&result.graph);
                 }
+                if (should_dump_live) try function.dumpLiveness(&function_alloc);
             }
             // FIXME: apply_colors only once
             try apply_colors.run(&ir_program, &device_colors, device_platform.abi, alloc);
@@ -396,6 +404,10 @@ pub fn main(init: std.process.Init) !void {
     timer.finish(.backend_total, io);
     if (should_dump_time) {
         timer.print(use_escape_codes);
+        std.debug.print(
+            "spill decisions: before coloring={d}, after coloring={d}\n",
+            .{ spills_before_color, spills_after_color },
+        );
     }
 }
 

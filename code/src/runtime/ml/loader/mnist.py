@@ -5,7 +5,7 @@ def be32(data: array[char], offset: i32) -> int:
     return value
 
 class MNIST:
-    def __init__(self, image_path: str, label_path: str) -> None:
+    def __init__(self, image_path: str, label_path: str, batch_size: i32) -> None:
         self.images = File(image_path)
         self.labels = File(label_path)
         image_header: array[char] = array_empty(16)
@@ -22,22 +22,28 @@ class MNIST:
         self.count = be32(image_header, 4)
         # validation?
         self.position: int = 0
-        self.pixels: array[char] = array_empty(784)
-        self.label: array[char] = array_empty(1)
+        self.batch_size = batch_size
+        self.pixels: array[char] = array_empty(784 * batch_size)
+        self.label: array[char] = array_empty(1 * batch_size)
 
+    # missing `cast` and `onehot` primatives
     def next(self) -> tuple[Tensor[f32], Tensor[f32]]:
         self.images.readinto(self.pixels)
         self.labels.readinto(self.label)
-        values: array[f32] = array_empty(784)
-        for i in range(784):
-            values[i] = f32(self.pixels[i]) / f32(255)
-        targets: array[f32] = array_empty(10)
-        for i in range(10):
-            targets[i] = f32(0)
-        targets[self.label[0]] = f32(1)
 
-        self.position += 1
-        return Tensor(values, (1,784)),Tensor(targets, (1, 10))
+        values: array[f32] = array_empty(784 * self.batch_size)
+        for i in range(784 * self.batch_size):
+            # should this div be on the gpu
+            values[i] = f32(self.pixels[i]) / f32(255)
+
+        targets: array[f32] = array_empty(10 * self.batch_size)
+        for i in range(10 * self.batch_size):
+            targets[i] = f32(0)
+        for row in range(self.batch_size):
+            targets[row * 10 + i32(self.label[row])] = f32(1)
+
+        self.position += self.batch_size
+        return Tensor(values, (self.batch_size,784)),Tensor(targets, (self.batch_size, 10))
 
     def close(self) -> None:
         self.images.close()
