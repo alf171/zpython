@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 const HashMap = std.AutoHashMap;
 
 const common = @import("common");
+const Operand = common.alloc.Operand;
 const BlockId = common.ir.BlockId;
 const Copy = common.mir.Copy;
 const Function = common.function.Function;
@@ -16,10 +17,57 @@ pub fn eliminatePhi(program: *Program, alloc: std.mem.Allocator) !void {
     }
 }
 
-pub fn eliminatePhiInFunction(function: *Function, alloc: std.mem.Allocator) !void {
+/// a value wasnt used in block so phi isnt required
+fn skipPhi(function: *Function, alloc: std.mem.Allocator) !bool {
+    for (function.blocks.items) |*block| {
+        for (block.instructions.items, 0..) |instruction, index| {
+            switch (instruction) {
+                .phi => |phi| {
+                    const dst = phi.dst.operand;
+                    std.debug.assert(phi.inputs.len == 2);
+                    const a = phi.inputs[0].value.operand;
+                    const b = phi.inputs[1].value.operand;
+                    const replacement: Operand = blk: {
+                        // p = phi(entry: x, backedge: p)
+                        if (!a.equal(dst) and b.equal(dst)) break :blk a;
+                        // p = phi(x, x)
+                        if (a.equal(b) and !a.equal(dst)) break :blk a;
+                        // p = phi(x, y)
+                        continue;
+                    };
+
+                    for (function.blocks.items) |*use_block| {
+                        for (use_block.instructions.items) |*use_instruction| {
+                            var uses = try use_instruction.getUsePtrs(alloc);
+                            defer uses.deinit(alloc);
+                            for (uses.items) |use| {
+                                switch (use) {
+                                    .top => |top| {
+                                        if (top.operand.equal(dst)) {
+                                            top.operand = replacement;
+                                        }
+                                    },
+                                    .local => {},
+                                }
+                            }
+                        }
+                    }
+                    var removed = block.instructions.orderedRemove(index);
+                    removed.deinit(alloc);
+                    return true;
+                },
+                else => {},
+            }
+        }
+    }
+    return false;
+}
+
+fn eliminatePhiInFunction(function: *Function, alloc: std.mem.Allocator) !void {
+    while (try skipPhi(function, alloc)) {}
     for (function.blocks.items) |block| {
         // critical edge splitting will prevent there from being many blocks feeding into a single one
-        var copies_per_pred = HashMap(BlockId, ArrayList(Copy)).init(alloc);
+        var copies_per_pred: HashMap(BlockId, ArrayList(Copy)) = .init(alloc);
         defer {
             var it = copies_per_pred.valueIterator();
             while (it.next()) |copies| {
@@ -50,7 +98,7 @@ pub fn eliminatePhiInFunction(function: *Function, alloc: std.mem.Allocator) !vo
         var it = copies_per_pred.iterator();
         while (it.next()) |key| {
             const copies = try key.value_ptr.toOwnedSlice(alloc);
-            const instruction = Instruction{ .parallel_copy = .{
+            const instruction: Instruction = .{ .parallel_copy = .{
                 .copies = copies,
             } };
             try insertParallelCopyBeforeTerminator(function, key.key_ptr.*, instruction, alloc);
