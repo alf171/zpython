@@ -2439,19 +2439,33 @@ pub fn walkIf(stmt: *PyObject, ir_builder: *IrBuilder, alloc: std.mem.Allocator)
     ir_builder.setCurrentBlock(else_block);
     // restore in case condition set variables
     try ir_builder.currentScope().restoreLocalValues(&before_values, alloc);
-    _ = try walkStmtList(orelse_, ir_builder, alloc);
+    const else_terminates_early = try walkStmtList(orelse_, ir_builder, alloc);
     // save else locals
     const else_exit_block = ir_builder.current_block;
     var else_values = try ir_builder.currentScope().local_values.clone(alloc);
     defer else_values.deinit(alloc);
-    try ir_builder.emit(.{ .lir = .{
-        .jump = .{ .target = merge_block },
-    } }, alloc);
-    try ir_builder.addSuccessor(else_exit_block, merge_block, alloc);
+    if (!else_terminates_early) {
+        try ir_builder.emit(.{ .lir = .{
+            .jump = .{ .target = merge_block },
+        } }, alloc);
+        try ir_builder.addSuccessor(else_exit_block, merge_block, alloc);
+    }
 
     ir_builder.setCurrentBlock(merge_block);
-    // get locals orelse use branch value
+    // early return so skip then_values
+    if (then_termiantes_early and !else_terminates_early) {
+        try ir_builder.currentScope().restoreLocalValues(&else_values, alloc);
+        return;
+    }
+    // early return so skip else_values
+    if (!then_termiantes_early and else_terminates_early) {
+        try ir_builder.currentScope().restoreLocalValues(&then_values, alloc);
+        return;
+    }
+
+    // merge using phis
     ir_builder.currentScope().local_values.clear(alloc);
+
     var all_locals: std.AutoHashMap(LocalId, void) = .init(alloc);
     defer all_locals.deinit();
 
