@@ -177,6 +177,52 @@ fn appendBlocks(
     }
 }
 
-test "lower" {
-    try std.testing.expectEqual(true, true);
+test "physical reg coloring" {
+    const alloc = std.testing.allocator;
+    var program: Program = try .init(0, "", alloc);
+    defer program.deinit(alloc);
+    // t0 <- 7
+    const t0: TypedOperand = .{
+        .operand = program.main.nextTemp(),
+        .type = .i32,
+    };
+    try program.main.blocks.items[0].instructions.append(alloc, .{ .lir = .{ .move = .{
+        .dst = t0,
+        .src = .{ .constant = .{ .i32 = 7 } },
+    } } });
+    // t1 <- id(t0)
+    const t1: TypedOperand = .{
+        .operand = program.main.nextTemp(),
+        .type = .i32,
+    };
+    try program.main.blocks.items[0].instructions.append(alloc, .{ .lir = .{ .function_call = .{
+        .dst = t1,
+        .callee = .{ .direct = try alloc.dupe(u8, "id") },
+        .args = try alloc.dupe(TypedOperand, &.{try t0.clone(alloc)}),
+    } } });
+    // return t1
+    try program.main.blocks.items[0].instructions.append(alloc, .{ .lir = .{
+        .function_return = .{ .value = try t1.clone(alloc) },
+    } });
+
+    const abi = (@import("backend").Target{ .host = .X86, .device = .host }).host.getPlatform().abi;
+    var classes: RegisterClasses = .init(alloc);
+    defer classes.deinit();
+
+    try @import("pre_color.zig").applyFunction(&program.main, abi, alloc);
+    try @import("parallel_copies.zig").lower(&program, alloc);
+    try @import("reg_class.zig").classifyFunction(program.main, &classes);
+
+    var allocated = try buildFunction(program.main, &classes, alloc);
+    defer allocated.deinit(alloc);
+
+    try @import("live.zig").calculateLiveOut(&allocated, alloc);
+    const return_reg: common.alloc.Operand = .{
+        .reg = abi.getFunctionReturn(.i32),
+    };
+    // r0 <- id(t1)
+    try std.testing.expect(allocated.lines.items[2].defines.ops.contains(return_reg));
+    try std.testing.expect(allocated.lines.items[2].live_out.ops.contains(return_reg));
+    // t0 <- 7
+    try std.testing.expect(!allocated.lines.items[0].live_out.ops.contains(return_reg));
 }

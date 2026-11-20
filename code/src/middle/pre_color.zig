@@ -73,18 +73,27 @@ pub fn applyFunction(function: *Function, abi: CpuAbi, alloc: std.mem.Allocator)
                             .copies = copies,
                         } });
                         // jumps to function
-                        try new_instructions.append(alloc, .{ .lir = .{ .function_call = .{
-                            .dst = null,
-                            .callee = try fc.callee.clone(alloc),
-                            .args = args,
-                        } } });
-                        if (fc.dst) |dst| {
+                        const dst: ?TypedOperand = if (fc.dst) |d| .{
+                            .operand = .{ .reg = abi.getFunctionReturn(d.type) },
+                            .type = try d.type.clone(alloc),
+                        } else null;
+                        try new_instructions.append(alloc, .{
+                            .lir = .{
+                                .function_call = .{
+                                    // dst wont be used but its need for coloring
+                                    .dst = dst,
+                                    .callee = try fc.callee.clone(alloc),
+                                    .args = args,
+                                },
+                            },
+                        });
+                        if (fc.dst) |d| {
                             try new_instructions.append(alloc, .{ .lir = .{
                                 .move = .{
-                                    .dst = try dst.clone(alloc),
+                                    .dst = try d.clone(alloc),
                                     .src = .{ .top = .{
-                                        .operand = .{ .reg = abi.getFunctionReturn(dst.type) },
-                                        .type = try dst.type.clone(alloc),
+                                        .operand = .{ .reg = abi.getFunctionReturn(d.type) },
+                                        .type = try d.type.clone(alloc),
                                     } },
                                 },
                             } });
