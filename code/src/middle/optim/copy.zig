@@ -303,16 +303,14 @@ test "constant arg setup gets folded into abi reg" {
         .dst = .{ .operand = r0, .type = .i64 },
         .src = .{ .top = .{ .operand = t0, .type = .i64 } },
     } } });
-    try instructions.append(alloc, .{
-        .function_call = .{
-            .dst = null,
-            .callee = .{ .direct = try alloc.dupe(u8, "foobar") },
-            .args = try alloc.dupe(TypedOperand, &[_]TypedOperand{.{
-                .operand = r0,
-                .type = .i64,
-            }}),
-        },
-    });
+    try instructions.append(alloc, .{ .lir = .{ .function_call = .{
+        .dst = null,
+        .callee = .{ .direct = try alloc.dupe(u8, "foobar") },
+        .args = try alloc.dupe(TypedOperand, &[_]TypedOperand{.{
+            .operand = r0,
+            .type = .i64,
+        }}),
+    } } });
     try run(&program, alloc);
     const new_instructions = program.main.blocks.items[0].instructions.items;
     try std.testing.expectEqual(3, new_instructions.len);
@@ -328,7 +326,7 @@ test "constant arg setup gets folded into abi reg" {
             .src = .{ .constant = .{ .i64 = 5 } },
         } },
     }, new_instructions[1]);
-    const call = new_instructions[2].function_call;
+    const call = new_instructions[2].lir.function_call;
     try std.testing.expectEqual(@as(usize, 1), call.args.len);
     try std.testing.expectEqualDeep(r0, call.args[0].operand);
 }
