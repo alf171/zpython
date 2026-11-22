@@ -11,6 +11,7 @@ class str:
     def __setitem__(self, i: int, c: char) -> None:
         self.data[i] = c
 
+    @inline
     def __len__(self) -> i32:
         # exclude trailing \0
         return len(self.data) - 1
