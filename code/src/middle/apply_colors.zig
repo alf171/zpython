@@ -41,11 +41,8 @@ fn applyColor(value: SeenValuePtr, colors: *const ColorGraph, abi: anytype) !voi
                     const node = colors.nodes.get(operand) orelse {
                         return;
                     };
-                    const color = node.register orelse {
-                        return error.MissingColor;
-                    };
                     top.operand = .{
-                        .reg = try abi.regForColor(color, node.reg_class),
+                        .reg = try abi.regForColor(node.register, node.reg_class),
                     };
                 },
                 .reg, .mem => {},

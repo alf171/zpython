@@ -1,5 +1,4 @@
 const std = @import("std");
-const parser = @import("parse.zig");
 const igraph = @import("igraph.zig");
 const color = @import("color.zig");
 const spill = @import("spill.zig");

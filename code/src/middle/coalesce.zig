@@ -1,7 +1,5 @@
-// TODO: move some logic from igraph and main into here
 const std = @import("std");
 const igraph = @import("igraph.zig");
-const parser = @import("parse.zig");
 
 const RegisterFile = @import("common").register.RegisterFile;
 const Node = @import("igraph.zig").Node;

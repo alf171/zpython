@@ -1,10 +1,10 @@
 // goal of this file is to go from interference graph to a colored inteference graph
 const std = @import("std");
-const parser = @import("parse.zig");
-const graph = @import("igraph.zig");
-
+const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Writer = std.Io.Writer;
+
+const graph = @import("igraph.zig");
 const RegisterFile = @import("common").register.RegisterFile;
 const Operand = @import("common").alloc.Operand;
 const RegisterClass = @import("common").register.RegisterClass;
@@ -14,77 +14,22 @@ pub fn Set(comptime K: type) type {
     return std.AutoHashMap(K, void);
 }
 
-// TODO: hacky way to have different nodes
-pub const Node = struct {
-    // TODO: consider value of duplicate term
-    // allows us to make our key in our maps smaller i.e. us a NodeId of some sort :)
-    val: Operand,
-    neighbors: Set(Operand),
-    moves: Set(Operand),
-    forbidden_colors: u32 = 0,
-
-    pub fn init(val: Operand, allocator: Allocator) Node {
-        return Node{ .val = val, .neighbors = Set(Operand).init(allocator), .moves = Set(Operand).init(allocator) };
-    }
-
-    pub fn deinit(self: *@This()) void {
-        self.moves.deinit();
-    }
-};
-
-pub const ColoredNode = struct {
-    node: Node,
-    register: ?u8,
+pub const Assignment = struct {
+    register: u8,
     reg_class: RegisterClass,
 };
 
 pub const ColoredGraph = struct {
-    nodes: std.AutoHashMap(Operand, ColoredNode),
+    nodes: std.AutoHashMap(Operand, Assignment),
 
     // compose a node with a register since we need it for coloring
-    pub fn init(input: *graph.IGraph, allocator: Allocator) !@This() {
-        var cg = ColoredGraph{
-            .nodes = std.AutoHashMap(Operand, ColoredNode).init(allocator),
-        };
-        var it = input.nodes.iterator();
-        while (it.next()) |entry| {
-            const key = entry.key_ptr.*;
-            var node_ptr = entry.value_ptr;
-
-            var neighbors = try node_ptr.neighbors.clone();
-            errdefer neighbors.deinit();
-            var moves = try node_ptr.moves.clone();
-            errdefer moves.deinit();
-
-            // hacky way to have different nodes
-            // TODO: consider sharing memory between igraph and ColoredGraph to avoid cloning memory
-            const moved_node: Node = .{
-                .moves = moves,
-                .neighbors = neighbors,
-                .val = node_ptr.val,
-                .forbidden_colors = node_ptr.forbidden_colors,
-            };
-            try cg.nodes.put(key, ColoredNode{
-                .node = moved_node,
-                .register = null,
-                .reg_class = node_ptr.reg_class,
-            });
-        }
-        return cg;
-    }
-
-    pub fn initEmpty(alloc: std.mem.Allocator) @This() {
+    pub fn init(allocator: Allocator) @This() {
         return .{
-            .nodes = std.AutoHashMap(Operand, ColoredNode).init(alloc),
+            .nodes = .init(allocator),
         };
     }
 
     pub fn deinit(self: *@This()) void {
-        var it = self.nodes.valueIterator();
-        while (it.next()) |cn| {
-            cn.node.moves.deinit();
-            cn.node.neighbors.deinit();
-        }
         self.nodes.deinit();
     }
 
@@ -110,7 +55,9 @@ pub const ColoredGraph = struct {
             defer allocator.free(key_str);
             const value = node_ptr.value_ptr.*;
 
-            var buf = std.array_list.Managed(u8).init(allocator);
+            var buf: ArrayList(u8) = .init(allocator);
+            defer buf.deinit();
+
             var inner_it = value.node.neighbors.iterator();
             const reg = value.register;
             var i: usize = 0;
@@ -125,7 +72,6 @@ pub const ColoredGraph = struct {
 
             try stdout.print("[{?d}] {s} -> ({s})\n", .{ reg, key_str, buf.items });
             try stdout.flush();
-            defer buf.deinit();
         }
     }
 };
@@ -164,11 +110,10 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
         }
     }
 
-    var new_graph = try ColoredGraph.init(input, allocator);
+    var new_graph: ColoredGraph = .init(allocator);
 
-    // TODO: consider presizing stack since we have some knowledge at runtime
-    var select = std.array_list.Managed(Operand).init(allocator);
-    defer select.deinit();
+    var select: ArrayList(Operand) = .empty;
+    defer select.deinit(allocator);
 
     // phase 2: build select
     while (simplify.count() > 0 or spill.count() > 0) {
@@ -178,47 +123,32 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
                 return error.CantFindNode;
             };
             if (!node.selected) {
-                try removeNode(input, node.*, &select, &simplify, &spill, register_file);
+                try removeNode(input, node.*, &select, &simplify, &spill, register_file, allocator);
             }
         } else {
-            // spill node with lowest impact according to our hueristic
-            const id = try takeNodeWithCheapestSpill(input.nodes, &spill, allocator);
-            // const node = input.nodes.get(id) orelse return error.CantFindNode;
-            // const name = try id.toString(allocator);
-            // defer allocator.free(name);
-            // std.debug.print(
-            //     "select {s} spill {s}: cost={d} degree={d} forbidden=0x{x} legal={d}/{d}\n",
-            //     .{
-            //         @tagName(register_file.type),
-            //         name,
-            //         node.spill_cost,
-            //         node.static_degree,
-            //         node.forbidden_colors,
-            //         node.legalCount(register_file.count),
-            //         register_file.count,
-            //     },
-            // );
-            new_graph.deinit();
-            return .{ .spill_before_color = id };
+            // TODO: write test case for not throwing spilling in here
+            const id = try takeNodeWithCheapestSpill(input.nodes, &spill);
+            const node = input.nodes.getPtr(id) orelse return error.CantFindNode;
+            try removeNode(input, node.*, &select, &simplify, &spill, register_file, allocator);
         }
     }
 
     // phase 3: select + color
     while (select.items.len > 0) {
         const id = select.pop().?;
-        var graph_node = new_graph.nodes.getPtr(id) orelse {
-            std.debug.print("node doesn't exist in graph", .{});
-            return error.GraphError;
-        };
+        const node = input.nodes.getPtr(id) orelse return error.CantFindNode;
 
-        const reg = try scanForRegister(graph_node, &new_graph, register_file.count) orelse {
+        const reg = try scanForRegister(node, &new_graph, register_file.count) orelse {
             const str = try id.toString(allocator);
             defer allocator.free(str);
-            std.debug.print("couldn't find register for {s}\n", .{str});
+            // std.debug.print("couldn't find register for {s}\n", .{str});
             new_graph.deinit();
             return .{ .spill_after_color = id };
         };
-        graph_node.register = reg;
+        try new_graph.nodes.put(id, .{
+            .register = reg,
+            .reg_class = node.reg_class,
+        });
     }
 
     // phase 4: swap Operand aliases
@@ -229,16 +159,9 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
             const new = input.resolveAlias(key.value_ptr.*);
 
             const rep_colors = new_graph.nodes.get(new) orelse return error.CantFindAlias;
-            const reg = rep_colors.register orelse return error.MissingColor;
 
             try new_graph.nodes.put(old, .{
-                // this doesn't matter at this point
-                .node = .{
-                    .moves = Set(Operand).init(allocator),
-                    .neighbors = Set(Operand).init(allocator),
-                    .val = old,
-                },
-                .register = reg,
+                .register = rep_colors.register,
                 .reg_class = rep_colors.reg_class,
             });
         }
@@ -248,10 +171,18 @@ pub fn colorGraph(input: *graph.IGraph, register_file: RegisterFile, allocator: 
 }
 
 /// build our select stack. move things between simplify and spill as needed
-fn removeNode(input: *const graph.IGraph, node: graph.Node, select: *std.array_list.Managed(Operand), simplify: *Set(Operand), spill: *Set(Operand), register_file: RegisterFile) !void {
+fn removeNode(
+    input: *const graph.IGraph,
+    node: graph.Node,
+    select: *ArrayList(Operand),
+    simplify: *Set(Operand),
+    spill: *Set(Operand),
+    register_file: RegisterFile,
+    alloc: std.mem.Allocator,
+) !void {
     std.debug.assert(node.val != .reg);
     std.debug.assert(!node.selected);
-    try select.append(node.val);
+    try select.append(alloc, node.val);
     const item = input.nodes.getPtr(node.val).?;
     item.selected = true;
 
@@ -282,22 +213,19 @@ fn removeNode(input: *const graph.IGraph, node: graph.Node, select: *std.array_l
 fn takeNodeWithCheapestSpill(
     input_graph: std.AutoHashMap(Operand, graph.Node),
     canadidites: *std.AutoHashMap(Operand, void),
-    allocator: std.mem.Allocator,
 ) !Operand {
     var it = canadidites.keyIterator();
     var best_id: ?Operand = null;
     var best_cost: u32 = 0;
     var best_degree: u16 = 1;
 
-    while (it.next()) |canadidite| {
-        const name = try canadidite.*.toString(allocator);
-        const node = input_graph.get(canadidite.*) orelse continue;
-        defer allocator.free(name);
+    while (it.next()) |candidate| {
+        const node = input_graph.get(candidate.*) orelse continue;
 
         const degree = @max(node.static_degree, 1);
         // base case
         if (best_id == null) {
-            best_id = canadidite.*;
+            best_id = candidate.*;
             best_degree = degree;
             best_cost = node.spill_cost;
             continue;
@@ -306,14 +234,12 @@ fn takeNodeWithCheapestSpill(
         const candidate_score: u64 = @as(u64, node.spill_cost) * @as(u64, best_degree);
         const best_score: u64 = @as(u64, best_cost) * @as(u64, degree);
         if (candidate_score < best_score) {
-            best_id = canadidite.*;
+            best_id = candidate.*;
             best_degree = degree;
             best_cost = node.spill_cost;
         }
     }
     const id = best_id orelse return error.IllegalGraph;
-    const selected_name = try id.toString(allocator);
-    defer allocator.free(selected_name);
     _ = canadidites.remove(id);
     return id;
 }
@@ -335,36 +261,29 @@ fn takeAny(s: *std.AutoHashMap(Operand, void)) !Operand {
 
 // take a node. determininstically find lowest reg available
 // skip registers based on callee_save_mask
-fn scanForRegister(cnode: *ColoredNode, g: *ColoredGraph, k: u16) !?u8 {
-    std.debug.assert(cnode.register == null);
+fn scanForRegister(node: *const graph.Node, coloring: *ColoredGraph, k: u16) !?u8 {
     scan: for (0..k) |scan_reg| {
         // bit mask skip logic
-        const end = scan_reg + cnode.reg_class.count;
+        const end = scan_reg + node.reg_class.count;
         if (end > k) continue;
 
         for (scan_reg..end) |reg| {
             const mask = @as(u32, 1) << @intCast(reg);
-            if (cnode.node.forbidden_colors & mask != 0) {
+            if (node.forbidden_colors & mask != 0) {
                 continue :scan;
             }
         }
 
         // align width 2 sclar registers
-        if (cnode.reg_class.type == .sgpr and cnode.reg_class.count == 2 and scan_reg % 2 != 0) {
+        if (node.reg_class.type == .sgpr and node.reg_class.count == 2 and scan_reg % 2 != 0) {
             continue;
         }
 
         // selection logic
-        var it = cnode.node.neighbors.keyIterator();
+        var it = node.neighbors.keyIterator();
         while (it.next()) |key| {
-            const nbor = g.nodes.get(key.*) orelse {
-                std.debug.print("cant find node for register", .{});
-                return error.GraphError;
-            };
-            const nbor_reg = nbor.register orelse {
-                continue;
-            };
-            if (overlaps(@intCast(scan_reg), cnode.reg_class.count, nbor_reg, nbor.reg_class.count)) {
+            const nbor = coloring.nodes.get(key.*) orelse continue;
+            if (overlaps(@intCast(scan_reg), node.reg_class.count, nbor.register, nbor.reg_class.count)) {
                 continue :scan;
             }
         }

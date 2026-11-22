@@ -1,5 +1,4 @@
 const std = @import("std");
-const parser = @import("parse.zig");
 const live = @import("live.zig");
 const ArrayList = std.ArrayList;
 

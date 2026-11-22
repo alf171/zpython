@@ -1,5 +1,4 @@
 const std = @import("std");
-const parser = @import("parse.zig");
 const RegisterFile = @import("common").register.RegisterFile;
 
 const ArrayList = std.ArrayList;
@@ -139,7 +138,7 @@ pub const IGraph = struct {
             defer allocator.free(key_str);
             const value = node_ptr.value_ptr.*;
 
-            var buf = std.array_list.Managed(u8).init(allocator);
+            var buf: ArrayList(u8) = .init(allocator);
             var inner_it = value.neighbors.iterator();
             while (inner_it.next()) |value_ptr| {
                 const str = try value_ptr.key_ptr.toString(allocator);
@@ -251,6 +250,10 @@ fn placeNodes(
     register_file: RegisterFile,
     allocator: Allocator,
 ) !void {
+    const copy_src = if (line.move)
+        try line.uses.singleForType(register_file.type)
+    else
+        null;
     // place all defines
     {
         var it = line.defines.ops.iterator();
@@ -311,6 +314,10 @@ fn placeNodes(
                 if (live_out_class.type != register_file.type) continue;
 
                 const live_out_op = live_out_entry.key_ptr.*;
+                // dst and src hold same value so skip
+                if (copy_src) |src| {
+                    if (live_out_op.equal(src)) continue;
+                }
                 try igraph.addInterference(define_op, live_out_op, define_class, live_out_class, allocator);
             }
         }
@@ -337,7 +344,7 @@ fn placeNodes(
     {
         if (line.move) {
             const define = try line.defines.singleForType(register_file.type) orelse return;
-            const uses = try line.uses.singleForType(register_file.type) orelse return;
+            const uses = copy_src orelse return;
 
             const define_class = line.defines.ops.get(define).?;
             const uses_class = line.uses.ops.get(uses).?;
@@ -366,9 +373,9 @@ test "coalesce removes stale move refs" {
     const alloc = std.testing.allocator;
     var graph = IGraph.init(alloc);
     defer graph.deinit();
-    const a = Operand{ .temp = .{ .id = 0, .function_id = 0 } };
-    const b = Operand{ .temp = .{ .id = 1, .function_id = 0 } };
-    const c = Operand{ .temp = .{ .id = 2, .function_id = 0 } };
+    const a: Operand = .{ .temp = .{ .id = 0, .function_id = 0 } };
+    const b: Operand = .{ .temp = .{ .id = 1, .function_id = 0 } };
+    const c: Operand = .{ .temp = .{ .id = 2, .function_id = 0 } };
     // init nodes
     try graph.nodes.put(a, Node.init(a, .{ .type = .gp, .count = 1 }, alloc));
     try graph.nodes.put(b, Node.init(b, .{ .type = .gp, .count = 1 }, alloc));
@@ -392,4 +399,40 @@ test "coalesce removes stale move refs" {
     const c_node = graph.nodes.getPtr(c) orelse return error.CantFindA;
     try std.testing.expectEqual(1, c_node.moves.count());
     try std.testing.expect(c_node.moves.contains(a));
+}
+
+test "copy does not interfere" {
+    const alloc = std.testing.allocator;
+
+    const a: Operand = .{ .temp = .{ .id = 0, .function_id = 0 } };
+    const b: Operand = .{ .temp = .{ .id = 1, .function_id = 0 } };
+
+    var line: Line = .{
+        .uses = .init(alloc),
+        .defines = .init(alloc),
+        .live_out = .init(alloc),
+        .move = true,
+        .clobber_caller_saved = false,
+        .instruction_index = 0,
+    };
+    defer line.deinit();
+
+    const gp: RegisterClass = .{ .type = .gp, .count = 1 };
+    // b <- a
+    try line.uses.ops.put(a, gp);
+    try line.defines.ops.put(b, gp);
+    try line.live_out.ops.put(a, gp);
+    try line.live_out.ops.put(b, gp);
+
+    var graph: IGraph = .init(alloc);
+    defer graph.deinit();
+    try placeNodes(&graph, line, .{
+        .type = .gp,
+        .count = 2,
+        .forbidden_mask = 0,
+    }, alloc);
+
+    const b_node = graph.nodes.get(b).?;
+    try std.testing.expect(b_node.moves.contains(a));
+    try std.testing.expect(!b_node.neighbors.contains(a));
 }

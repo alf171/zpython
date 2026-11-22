@@ -1,6 +1,5 @@
 const std = @import("std");
 const expect = std.testing.expect;
-const parser = @import("parse.zig");
 
 const common = @import("common");
 const WorkList = @import("common").alloc.WorkList;
