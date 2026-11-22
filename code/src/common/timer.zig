@@ -6,6 +6,8 @@ const reset_code = "\x1b[0m";
 const Phase = enum {
     frontend_total,
     middle_total,
+    middle_pre_alloc,
+    middle_finalize,
     middle_dead,
     middle_liveness,
     middle_igraph,
@@ -56,7 +58,7 @@ pub const TimerMetrics = struct {
     pub fn print(self: *const @This(), use_escape_codes: bool) void {
         std.debug.print("\n", .{});
         if (use_escape_codes) std.debug.print("{s}", .{underline_code});
-        std.debug.print("timer metrics:", .{});
+        std.debug.print("timer metrics:\n", .{});
         if (use_escape_codes) std.debug.print("{s}\n", .{reset_code});
         inline for (std.meta.tags(Phase)) |phase| {
             const elapsed = self.durations.get(phase);

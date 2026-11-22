@@ -58,11 +58,11 @@ void arena_free(void) {
   allocations = NULL;
   cleanup_ns += now_ns() - start;
   if (alloc_count > 0) {
-    fprintf(stdout, "[!!memory report!!]: allocs=%llu frees=%llu allocated_bytes=%llu freed_bytes=%llu cleanup_ms=%.3f\n",
+    fprintf(stdout, "[!!memory report!!]: allocs=%llu frees=%llu allocated_bytes=%llu freed_bytes=%llu\n",
         (unsigned long long)alloc_count,
         (unsigned long long)free_count,
         (unsigned long long)allocated_bytes,
-        (unsigned long long)freed_bytes,
-        cleanup_ns / 1e6);
+        (unsigned long long)freed_bytes);
+        // cleanup_ns / 1e6);
   }
 }

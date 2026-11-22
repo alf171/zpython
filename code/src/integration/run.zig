@@ -136,10 +136,14 @@ pub fn main(init: std.process.Init) !void {
         try runtime.injectCleanup(&ir_program, alloc);
     }
 
+    // TODO: code sink pass
+
     // phi cleanup
     try phi.eliminatePhi(&ir_program, alloc);
     timer.finish(.frontend_total, io);
 
+    timer.begin(.middle_total, io);
+    timer.begin(.middle_pre_alloc, io);
     const host_platform = target.host.getPlatform();
     try precolor.apply(&ir_program, host_platform.abi, alloc);
     try parallel_copies.lower(&ir_program, alloc);
@@ -152,6 +156,7 @@ pub fn main(init: std.process.Init) !void {
         // cleanup peephole optims
         try copy.run(&ir_program, alloc);
     }
+    timer.finish(.middle_pre_alloc, io);
     // dump ir after optim pass
     if (should_dump_ir) {
         std.debug.print("\n", .{});
@@ -161,8 +166,6 @@ pub fn main(init: std.process.Init) !void {
         std.debug.print("\n", .{});
         try ir_program.print();
     }
-
-    timer.begin(.middle_total, io);
 
     // setup register specifics
     timer.begin(.middle_reg_class, io);
@@ -188,7 +191,7 @@ pub fn main(init: std.process.Init) !void {
 
     const register_files = host_platform.abi.registerFiles();
     // generate interference graph
-    var host_colors: color.ColoredGraph = .initEmpty(alloc);
+    var host_colors: color.ColoredGraph = .init(alloc);
     defer host_colors.deinit();
     var spill_rounds: std.EnumArray(FunctionType, usize) = .initFill(0);
     var spills_before_color: usize = 0;
@@ -206,6 +209,7 @@ pub fn main(init: std.process.Init) !void {
         timer.begin(.middle_liveness, io);
         try live.calculateLiveOut(&alloc_program, alloc);
         timer.finish(.middle_liveness, io);
+        if (should_dump_live) try function.dumpLiveness(&alloc_program);
 
         for (register_files) |register_file| {
             var result = try loop.run(
@@ -226,7 +230,6 @@ pub fn main(init: std.process.Init) !void {
             spills_before_color += result.spill_before_color;
             spills_after_color += result.spill_after_color;
         }
-        if (should_dump_live) try function.dumpLiveness(&alloc_program);
     }
 
     // dump colored graph
@@ -239,7 +242,7 @@ pub fn main(init: std.process.Init) !void {
         try ir_program.print();
     }
 
-    var device_colors: color.ColoredGraph = .initEmpty(alloc);
+    var device_colors: color.ColoredGraph = .init(alloc);
     defer device_colors.deinit();
     switch (target.device) {
         .host => {},
@@ -272,13 +275,15 @@ pub fn main(init: std.process.Init) !void {
                 }
                 if (should_dump_live) try function.dumpLiveness(&function_alloc);
             }
-            // FIXME: apply_colors only once
-            try apply_colors.run(&ir_program, &device_colors, device_platform.abi, alloc);
+            timer.begin(.middle_finalize, io);
+            try apply_colors.run(&ir_program, &device_colors, device_platform.abi, .gpu_kernel, alloc);
+            timer.finish(.middle_finalize, io);
         },
     }
-    // FIXME: apply_colors only once
-    try apply_colors.run(&ir_program, &host_colors, host_platform.abi, alloc);
+    timer.begin(.middle_finalize, io);
+    try apply_colors.run(&ir_program, &host_colors, host_platform.abi, .host, alloc);
     if (should_optim) try identity.run(&ir_program, alloc);
+    timer.finish(.middle_finalize, io);
     timer.finish(.middle_total, io);
 
     timer.begin(.backend_total, io);

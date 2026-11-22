@@ -1,5 +1,5 @@
 const std = @import("std");
-const ArrayList = std.array_list.Managed;
+const ArrayList = std.ArrayList;
 const c = @import("python.zig").c;
 const PyObject = c.PyObject;
 
@@ -74,8 +74,8 @@ pub fn walkLoop(
     ir_builder.currentScope().local_values.clear(alloc);
     var loop_values: LocalValues = .init(alloc);
     defer loop_values.deinit(alloc);
-    var loop_phis: ArrayList(LoopPhi) = .init(alloc);
-    defer loop_phis.deinit();
+    var loop_phis: ArrayList(LoopPhi) = .empty;
+    defer loop_phis.deinit(alloc);
 
     var before_it = before_values.map.iterator();
     // shadowed values causing phis
@@ -106,7 +106,7 @@ pub fn walkLoop(
         } }, alloc);
         try ir_builder.currentScope().putLocalValues(local, try dst.clone(alloc), alloc);
         try loop_values.map.put(local, try dst.clone(alloc));
-        try loop_phis.append(.{
+        try loop_phis.append(alloc, .{
             .local = local,
             .phi_inputs = inputs,
             .dst = dst,

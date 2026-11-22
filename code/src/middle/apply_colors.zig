@@ -1,21 +1,23 @@
 const std = @import("std");
-const ArrayList = std.array_list.Managed;
+const ArrayList = std.ArrayList;
 
 const Function = @import("common").function.Function;
+const FunctionKind = @import("common").function.FunctionKind;
 const Program = @import("common").program.Program;
 const Instruction = @import("common").mir.Instruction;
 const ColorGraph = @import("color.zig").ColoredGraph;
 const SeenValuePtr = @import("common").ir.SeenValuePtr;
 
 /// apply colors onto Operands
-pub fn run(program: *Program, colors: *const ColorGraph, abi: anytype, alloc: std.mem.Allocator) !void {
-    try runFunction(&program.main, colors, abi, alloc);
+pub fn run(program: *Program, colors: *const ColorGraph, abi: anytype, kind: FunctionKind, alloc: std.mem.Allocator) !void {
+    try runFunction(&program.main, colors, abi, kind, alloc);
     for (program.functions.items) |*function| {
-        try runFunction(function, colors, abi, alloc);
+        try runFunction(function, colors, abi, kind, alloc);
     }
 }
 
-pub fn runFunction(function: *Function, colors: *const ColorGraph, abi: anytype, alloc: std.mem.Allocator) !void {
+pub fn runFunction(function: *Function, colors: *const ColorGraph, abi: anytype, kind: FunctionKind, alloc: std.mem.Allocator) !void {
+    if (function.kind != kind) return;
     for (function.blocks.items) |block| {
         for (block.instructions.items) |*instruction| {
             const define = instruction.getDefinePtrs();
