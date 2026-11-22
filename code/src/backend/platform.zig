@@ -1,5 +1,6 @@
 const std = @import("std");
 const Program = @import("common").program.Program;
+const LirProgram = @import("common").program.LirProgram;
 const CpuAbi = @import("cpu_abi.zig").CpuAbi;
 const GpuAbi = @import("gpu_abi.zig").GpuAbi;
 const ArmAbi = @import("arm/reg.zig").ArmAbi;
@@ -70,7 +71,7 @@ pub const Target = struct {
 pub const HostPlatform = struct {
     abi: CpuAbi,
     emit: *const fn (
-        program: *const Program,
+        program: *const LirProgram,
         abi: CpuAbi,
         alloc: std.mem.Allocator,
     ) anyerror![]u8,
@@ -105,7 +106,7 @@ pub const CompileRequest = struct {
         const host_platform = self.target.host.getPlatform();
 
         const host_asm = try host_platform.emit(
-            self.program,
+            &try self.program.lowerProgram(alloc),
             host_platform.abi,
             alloc,
         );

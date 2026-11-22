@@ -4,6 +4,7 @@ const ArrayList = std.ArrayList;
 const BasicBlock = @import("ir.zig").BasicBlock;
 const ClassInfo = @import("class.zig").ClassInfo;
 const Function = @import("function.zig").Function;
+const LirFunction = @import("function.zig").LirFunction;
 const FunctionType = @import("function.zig").FunctionType;
 const Param = @import("function.zig").Param;
 const TypeParam = @import("function.zig").TypeParam;
@@ -92,4 +93,21 @@ pub const Program = struct {
         }
         return null;
     }
+
+    pub fn lowerProgram(program: *const Program, alloc: std.mem.Allocator) !LirProgram {
+        var functions: ArrayList(LirFunction) = .empty;
+        try functions.append(alloc, try program.main.lowerFunction(alloc));
+        for (program.functions.items) |*function| {
+            if (function.kind != .host) continue;
+            try functions.append(alloc, try function.lowerFunction(alloc));
+        }
+        return .{
+            .functions = try functions.toOwnedSlice(alloc),
+        };
+    }
+};
+
+pub const LirProgram = struct {
+    // the first function is main
+    functions: []const LirFunction,
 };

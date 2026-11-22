@@ -9,6 +9,7 @@ const LocalId = @import("ir.zig").LocalId;
 const ScopeId = @import("ir.zig").ScopeId;
 const ValueRef = @import("ir.zig").ValueRef;
 const BasicBlock = @import("ir.zig").BasicBlock;
+const LirBasicBlock = @import("ir.zig").LirBasicBlock;
 const BlockId = @import("ir.zig").BlockId;
 const AllocProgram = @import("alloc.zig").AllocProgram;
 const Operand = @import("alloc.zig").Operand;
@@ -110,8 +111,6 @@ pub const Capture = struct {
         self.type.deinit(alloc);
     }
 };
-
-// TODO: add a FunctionId
 
 pub const Function = struct {
     // function name
@@ -348,4 +347,26 @@ pub const Function = struct {
             }
         }
     }
+
+    pub fn lowerFunction(function: *const Function, alloc: std.mem.Allocator) !LirFunction {
+        const blocks = try alloc.alloc(LirBasicBlock, function.blocks.items.len);
+
+        for (function.blocks.items, 0..) |*block, i| {
+            blocks[i] = try block.lowerBlock(alloc);
+        }
+
+        return .{
+            .label = function.label,
+            .origin = function.origin,
+            .next_mem = function.next_mem,
+            .blocks = blocks,
+        };
+    }
+};
+
+pub const LirFunction = struct {
+    label: []const u8,
+    origin: FunctionType,
+    next_mem: MemoryId,
+    blocks: []const LirBasicBlock,
 };

@@ -110,7 +110,6 @@ pub const Instruction = union(enum) {
         copies: []Copy,
     },
     function_param: struct {
-        // TODO: remove label
         label: []const u8,
         dst: TypedOperand,
         name: []const u8,

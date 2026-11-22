@@ -1,5 +1,6 @@
 const std = @import("std");
 const Instruction = @import("mir.zig").Instruction;
+const LirInstruction = @import("lir.zig").Instruction;
 const ArrayList = std.ArrayList;
 const TypeInfo = @import("types.zig").TypeInfo;
 const TypedOperand = @import("alloc.zig").TypedOperand;
@@ -359,4 +360,21 @@ pub const BasicBlock = struct {
         self.predecessors.deinit(alloc);
         self.successors.deinit(alloc);
     }
+
+    pub fn lowerBlock(self: @This(), alloc: std.mem.Allocator) !LirBasicBlock {
+        const instructions = try alloc.alloc(LirInstruction, self.instructions.items.len);
+        for (self.instructions.items, 0..) |*instruction, i| {
+            if (instruction.* != .lir) return error.InvalidLirInstruction;
+            instructions[i] = instruction.lir;
+        }
+        return .{
+            .id = self.id,
+            .instructions = instructions,
+        };
+    }
+};
+
+pub const LirBasicBlock = struct {
+    id: BlockId,
+    instructions: []const LirInstruction,
 };
