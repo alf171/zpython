@@ -21,11 +21,13 @@ pub fn main(init: std.process.Init) !void {
         .host = .X86,
         .device = .gfx1103,
     };
+    var gpu_object: ?[]const u8 = null;
     for (args[1..]) |arg| {
         if (std.mem.eql(u8, arg, "--regen")) should_regen_snapshot = true;
         if (std.mem.eql(u8, arg, "--host=arm")) target.host = .ARM;
         if (std.mem.eql(u8, arg, "--host=x86")) target.host = .X86;
         if (std.mem.eql(u8, arg, "--device=host")) target.device = .host;
+        if (std.mem.startsWith(u8, arg, "--gpu-object=")) gpu_object = arg;
     }
     const compiler_path = args[1];
 
@@ -47,7 +49,11 @@ pub fn main(init: std.process.Init) !void {
         defer alloc.free(flattened_name);
         const file_name = try std.fs.path.join(alloc, &.{ "tst/python", entry.path });
         defer alloc.free(file_name);
-        run(compiler_path, file_name, flattened_name, should_regen_snapshot, target, alloc, io) catch |err| {
+        run(compiler_path, file_name, flattened_name, .{
+            .target = target,
+            .update = should_regen_snapshot,
+            .gpu_object = gpu_object,
+        }, alloc, io) catch |err| {
             std.debug.print(" [[ERROR: {s}]]\n", .{@errorName(err)});
         };
     }
@@ -57,8 +63,11 @@ pub fn run(
     compiler_path: []const u8,
     python_file_name: []const u8,
     snapshot_name: []const u8,
-    update: bool,
-    target: Target,
+    flags: struct {
+        target: Target,
+        update: bool,
+        gpu_object: ?[]const u8,
+    },
     alloc: std.mem.Allocator,
     io: std.Io,
 ) !void {
@@ -66,13 +75,13 @@ pub fn run(
     const host_arg = try std.fmt.allocPrint(
         alloc,
         "--host={s}",
-        .{target.host.toString()},
+        .{flags.target.host.toString()},
     );
     defer alloc.free(host_arg);
     const device_arg = try std.fmt.allocPrint(
         alloc,
         "--device={s}",
-        .{try target.device.toString()},
+        .{try flags.target.device.toString()},
     );
     defer alloc.free(device_arg);
 
@@ -83,17 +92,13 @@ pub fn run(
     );
     defer alloc.free(asm_temp_path);
 
-    const result = try std.process.run(alloc, io, .{ .argv = &.{
-        compiler_path,
-        python_file_name,
-        asm_temp_path,
-        "--run",
-        "--dump-user-stats",
-        "--omit-escape-codes",
-        "--optim",
-        host_arg,
-        device_arg,
-    } });
+    var argv: std.ArrayList([]const u8) = .empty;
+    defer argv.deinit(alloc);
+    try argv.appendSlice(alloc, &.{ compiler_path, python_file_name, asm_temp_path, "--run", "--dump-user-stats", "--omit-escape-codes", "--optim", host_arg, device_arg });
+    if (flags.gpu_object) |gpu_flag| {
+        try argv.append(alloc, gpu_flag);
+    }
+    const result = try std.process.run(alloc, io, .{ .argv = argv.items });
     defer alloc.free(result.stdout);
     defer alloc.free(result.stderr);
 
@@ -108,7 +113,7 @@ pub fn run(
     const snapshot_dir_path = try std.fmt.allocPrint(
         alloc,
         "tst/snapshot/{s}",
-        .{target.host.toString()},
+        .{flags.target.host.toString()},
     );
     defer alloc.free(snapshot_dir_path);
 
@@ -135,7 +140,7 @@ pub fn run(
 
     // skip if we expected an error
     if (expected_error) {
-        if (update) {
+        if (flags.update) {
             const file = try dir.createFile(io, snapshot_file_name, .{});
             defer file.close(io);
             try file.writeStreamingAll(io, result.stderr);
@@ -163,7 +168,7 @@ pub fn run(
     defer alloc.free(stats_diff.stdout);
     defer alloc.free(stats_diff.stderr);
     // verify asm
-    const asm_file_path = try std.fmt.allocPrint(alloc, "tst/snapshot/{s}/asm/{s}.s", .{ target.host.toString(), std.fs.path.stem(snapshot_name) });
+    const asm_file_path = try std.fmt.allocPrint(alloc, "tst/snapshot/{s}/asm/{s}.s", .{ flags.target.host.toString(), std.fs.path.stem(snapshot_name) });
     defer alloc.free(asm_file_path);
     const asm_diff = try calculateDiff(asm_file_path, asm_temp_path, io, alloc);
     defer alloc.free(asm_diff.stdout);
@@ -173,7 +178,7 @@ pub fn run(
     const asm_diff_deteched = asm_diff.term.exited == 1;
 
     // perform snapshotting
-    if (update) {
+    if (flags.update) {
         // NOTE: should check if asm_code changed also
         if (!stats_diff_detected and !asm_diff_deteched) {
             std.debug.print(" [[EQUAL]]\n", .{});

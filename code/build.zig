@@ -172,6 +172,9 @@ pub fn build(b: *std.Build) void {
     const snapshot_test_step = b.step("snapshot-test", "run snapshot test");
     snapshot_test_step.dependOn(&run_snapshot_tests.step);
     if (b.args) |args| run_snapshot_tests.addArgs(args);
+    if (gpu_object) |path| {
+        run_snapshot_tests.addPrefixedFileArg("--gpu-object=", path);
+    }
 
     b.installArtifact(frontend);
 
