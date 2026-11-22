@@ -11,7 +11,12 @@ def f() -> None:
 
     print(x)
     print(y)
-    # also should work with no return
-    return
 
 f()
+
+def g() -> bool:
+    print("should not run")
+    return True
+
+if False and g():
+    print("also should not run")

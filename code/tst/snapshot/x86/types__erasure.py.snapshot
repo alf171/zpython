@@ -1,0 +1,31 @@
+running program: (OPTIM=true)
+
+class Box[T]:
+    def __init__(self, value: T) -> None:
+        # more complex if this were type T
+        self.value: list[T] = [value]
+
+a = Box(i32(1))
+b = Box(f32(1))
+c: list[Box] = [a, b]
+print(type(c))
+d = c[0]
+# print(d)
+print(type(d))
+
+performance report: (ORIGIN=user)
+number of asm lines: 227
+mov count: 146
+memory load count: 20
+memory store count: 51
+conditional jumps: 0
+unconditional jumps: 3
+comparisons: 0
+returns: 3
+call count: 28
+spill rounds: 2
+
+actual output:
+list[Box]
+Box
+[!!memory report!!]: allocs=16 frees=16 allocated_bytes=182 freed_bytes=182

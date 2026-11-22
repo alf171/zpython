@@ -10,12 +10,12 @@ def fib(n: int) -> int:
 print(fib(35))
 
 performance report: (ORIGIN=user)
-number of asm lines: 96
+number of asm lines: 94
 mov count: 37
 memory load count: 12
 memory store count: 15
 conditional jumps: 2
-unconditional jumps: 10
+unconditional jumps: 8
 comparisons: 4
 returns: 2
 call count: 8

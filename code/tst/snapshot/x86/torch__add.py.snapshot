@@ -32,4 +32,4 @@ actual output:
 True
 True
 True
-[!!memory report!!]: allocs=102 frees=102 allocated_bytes=2106 freed_bytes=2106
+[!!memory report!!]: allocs=98 frees=98 allocated_bytes=2110 freed_bytes=2110

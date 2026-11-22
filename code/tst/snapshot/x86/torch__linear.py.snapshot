@@ -43,4 +43,4 @@ actual output:
 1.00000 1.00000 0.00000 
 1.00000 2.00000 3.00000 1.00000 2.00000 3.00000 
 1.00000 1.00000 
-[!!memory report!!]: allocs=438 frees=438 allocated_bytes=8467 freed_bytes=8467
+[!!memory report!!]: allocs=428 frees=428 allocated_bytes=8855 freed_bytes=8855
