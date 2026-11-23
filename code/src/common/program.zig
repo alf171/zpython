@@ -28,7 +28,7 @@ pub const Program = struct {
                 module_name,
                 params,
                 type_params,
-                .i64,
+                .i32,
                 .user,
                 .host,
                 false,

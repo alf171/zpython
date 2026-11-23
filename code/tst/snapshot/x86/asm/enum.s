@@ -109,9 +109,9 @@ main_L0:
 	movq %r12, %rsi
 	callq _print__print_int
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

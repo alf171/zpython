@@ -16,9 +16,9 @@ main_L0:
 	movq $10, %rdi
 	callq _cycle_b__b
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

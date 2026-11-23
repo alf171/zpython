@@ -105,8 +105,10 @@ pub const CompileRequest = struct {
     pub fn compile(self: @This(), alloc: std.mem.Allocator) !CompilationArifacts {
         const host_platform = self.target.host.getPlatform();
 
+        var lir_arena: std.heap.ArenaAllocator = .init(alloc);
+        defer lir_arena.deinit();
         const host_asm = try host_platform.emit(
-            &try self.program.lowerProgram(alloc),
+            &try self.program.lowerProgram(lir_arena.allocator()),
             host_platform.abi,
             alloc,
         );

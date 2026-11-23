@@ -170,9 +170,9 @@ main_L0:
 	movq 8(%rbx), %rdi
 	callq _linear__print_union
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

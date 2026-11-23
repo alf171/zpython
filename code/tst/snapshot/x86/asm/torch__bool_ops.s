@@ -226,9 +226,9 @@ main_L0:
 	movq %r13, %rsi
 	callq _tensor__Tensor____print____bool
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

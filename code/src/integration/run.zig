@@ -135,6 +135,7 @@ pub fn main(init: std.process.Init) !void {
     if (std_lib_enabled) {
         try runtime.injectCleanup(&ir_program, alloc);
     }
+    try runtime.insertReturn(&ir_program, alloc);
 
     // TODO: code sink pass
 

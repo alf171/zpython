@@ -46,9 +46,9 @@ main_L0:
 	movq %rbx, %rdi
 	callq _inherit__Dog__speak
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

@@ -244,9 +244,9 @@ main_L3:
 	movq %r13, %rsi
 	callq _list__list____print____i64
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

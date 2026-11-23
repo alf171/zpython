@@ -443,6 +443,7 @@ main_L3:
 	movq -72(%rbp), %rdi
 	callq _mnist__MNIST__close
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_L4:
 	movq -24(%rbp), %rdi
@@ -552,7 +553,6 @@ main_L12:
 	movq %rdi, -8(%rbp)
 	jmp main_L1
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

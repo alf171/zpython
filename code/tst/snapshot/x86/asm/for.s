@@ -52,6 +52,7 @@ main_L3:
 	movq %r13, %rsi
 	callq _print__print_int
 	callq arena_free
+	movq $0, %rax
 	jmp main_epilogue
 main_L4:
 	cmpq %rdx, %rsi
@@ -73,7 +74,6 @@ main_L6:
 	addq %rdi, %r9
 	jmp main_L1
 main_epilogue:
-	movq $0, %rax
 	popq %r15
 	popq %r14
 	popq %r13

@@ -17,7 +17,7 @@ pub fn emit(program: *const LirProgram, abi: Abi, alloc: std.mem.Allocator) ![]u
 
     try createProgramHeader(&out, alloc);
     for (program.functions) |function| {
-        try emitFunction(&out, &function, abi, false, alloc);
+        try emitFunction(&out, &function, abi, alloc);
     }
     try createFooter(&out, alloc);
 
@@ -28,7 +28,6 @@ fn emitFunction(
     out: *ArrayList(u8),
     function: *const Function,
     abi: Abi,
-    is_main: bool,
     alloc: std.mem.Allocator,
 ) !void {
     // emit comment used by metrics for function origin metrics
@@ -454,11 +453,8 @@ fn emitFunction(
                 },
             }
         }
-        if (is_main) {
-            try out.print(alloc, "\tb _{s}_epilogue\n", .{function.label});
-        }
     }
-    try createFunctionFooter(out, function.label, frame_stack_size, is_main, abi, alloc);
+    try createFunctionFooter(out, function.label, frame_stack_size, abi, alloc);
 }
 
 fn createProgramHeader(out: *ArrayList(u8), alloc: std.mem.Allocator) !void {
@@ -560,13 +556,8 @@ fn emitStackStoreByte(
     }
 }
 
-fn createFunctionFooter(out: *ArrayList(u8), name: []const u8, local_stack_size: usize, is_main: bool, abi: Abi, alloc: std.mem.Allocator) !void {
+fn createFunctionFooter(out: *ArrayList(u8), name: []const u8, local_stack_size: usize, abi: Abi, alloc: std.mem.Allocator) !void {
     try out.print(alloc, "_{s}_epilogue:\n", .{name});
-    if (is_main) {
-        // return 0 at end of main
-        try out.appendSlice(alloc, "\tmov w0, #0\n");
-    }
-
     try restoreCallleeSafeReg(out, abi, alloc);
     if (local_stack_size > 0) {
         try out.print(alloc, "\tadd sp, sp, #{d}\n", .{local_stack_size});
