@@ -150,7 +150,12 @@ pub fn parseModule(path: []const u8, io: std.Io, alloc: std.mem.Allocator) !*PyO
     const ast_module = c.PyImport_ImportModule("ast");
     const parse_fn = c.PyObject_GetAttrString(ast_module, "parse");
     std.debug.assert(parse_fn != null);
-    const tree = c.PyObject_CallFunction(parse_fn, "s", code_z.ptr);
+    const path_z = try alloc.dupeSentinel(u8, path, 0);
+    defer alloc.free(path_z);
+    const tree = c.PyObject_CallFunction(parse_fn, "ss", code_z.ptr, path_z.ptr) orelse {
+        c.PyErr_Print();
+        return error.DiagnosticReported;
+    };
     std.debug.assert(tree != null);
     return tree;
 }
