@@ -664,8 +664,8 @@ pub fn getSubscriberType(annotation: *PyObject, irBuilder: *IrBuilder) !Subscrib
         return .{ .instance = class.id };
     }
 
-    std.debug.print("unknown annotation base {s}\n", .{name});
-    return error.InvalidSubscriber;
+    diagnostics.report(annotation, irBuilder.current_file, "unknown type constructor '{s}' in annotation", .{name});
+    return error.DiagnosticReported;
 }
 
 // ClassDef(name='MiniTorch', type_params=[ TypeVar(name='T')], body=[...])
