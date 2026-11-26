@@ -58,6 +58,7 @@ def matmul[U](out: Tensor[U], a: Tensor[U], b: Tensor[U]) -> None:
 - Run: batch size 8, 60,000 images, 7,500 optimizer steps
 - Result: 17.86 s execution; about 93% accuracy on training batches
 - Profile [AI generated]: 157,502 launches, 12.31 s total kernel time—matmul 9.64 s (78%), including 7.26 s for (8, 64) outputs; fused subtract/multiply 1.81 s (15%); all others 0.86 s (7%)
+- WIP (in no order): WMMA, lds storage + tiling, for loop hoisting, fewer barriers (**not** load A, wait, load B wait)
 
 ## Reading Materials
 - user scheduling lanuage
