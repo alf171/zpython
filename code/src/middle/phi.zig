@@ -17,6 +17,13 @@ pub fn eliminatePhi(program: *Program, alloc: std.mem.Allocator) !void {
     }
 }
 
+pub fn simplifyTrivial(program: *Program, alloc: std.mem.Allocator) !void {
+    while (try skipPhi(&program.main, alloc)) {}
+    for (program.functions.items) |*function| {
+        while (try skipPhi(function, alloc)) {}
+    }
+}
+
 /// a value wasnt used in block so phi isnt required
 fn skipPhi(function: *Function, alloc: std.mem.Allocator) !bool {
     for (function.blocks.items) |*block| {
@@ -64,7 +71,6 @@ fn skipPhi(function: *Function, alloc: std.mem.Allocator) !bool {
 }
 
 fn eliminatePhiInFunction(function: *Function, alloc: std.mem.Allocator) !void {
-    while (try skipPhi(function, alloc)) {}
     for (function.blocks.items) |block| {
         // critical edge splitting will prevent there from being many blocks feeding into a single one
         var copies_per_pred: HashMap(BlockId, ArrayList(Copy)) = .init(alloc);

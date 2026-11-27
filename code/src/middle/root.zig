@@ -13,6 +13,7 @@ pub const math = @import("math.zig");
 pub const copy = @import("optim/copy.zig");
 pub const dead = @import("optim/dead.zig");
 pub const peephole = @import("optim/peephole.zig");
+pub const hoist = @import("optim/hoist.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

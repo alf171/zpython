@@ -36,6 +36,7 @@ const copy = middle.copy;
 const dead = middle.dead;
 const peephole = middle.peephole;
 const math = middle.math;
+const hoist = middle.hoist;
 const FunctionType = @import("common").function.FunctionType;
 const TimerMetrics = @import("common").timer.TimerMetrics;
 const RegisterClass = @import("common").register.RegisterClass;
@@ -136,9 +137,12 @@ pub fn main(init: std.process.Init) !void {
         try runtime.injectCleanup(&ir_program, alloc);
     }
     try runtime.insertReturn(&ir_program, alloc);
-
     // TODO: code sink pass
 
+    try phi.simplifyTrivial(&ir_program, alloc);
+    if (should_optim) {
+        try hoist.run(&ir_program, alloc);
+    }
     // phi cleanup
     try phi.eliminatePhi(&ir_program, alloc);
     timer.finish(.frontend_total, io);
