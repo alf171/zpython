@@ -143,7 +143,7 @@ class TensorData[T]:
     def sub_mul(self, b: TensorData[T], c: TensorData[T]) -> TensorData[T]:
         zero: T = 0
         res = TensorData.empty((self.rows, self.cols), zero)
-        _sub_mul_gpu(res, self, b, c, (self.rows, self.cols, 1))
+        _sub_mul_gpu(res, self, b, c, (self.cols, self.rows, 1))
         return res
 
     def __truediv__(self, other: TensorData[T]) -> TensorData[T]:
@@ -156,7 +156,7 @@ class TensorData[T]:
         zero: T = 0
         # (i, k)
         res = TensorData.empty((self.rows, other.cols), zero)
-        _matmul_gpu(res, self, other, (self.rows, other.cols, 1))
+        _matmul_gpu(res, self, other, (other.cols, self.rows, 1))
         # _matmul_tile_gpu(res, self, other, (self.rows, other.cols // 2, 1))
         return res
 

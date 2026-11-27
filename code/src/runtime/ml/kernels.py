@@ -56,9 +56,10 @@ def mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
     out.store(row, col, a.load(row, col) * b.load(row, col))
 
 @gpu
+# column major
 def sub_mul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U], c: TensorData[U]) -> None:
-    row = global_id(0)
-    col = global_id(1)
+    col = global_id(0)
+    row = global_id(1)
     out.store(row, col, a.load(row, col) - (b.load(row, col) * c.load(row, col)))
 
 @gpu
@@ -69,9 +70,10 @@ def div[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
 
 @gpu
 # (i, j) @ (j,k) = (i,k)
+# column major
 def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
-    i = global_id(0)
-    k = global_id(1)
+    k = global_id(0)
+    i = global_id(1)
 
     acc: U = 0
     for j in range(a.cols):
@@ -83,19 +85,18 @@ def matmul[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
 @gpu
 # (i, j) @ (j,k) = (i,k)
 def matmul_tile[U](out: TensorData[U], a: TensorData[U], b: TensorData[U]) -> None:
-    i = global_id(0)
-    k = global_id(1) * 2
+    col = global_id(0)
+    row = global_id(1)
+    lr = local_id(0)
+    lc = local_id(1)
 
-    acc0: U = 0
-    acc1: U = 0
+    acc: U = 0
     for j in range(a.cols):
-        av = a.load(i, j)
-        acc0 += av * b.load(j, k)
-        acc1 += av * b.load(j, k + 1)
+        av = a.load(col, j)
+        acc += av * b.load(j, row)
 
     # (i, k)
-    out.store(i, k, acc0)
-    out.store(i, k + 1, acc1)
+    out.store(row, col, acc)
 
 @gpu
 def where[U](out: TensorData[U], mask: TensorData[bool], a: TensorData[U], b: TensorData[U]) -> None:
