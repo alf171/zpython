@@ -28,6 +28,7 @@ const igraph = middle.igraph;
 const color = middle.color;
 const apply_colors = middle.apply_colors;
 const identity = middle.identity;
+const wait = middle.wait;
 const RegisterFile = @import("common").register.RegisterFile;
 const precolor = middle.precolor;
 const phi = middle.phi;
@@ -288,6 +289,8 @@ pub fn main(init: std.process.Init) !void {
     timer.begin(.middle_finalize, io);
     try apply_colors.run(&ir_program, &host_colors, host_platform.abi, .host, alloc);
     if (should_optim) try identity.run(&ir_program, alloc);
+    // gpu pass to insert rdna3 waits
+    try wait.run(&ir_program, alloc);
     timer.finish(.middle_finalize, io);
     timer.finish(.middle_total, io);
 

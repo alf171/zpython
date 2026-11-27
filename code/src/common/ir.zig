@@ -86,6 +86,23 @@ pub const BinOp = enum {
     pow,
     unknown,
 
+    pub fn symbol(self: @This()) []const u8 {
+        return switch (self) {
+            .add => "+",
+            .sub => "-",
+            .mul => "*",
+            .matmul => "@",
+            .div => "/",
+            .floor_div => "//",
+            .pow => "^",
+            .mod => "%",
+            else => |e| {
+                std.debug.print("uses cant handle {s}\n", .{@tagName(e)});
+                unreachable;
+            },
+        };
+    }
+
     pub fn toClassBuiltin(self: @This()) []const u8 {
         return switch (self) {
             .add => "__add__",

@@ -99,6 +99,8 @@ pub const Program = struct {
         try functions.append(alloc, try program.main.lowerFunction(alloc));
         for (program.functions.items) |*function| {
             if (function.kind != .host) continue;
+            // we should consider dropping elsewhere hmm
+            if (function.is_inline) continue;
             try functions.append(alloc, try function.lowerFunction(alloc));
         }
         return .{

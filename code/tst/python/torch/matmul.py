@@ -1,17 +1,11 @@
-# i32 matmul
-# A_data: array[i32] = [1,2,3,4,5,6] 
-# A = Tensor(A_data, (2,3))
-# B_data: array[i32] = [7,8,9,10,11,12,13,14,15,16,17,18]
-# B = Tensor(B_data, (3,4))
-# C = A @ B
-# C.print_shape()
-# C.print()
+srand(42)
 
 # f32 matmul
-A_data: array[f32] = [1.5, -2.0, 0.0,  3.25, -1.0,  0.5]
-A = Tensor(A_data, (3, 2))
-
-B_data: array[f32] = [2.0, -1.0,  0.5, 4.0, 1.5,  2.0, -2.0, 0.0]
-B = Tensor(B_data, (2, 4))
+A = Tensor.randn((1024, 1024))
+B = Tensor.randn((1024, 1024))
 C = A @ B
-print(C)
+
+print(C[0, 0])
+print(C[10, 10])
+print(C[100, 100])
+print(C[1000, 1000])

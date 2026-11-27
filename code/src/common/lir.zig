@@ -106,6 +106,11 @@ pub const Instruction = union(enum) {
         dst: TypedOperand,
         src: TypedOperand,
     },
+    // gpu: wait count
+    waitcnt: struct {
+        // vector memory count
+        vmcnt: u6,
+    },
     unkown,
 
     pub fn printFn(self: @This()) !void {
@@ -141,9 +146,13 @@ pub const Instruction = union(enum) {
             },
             .binop => |binop| {
                 binop.dst.operand.print();
-                debugPrint(" <- {s} ", .{@tagName(binop.op)});
+                debugPrint(" <- ", .{});
                 binop.lhs.operand.print();
-                debugPrint(", ", .{});
+                const tag = switch (binop.op) {
+                    .bop => |bop| bop.symbol(),
+                    .cmp => |cmp| cmp.symbol(),
+                };
+                debugPrint(" {s} ", .{tag});
                 binop.rhs.operand.print();
                 debugPrint("\n", .{});
             },

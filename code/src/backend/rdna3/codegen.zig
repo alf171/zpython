@@ -8,7 +8,7 @@ const TypeInfo = common.types.TypeInfo;
 const Block = common.ir.BasicBlock;
 const ConstValue = common.ir.ConstValue;
 const BasicBlock = common.ir.BasicBlock;
-const Function = common.ir.Function;
+const Function = common.function.Function;
 const ValueRef = common.ir.ValueRef;
 const ColoredGraph = @import("middle").color.ColoredGraph;
 const Abi = @import("../gpu_abi.zig").GpuAbi;
@@ -27,53 +27,536 @@ pub fn emit(
         if (function.kind != .gpu_kernel) {
             continue;
         }
-        try emitKernelHeader(&out, function.label, alloc);
-        for (function.blocks.items) |block| {
-            try out.print(alloc, "{s}_L{d}:\n", .{ function.label, block.id });
-            for (block.instructions.items) |instruction| {
-                switch (instruction) {
-                    .function_param => |fp| {
-                        const dst = try abi.regFor(fp.dst.operand);
-                        if (dst.reg_type != .sgpr) return error.InvalidGpuRegisterClass;
+        try emitKernel(&out, &function, abi, alloc);
+    }
 
-                        const kernel_offset = fp.index * 8;
-                        switch (dst.count) {
-                            1 => {
-                                try out.print(alloc, "\ts_load_b32 s{d}, s[2:3], {d}\n", .{ dst.base, kernel_offset });
+    return out.toOwnedSlice(alloc);
+}
+
+pub fn emitKernel(
+    out: *ArrayList(u8),
+    function: *const Function,
+    abi: Abi,
+    alloc: std.mem.Allocator,
+) !void {
+    var lds_bytes: usize = 0;
+    try emitKernelHeader(out, function.label, alloc);
+    for (function.blocks.items) |block| {
+        try out.print(alloc, "{s}_L{d}:\n", .{ function.label, block.id });
+        for (block.instructions.items) |instruction| {
+            switch (instruction) {
+                .function_param => |fp| {
+                    const dst = try abi.regFor(fp.dst.operand);
+                    if (dst.reg_type != .sgpr) return error.InvalidGpuRegisterClass;
+
+                    const kernel_offset = fp.index * 8;
+                    switch (dst.count) {
+                        1 => {
+                            try out.print(alloc, "\ts_load_b32 s{d}, s[2:3], {d}\n", .{ dst.base, kernel_offset });
+                        },
+                        2 => {
+                            try out.print(alloc, "\ts_load_b64 s[{d}:{d}], s[2:3], {d}\n", .{ dst.base, dst.base + 1, kernel_offset });
+                        },
+                        else => return error.NotImpl,
+                    }
+                    // load is async so place a barrier
+                    try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
+                },
+                .global_idx => |gi| {
+                    const dst = try abi.regFor(gi.dst.operand);
+                    if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
+                    switch (gi.axis) {
+                        .constant => |c| {
+                            const scratch = try abi.scratchReg(0, 1, .sgpr);
+                            const axis = try c.valueAsIntImm();
+                            const offset: u16 = if (axis == 2) 8 else 4;
+                            const field = (16 << 16) | @as(u32, if (axis == 1) 16 else 0);
+                            // if (dst.count == 2)
+                            //     try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                            try out.print(alloc, "\ts_load_b32 s{d}, s[0:1], {d}\n", .{ scratch.base, offset });
+                            try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
+                            // scratch = workgroup_size[axis]
+                            try out.print(alloc, "\ts_bfe_u32 s{d}, s{d}, {d}\n", .{ scratch.base, scratch.base, field });
+                            // extract the local id
+                            try out.print(alloc, "\tv_bfe_u32 v{d}, v0, {d}, 10\n", .{ dst.base, axis * 10 });
+                            // axis starts at reg s5
+                            // scratch = group_id[axis] * workgroup_size[axis]
+                            try out.print(alloc, "\ts_mul_i32 s{d}, s{d}, s{d}\n", .{ scratch.base, 4 + axis, scratch.base });
+                            // dst = group_offset + local id
+                            try out.print(alloc, "\tv_add_u32 v{d}, s{d}, v{d}\n", .{ dst.base, scratch.base, dst.base });
+
+                            if (dst.count == 2) {
+                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                            }
+                        },
+                        else => |e| {
+                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                            return error.NotImpl;
+                        },
+                    }
+                },
+                .workground_alloc => |wa| {
+                    const dst = try abi.regFor(wa.dst.operand);
+                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, lds_bytes });
+                    if (dst.count == 2) {
+                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                    }
+                    lds_bytes += wa.byte_count;
+                },
+                .lir => |lir| switch (lir) {
+                    .function_return => |fr| {
+                        if (fr.value != null) return error.UnsupportedGpu;
+                        try out.appendSlice(alloc, "\ts_endpgm\n");
+                    },
+                    .move => |m| {
+                        const dst = try abi.regFor(m.dst.operand);
+                        if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
+                        switch (m.src) {
+                            .constant => |c| switch (c) {
+                                .i64, .f64 => {
+                                    const bits: u64 = switch (c) {
+                                        .i64 => |i| @bitCast(i),
+                                        .f64 => |f| @bitCast(f),
+                                        else => unreachable,
+                                    };
+                                    const low: u32 = @truncate(bits);
+                                    if (dst.count == 1) {
+                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
+                                    } else {
+                                        std.debug.assert(dst.count == 2);
+                                        const high: u32 = @truncate(bits >> 32);
+
+                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
+                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base + 1, high });
+                                    }
+                                },
+                                .i32, .f32 => {
+                                    const bits: u32 = switch (c) {
+                                        .i32 => |i| @bitCast(i),
+                                        .f32 => |f| @bitCast(f),
+                                        else => unreachable,
+                                    };
+                                    std.debug.assert(dst.count == 1);
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{
+                                        dst.base,
+                                        bits,
+                                    });
+                                },
+                                .bool => |b| {
+                                    try out.print(alloc, "\tv_mov_b32 v{d}, {d}\n", .{
+                                        dst.base,
+                                        @intFromBool(b),
+                                    });
+                                },
+                                else => |e| {
+                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                    return error.NotImpl;
+                                },
                             },
-                            2 => {
-                                try out.print(alloc, "\ts_load_b64 s[{d}:{d}], s[2:3], {d}\n", .{ dst.base, dst.base + 1, kernel_offset });
+                            .top => |top| switch (top.type) {
+                                .array, .ptr, .i64, .f64, .instance => {
+                                    const src = try abi.regFor(top.operand);
+                                    std.debug.assert(dst.reg_type == .vgpr);
+                                    std.debug.assert(dst.count == 2);
+                                    std.debug.assert(src.count == 2);
+                                    const src_reg_lo = try src.toString(alloc);
+                                    defer alloc.free(src_reg_lo);
+                                    const src_reg_hi = try src.toStringAt(1, alloc);
+                                    defer alloc.free(src_reg_hi);
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg_lo });
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base + 1, src_reg_hi });
+                                },
+                                .i32, .f32, .bool => {
+                                    std.debug.assert(dst.reg_type == .vgpr);
+                                    const src = try abi.regFor(top.operand);
+                                    const src_reg = try src.toString(alloc);
+                                    defer alloc.free(src_reg);
+                                    std.debug.assert(dst.count == 1);
+                                    std.debug.assert(src.count == 1);
+                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg });
+                                },
+                                else => |e| {
+                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                    return error.NotImpl;
+                                },
+                            },
+                        }
+                    },
+                    .binop => |binop| {
+                        const dst = try abi.regFor(binop.dst.operand);
+                        std.debug.assert(dst.reg_type == .vgpr);
+                        const lhs = try abi.regFor(binop.lhs.operand);
+                        const rhs = try abi.regFor(binop.rhs.operand);
+                        switch (binop.op) {
+                            .cmp => |cmp| {
+                                std.debug.assert(dst.reg_type == .vgpr);
+                                std.debug.assert(lhs.reg_type == .vgpr);
+                                std.debug.assert(rhs.reg_type == .vgpr);
+                                std.debug.assert(lhs.count == 1);
+                                std.debug.assert(rhs.count == 1);
+                                const t = switch (binop.lhs.type) {
+                                    .bool => "u32",
+                                    .i32 => "i32",
+                                    .f32 => "f32",
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                };
+                                // NOTE: rhs can technically be vector or scalar!
+                                try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ condForCmp(cmp, binop.lhs.type), t, lhs.base, rhs.base });
+                                try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
+                            },
+                            .bop => |bop| blk: {
+                                var src0 = lhs;
+                                var src1 = rhs;
+                                if (bop.isCommutative() and src0.reg_type == .vgpr and src1.reg_type == .sgpr) {
+                                    std.mem.swap(@TypeOf(src0), &src0, &src1);
+                                }
+                                if (dst.reg_type != .vgpr or src1.reg_type != .vgpr) {
+                                    return error.InvalidGpuVop2Operand;
+                                }
+                                const dst_reg = try dst.toString(alloc);
+                                defer alloc.free(dst_reg);
+                                const src0_reg = try src0.toString(alloc);
+                                defer alloc.free(src0_reg);
+                                const src1_reg = try src1.toString(alloc);
+                                defer alloc.free(src1_reg);
+                                break :blk switch (bop) {
+                                    .add => {
+                                        switch (binop.dst.type) {
+                                            .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                            else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                        }
+                                        if (dst.count == 2)
+                                            try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                                    },
+                                    .mul => {
+                                        switch (binop.dst.type) {
+                                            .f32 => {
+                                                try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                            },
+                                            else => {
+                                                try out.print(alloc, "\tv_mul_lo_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
+                                            },
+                                        }
+                                        // 0 out bits [32..64]
+                                        if (dst.count == 2)
+                                            try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                                    },
+                                    .sub => {
+                                        // sub is not communitiive
+                                        std.debug.assert(src1.reg_type == .vgpr);
+                                        switch (binop.dst.type) {
+                                            .f32 => try out.print(alloc, "\tv_sub_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                            else => try out.print(alloc, "\tv_sub_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
+                                        }
+                                    },
+                                    .div => {
+                                        // div is not communitiive
+                                        std.debug.assert(src1.reg_type == .vgpr);
+                                        switch (binop.dst.type) {
+                                            .f32 => {
+                                                const reciprocal = try abi.scratchReg(0, 1, .vgpr);
+                                                const reciprocal_reg = try reciprocal.toString(alloc);
+                                                defer alloc.free(reciprocal_reg);
+                                                // x/y => x * 1/y
+                                                try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
+                                                try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
+                                            },
+                                            // TODO: impl
+                                            .i32, .bool => {
+                                                std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
+                                            },
+                                            else => |e| {
+                                                std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                                return error.NotImpl;
+                                            },
+                                        }
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                };
+                            },
+                        }
+                    },
+                    .store_offset => |so| {
+                        const base = try abi.regFor(so.dst.operand);
+                        const offset = switch (so.offset) {
+                            .constant => return error.NotImpl,
+                            .top => |top| try abi.regFor(top.operand),
+                        };
+                        const src = try abi.regFor(so.src.operand);
+                        if (so.dst.type == .lds_ptr) {
+                            // emit ds_* variant
+                            std.debug.assert(so.src.type == .i64);
+                            // addr = base + offset
+                            const addr = try abi.scratchReg(0, 1, .vgpr);
+                            try out.print(alloc, "\tv_add_u32 v{d}, v{d}, v{d}\n", .{ addr.base, base.base, offset.base });
+                            try out.print(alloc, "\tds_store_b64 v{d}, v[{d}:{d}]\n", .{ addr.base, src.base, src.base + 1 });
+                            try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
+                            continue;
+                        }
+
+                        switch (base.reg_type) {
+                            .sgpr => {
+                                // *(base + offset) = src
+                                switch (so.src.type) {
+                                    .i64, .array => {
+                                        try out.print(alloc, "\tglobal_store_b64 v{d}, v[{d}:{d}], s[{d}:{d}]\n", .{
+                                            offset.base,
+                                            src.base,
+                                            src.base + 1,
+                                            base.base,
+                                            base.base + 1,
+                                        });
+                                    },
+                                    .i32, .f32 => {
+                                        try out.print(alloc, "\tglobal_store_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                            offset.base,
+                                            src.base,
+                                            base.base,
+                                            base.base + 1,
+                                        });
+                                    },
+                                    .bool => {
+                                        try out.print(alloc, "\tglobal_store_b8 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                            offset.base,
+                                            src.base,
+                                            base.base,
+                                            base.base + 1,
+                                        });
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                }
+                            },
+                            .vgpr => {
+                                std.debug.assert(base.count == 2);
+                                std.debug.assert(offset.count == 2);
+                                // *(base + offset) = src
+                                // address = base + offset
+                                const address = try abi.scratchReg(0, 2, .vgpr);
+                                try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{
+                                    address.base,
+                                    base.base,
+                                    offset.base,
+                                });
+                                try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{
+                                    address.base + 1,
+                                    base.base + 1,
+                                    offset.base + 1,
+                                });
+                                // address = src
+                                switch (so.src.type) {
+                                    .i64 => {
+                                        std.debug.assert(src.count == 2);
+                                        try out.print(alloc, "\tglobal_store_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{
+                                            address.base,
+                                            address.base + 1,
+                                            src.base,
+                                            src.base + 1,
+                                        });
+                                    },
+                                    .i32, .f32 => {
+                                        try out.print(alloc, "\tglobal_store_b32 v[{d}:{d}], v{d}, off\n", .{
+                                            address.base,
+                                            address.base + 1,
+                                            src.base,
+                                        });
+                                    },
+                                    .bool => {
+                                        try out.print(alloc, "\tglobal_store_b8 v[{d}:{d}], v{d}, off\n", .{
+                                            address.base,
+                                            address.base + 1,
+                                            src.base,
+                                        });
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                }
+                            },
+                            else => return error.UnexpectedRegisterType,
+                        }
+                    },
+                    .load_offset => |lo| {
+                        const dst = try abi.regFor(lo.dst.operand);
+                        const offset = switch (lo.offset) {
+                            .constant => |constant| blk: {
+                                const value: i64 = switch (constant) {
+                                    .i64 => |v| v,
+                                    .i32 => |v| v,
+                                    else => return error.InvalidOffsetType,
+                                };
+                                const scratch = try abi.scratchReg(0, 2, .vgpr);
+                                const bits: u64 = @bitCast(value);
+                                const low: u32 = @truncate(bits);
+                                const high: u32 = @truncate(bits >> 32);
+                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base, low });
+                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base + 1, high });
+                                break :blk scratch;
+                            },
+                            .top => |top| try abi.regFor(top.operand),
+                        };
+                        const src = try abi.regFor(lo.src.operand);
+                        if (lo.src.type == .lds_ptr) {
+                            // emit ds_* variant
+                            std.debug.assert(lo.dst.type == .i64);
+                            const addr = try abi.scratchReg(0, 1, .vgpr);
+                            // addr = base + index
+                            try out.print(alloc, "\tv_add_u32 v{d}, v{d}, v{d}\n", .{ addr.base, src.base, offset.base });
+                            try out.print(alloc, "\tds_load_b64 v[{d}:{d}], v{d}\n", .{ dst.base, dst.base + 1, addr.base });
+                            try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
+                            continue;
+                        }
+                        std.debug.assert(dst.reg_type == .vgpr);
+                        // dst = *(src + offset)
+                        switch (src.reg_type) {
+                            .vgpr => {
+                                std.debug.assert(src.count == 2);
+                                std.debug.assert(offset.count == 2);
+                                std.debug.assert(offset.reg_type == .vgpr);
+                                const address = try abi.scratchReg(0, 2, .vgpr);
+                                try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
+                                try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
+                                switch (lo.dst.type) {
+                                    .i64, .array, .instance => {
+                                        std.debug.assert(dst.count == 2);
+                                        try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
+                                    },
+                                    .i32, .f32 => {
+                                        std.debug.assert(dst.count == 1);
+                                        try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
+                                    },
+                                    .bool => {
+                                        std.debug.assert(dst.count == 1);
+                                        try out.print(alloc, "\tglobal_load_u8 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                }
+                            },
+                            .sgpr => {
+                                switch (lo.dst.type) {
+                                    .i64, .array, .f64 => {
+                                        try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v{d}, s[{d}:{d}]\n", .{
+                                            dst.base,
+                                            dst.base + 1,
+                                            offset.base,
+                                            src.base,
+                                            src.base + 1,
+                                        });
+                                        try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                    },
+                                    .i32, .f32 => {
+                                        std.debug.assert(dst.count == 1);
+                                        std.debug.assert(src.count == 2);
+                                        try out.print(alloc, "\tglobal_load_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                            dst.base,
+                                            offset.base,
+                                            src.base,
+                                            src.base + 1,
+                                        });
+                                        try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                    },
+                                    .bool => {
+                                        std.debug.assert(dst.count == 1);
+                                        std.debug.assert(src.count == 2);
+                                        try out.print(alloc, "\tglobal_load_u8 v{d}, v{d}, s[{d}:{d}]\n", .{
+                                            dst.base,
+                                            offset.base,
+                                            src.base,
+                                            src.base + 1,
+                                        });
+                                        try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
+                                }
+                            },
+                            else => unreachable,
+                        }
+                    },
+                    .waitcnt => |w| {
+                        try out.print(alloc, "\ts_waitcnt vmcnt({d})\n", .{w.vmcnt});
+                    },
+                    .jump => |j| {
+                        try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, j.target });
+                    },
+                    .branch => |b| {
+                        const condition = try abi.regFor(b.condition.operand);
+                        std.debug.assert(condition.reg_type == .vgpr);
+                        std.debug.assert(condition.count == 1);
+                        const scalar_scratch = try abi.scratchReg(0, 1, .sgpr);
+                        try out.print(alloc, "\tv_readfirstlane_b32 s{d}, v{d}\n", .{ scalar_scratch.base, condition.base });
+                        // sets scc bit
+                        try out.print(alloc, "\ts_cmp_lg_u32 s{d}, 0\n", .{scalar_scratch.base});
+                        try out.print(alloc, "\ts_cbranch_scc1 {s}_L{d}\n", .{ function.label, b.then_block });
+                        try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, b.else_block });
+                    },
+                    .select => |s| {
+                        const dst = try abi.regFor(s.dst.operand);
+                        std.debug.assert(dst.count == 1);
+                        std.debug.assert(dst.reg_type == .vgpr);
+                        const condition = try abi.regFor(s.condition.operand);
+                        std.debug.assert(condition.reg_type == .vgpr);
+                        try out.print(alloc, "\tv_cmp_ne_u32 vcc_lo, v{d}, 0\n", .{condition.base});
+                        try out.print(alloc, "v_cndmask_b32 v{d}, ", .{dst.base});
+                        switch (s.else_value) {
+                            .top => |top| {
+                                const else_value = try abi.regFor(top.operand);
+                                try out.print(alloc, "v{d}, ", .{else_value.base});
+                            },
+                            .constant => |c| {
+                                switch (c) {
+                                    .f64 => return error.NotImpl,
+                                    .f32 => |value| {
+                                        const bits: u32 = @bitCast(value);
+                                        try out.print(alloc, "0x{x}", .{bits});
+                                    },
+                                    else => try out.print(alloc, "{d}, ", .{try c.valueAsIntImm()}),
+                                }
+                            },
+                        }
+                        switch (s.if_value) {
+                            .top => |top| {
+                                const if_value = try abi.regFor(top.operand);
+                                try out.print(alloc, "v{d}, vcc_lo\n", .{if_value.base});
                             },
                             else => return error.NotImpl,
                         }
-                        // load is async so place a barrier
-                        try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
                     },
-                    .global_idx => |gi| {
-                        const dst = try abi.regFor(gi.dst.operand);
-                        if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
-                        switch (gi.axis) {
-                            .constant => |c| {
-                                const scratch = try abi.scratchReg(0, 1, .sgpr);
-                                const axis = try c.valueAsIntImm();
-                                const offset: u16 = if (axis == 2) 8 else 4;
-                                const field = (16 << 16) | @as(u32, if (axis == 1) 16 else 0);
-                                // if (dst.count == 2)
-                                //     try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
-                                try out.print(alloc, "\ts_load_b32 s{d}, s[0:1], {d}\n", .{ scratch.base, offset });
-                                try out.appendSlice(alloc, "\ts_waitcnt lgkmcnt(0)\n");
-                                // scratch = workgroup_size[axis]
-                                try out.print(alloc, "\ts_bfe_u32 s{d}, s{d}, {d}\n", .{ scratch.base, scratch.base, field });
-                                // extract the local id
-                                try out.print(alloc, "\tv_bfe_u32 v{d}, v0, {d}, 10\n", .{ dst.base, axis * 10 });
-                                // axis starts at reg s5
-                                // scratch = group_id[axis] * workgroup_size[axis]
-                                try out.print(alloc, "\ts_mul_i32 s{d}, s{d}, s{d}\n", .{ scratch.base, 4 + axis, scratch.base });
-                                // dst = group_offset + local id
-                                try out.print(alloc, "\tv_add_u32 v{d}, s{d}, v{d}\n", .{ dst.base, scratch.base, dst.base });
-
-                                if (dst.count == 2) {
-                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
+                    .unaryop => |uo| {
+                        switch (uo.op) {
+                            .exp2 => {
+                                const dst = try abi.regFor(uo.dst.operand);
+                                const src = try abi.regFor(uo.src.operand);
+                                switch (uo.src.type) {
+                                    .f32 => {
+                                        std.debug.assert(dst.count == 1);
+                                        std.debug.assert(dst.reg_type == .vgpr);
+                                        std.debug.assert(src.count == 1);
+                                        std.debug.assert(src.reg_type == .vgpr);
+                                        try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
+                                    },
+                                    // TODO: impl
+                                    .bool, .i32 => {
+                                        std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
+                                    },
+                                    else => |e| {
+                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                                        return error.NotImpl;
+                                    },
                                 }
                             },
                             else => |e| {
@@ -82,468 +565,21 @@ pub fn emit(
                             },
                         }
                     },
-                    .lir => |lir| switch (lir) {
-                        .function_return => |fr| {
-                            if (fr.value != null) return error.UnsupportedGpu;
-                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0) lgkmcnt(0)\n");
-                            try out.appendSlice(alloc, "\ts_endpgm\n");
-                        },
-                        .move => |m| {
-                            const dst = try abi.regFor(m.dst.operand);
-                            if (dst.reg_type != .vgpr) return error.InvalidGpuRegisterClass;
-                            switch (m.src) {
-                                .constant => |c| switch (c) {
-                                    .i64, .f64 => {
-                                        const bits: u64 = switch (c) {
-                                            .i64 => |i| @bitCast(i),
-                                            .f64 => |f| @bitCast(f),
-                                            else => unreachable,
-                                        };
-                                        const low: u32 = @truncate(bits);
-                                        if (dst.count == 1) {
-                                            try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
-                                        } else {
-                                            std.debug.assert(dst.count == 2);
-                                            const high: u32 = @truncate(bits >> 32);
-
-                                            try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base, low });
-                                            try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ dst.base + 1, high });
-                                        }
-                                    },
-                                    .i32, .f32 => {
-                                        const bits: u32 = switch (c) {
-                                            .i32 => |i| @bitCast(i),
-                                            .f32 => |f| @bitCast(f),
-                                            else => unreachable,
-                                        };
-                                        std.debug.assert(dst.count == 1);
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{
-                                            dst.base,
-                                            bits,
-                                        });
-                                    },
-                                    .bool => |b| {
-                                        try out.print(alloc, "\tv_mov_b32 v{d}, {d}\n", .{
-                                            dst.base,
-                                            @intFromBool(b),
-                                        });
-                                    },
-                                    else => |e| {
-                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                        return error.NotImpl;
-                                    },
-                                },
-                                .top => |top| switch (top.type) {
-                                    .array, .ptr, .i64, .f64, .instance => {
-                                        const src = try abi.regFor(top.operand);
-                                        std.debug.assert(dst.reg_type == .vgpr);
-                                        std.debug.assert(dst.count == 2);
-                                        std.debug.assert(src.count == 2);
-                                        const src_reg_lo = try src.toString(alloc);
-                                        defer alloc.free(src_reg_lo);
-                                        const src_reg_hi = try src.toStringAt(1, alloc);
-                                        defer alloc.free(src_reg_hi);
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg_lo });
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base + 1, src_reg_hi });
-                                    },
-                                    .i32, .f32, .bool => {
-                                        std.debug.assert(dst.reg_type == .vgpr);
-                                        const src = try abi.regFor(top.operand);
-                                        const src_reg = try src.toString(alloc);
-                                        defer alloc.free(src_reg);
-                                        std.debug.assert(dst.count == 1);
-                                        std.debug.assert(src.count == 1);
-                                        try out.print(alloc, "\tv_mov_b32_e32 v{d}, {s}\n", .{ dst.base, src_reg });
-                                    },
-                                    else => |e| {
-                                        std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                        return error.NotImpl;
-                                    },
-                                },
-                            }
-                        },
-                        .binop => |binop| {
-                            const dst = try abi.regFor(binop.dst.operand);
-                            std.debug.assert(dst.reg_type == .vgpr);
-                            const lhs = try abi.regFor(binop.lhs.operand);
-                            const rhs = try abi.regFor(binop.rhs.operand);
-                            switch (binop.op) {
-                                .cmp => |cmp| {
-                                    std.debug.assert(dst.reg_type == .vgpr);
-                                    std.debug.assert(lhs.reg_type == .vgpr);
-                                    std.debug.assert(rhs.reg_type == .vgpr);
-                                    std.debug.assert(lhs.count == 1);
-                                    std.debug.assert(rhs.count == 1);
-                                    const t = switch (binop.lhs.type) {
-                                        .bool => "u32",
-                                        .i32 => "i32",
-                                        .f32 => "f32",
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    };
-                                    // NOTE: rhs can technically be vector or scalar!
-                                    try out.print(alloc, "\tv_cmp_{s}_{s} vcc_lo, v{d}, v{d}\n", .{ condForCmp(cmp, binop.lhs.type), t, lhs.base, rhs.base });
-                                    try out.print(alloc, "\tv_cndmask_b32 v{d}, 0, 1, vcc_lo\n", .{dst.base});
-                                },
-                                .bop => |bop| blk: {
-                                    var src0 = lhs;
-                                    var src1 = rhs;
-                                    if (bop.isCommutative() and src0.reg_type == .vgpr and src1.reg_type == .sgpr) {
-                                        std.mem.swap(@TypeOf(src0), &src0, &src1);
-                                    }
-                                    if (dst.reg_type != .vgpr or src1.reg_type != .vgpr) {
-                                        return error.InvalidGpuVop2Operand;
-                                    }
-                                    const dst_reg = try dst.toString(alloc);
-                                    defer alloc.free(dst_reg);
-                                    const src0_reg = try src0.toString(alloc);
-                                    defer alloc.free(src0_reg);
-                                    const src1_reg = try src1.toString(alloc);
-                                    defer alloc.free(src1_reg);
-                                    break :blk switch (bop) {
-                                        .add => {
-                                            switch (binop.dst.type) {
-                                                .f32 => try out.print(alloc, "\tv_add_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                                else => try out.print(alloc, "\tv_add_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                            }
-                                            if (dst.count == 2)
-                                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
-                                        },
-                                        .mul => {
-                                            switch (binop.dst.type) {
-                                                .f32 => {
-                                                    try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
-                                                },
-                                                else => {
-                                                    try out.print(alloc, "\tv_mul_lo_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg });
-                                                },
-                                            }
-                                            // 0 out bits [32..64]
-                                            if (dst.count == 2)
-                                                try out.print(alloc, "\tv_mov_b32_e32 v{d}, 0\n", .{dst.base + 1});
-                                        },
-                                        .sub => {
-                                            // sub is not communitiive
-                                            std.debug.assert(src1.reg_type == .vgpr);
-                                            switch (binop.dst.type) {
-                                                .f32 => try out.print(alloc, "\tv_sub_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                                else => try out.print(alloc, "\tv_sub_u32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, src1_reg }),
-                                            }
-                                        },
-                                        .div => {
-                                            // div is not communitiive
-                                            std.debug.assert(src1.reg_type == .vgpr);
-                                            switch (binop.dst.type) {
-                                                .f32 => {
-                                                    const reciprocal = try abi.scratchReg(0, 1, .vgpr);
-                                                    const reciprocal_reg = try reciprocal.toString(alloc);
-                                                    defer alloc.free(reciprocal_reg);
-                                                    // x/y => x * 1/y
-                                                    try out.print(alloc, "\tv_rcp_f32 {s}, {s}\n", .{ reciprocal_reg, src1_reg });
-                                                    try out.print(alloc, "\tv_mul_f32 {s}, {s}, {s}\n", .{ dst_reg, src0_reg, reciprocal_reg });
-                                                },
-                                                // TODO: impl
-                                                .i32, .bool => {
-                                                    std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
-                                                },
-                                                else => |e| {
-                                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                                    return error.NotImpl;
-                                                },
-                                            }
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    };
-                                },
-                            }
-                        },
-                        .store_offset => |so| {
-                            const base = try abi.regFor(so.dst.operand);
-                            const offset = switch (so.offset) {
-                                .constant => return error.NotImpl,
-                                .top => |top| try abi.regFor(top.operand),
-                            };
-                            const src = try abi.regFor(so.src.operand);
-                            switch (base.reg_type) {
-                                .sgpr => {
-                                    // *(base + offset) = src
-                                    switch (so.src.type) {
-                                        .i64, .array => {
-                                            try out.print(alloc, "\tglobal_store_b64 v{d}, v[{d}:{d}], s[{d}:{d}]\n", .{
-                                                offset.base,
-                                                src.base,
-                                                src.base + 1,
-                                                base.base,
-                                                base.base + 1,
-                                            });
-                                        },
-                                        .i32, .f32 => {
-                                            try out.print(alloc, "\tglobal_store_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
-                                                offset.base,
-                                                src.base,
-                                                base.base,
-                                                base.base + 1,
-                                            });
-                                        },
-                                        .bool => {
-                                            try out.print(alloc, "\tglobal_store_b8 v{d}, v{d}, s[{d}:{d}]\n", .{
-                                                offset.base,
-                                                src.base,
-                                                base.base,
-                                                base.base + 1,
-                                            });
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    }
-                                },
-                                .vgpr => {
-                                    std.debug.assert(base.count == 2);
-                                    std.debug.assert(offset.count == 2);
-                                    // *(base + offset) = src
-                                    // address = base + offset
-                                    const address = try abi.scratchReg(0, 2, .vgpr);
-                                    try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{
-                                        address.base,
-                                        base.base,
-                                        offset.base,
-                                    });
-                                    try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{
-                                        address.base + 1,
-                                        base.base + 1,
-                                        offset.base + 1,
-                                    });
-                                    // address = src
-                                    switch (so.src.type) {
-                                        .i64 => {
-                                            std.debug.assert(src.count == 2);
-                                            try out.print(alloc, "\tglobal_store_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{
-                                                address.base,
-                                                address.base + 1,
-                                                src.base,
-                                                src.base + 1,
-                                            });
-                                        },
-                                        .i32, .f32 => {
-                                            try out.print(alloc, "\tglobal_store_b32 v[{d}:{d}], v{d}, off\n", .{
-                                                address.base,
-                                                address.base + 1,
-                                                src.base,
-                                            });
-                                        },
-                                        .bool => {
-                                            try out.print(alloc, "\tglobal_store_b8 v[{d}:{d}], v{d}, off\n", .{
-                                                address.base,
-                                                address.base + 1,
-                                                src.base,
-                                            });
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    }
-                                },
-                                else => return error.UnexpectedRegisterType,
-                            }
-                        },
-                        .load_offset => |lo| {
-                            const dst = try abi.regFor(lo.dst.operand);
-                            const offset = switch (lo.offset) {
-                                .constant => |constant| blk: {
-                                    const value: i64 = switch (constant) {
-                                        .i64 => |v| v,
-                                        .i32 => |v| v,
-                                        else => return error.InvalidOffsetType,
-                                    };
-                                    const scratch = try abi.scratchReg(0, 2, .vgpr);
-                                    const bits: u64 = @bitCast(value);
-                                    const low: u32 = @truncate(bits);
-                                    const high: u32 = @truncate(bits >> 32);
-                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base, low });
-                                    try out.print(alloc, "\tv_mov_b32_e32 v{d}, {d}\n", .{ scratch.base + 1, high });
-                                    break :blk scratch;
-                                },
-                                .top => |top| try abi.regFor(top.operand),
-                            };
-                            const src = try abi.regFor(lo.src.operand);
-                            std.debug.assert(dst.reg_type == .vgpr);
-                            // dst = *(src + offset)
-                            switch (src.reg_type) {
-                                .vgpr => {
-                                    std.debug.assert(src.count == 2);
-                                    std.debug.assert(offset.count == 2);
-                                    std.debug.assert(offset.reg_type == .vgpr);
-                                    const address = try abi.scratchReg(0, 2, .vgpr);
-                                    try out.print(alloc, "\tv_add_co_u32 v{d}, vcc_lo, v{d}, v{d}\n", .{ address.base, src.base, offset.base });
-                                    try out.print(alloc, "\tv_add_co_ci_u32 v{d}, vcc_lo, v{d}, v{d}, vcc_lo\n", .{ address.base + 1, src.base + 1, offset.base + 1 });
-                                    switch (lo.dst.type) {
-                                        .i64, .array, .instance => {
-                                            std.debug.assert(dst.count == 2);
-                                            try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v[{d}:{d}], off\n", .{ dst.base, dst.base + 1, address.base, address.base + 1 });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        .i32, .f32 => {
-                                            std.debug.assert(dst.count == 1);
-                                            try out.print(alloc, "\tglobal_load_b32 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        .bool => {
-                                            std.debug.assert(dst.count == 1);
-                                            try out.print(alloc, "\tglobal_load_u8 v{d}, v[{d}:{d}], off\n", .{ dst.base, address.base, address.base + 1 });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    }
-                                },
-                                .sgpr => {
-                                    switch (lo.dst.type) {
-                                        .i64, .array, .f64 => {
-                                            try out.print(alloc, "\tglobal_load_b64 v[{d}:{d}], v{d}, s[{d}:{d}]\n", .{
-                                                dst.base,
-                                                dst.base + 1,
-                                                offset.base,
-                                                src.base,
-                                                src.base + 1,
-                                            });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        .i32, .f32 => {
-                                            std.debug.assert(dst.count == 1);
-                                            std.debug.assert(src.count == 2);
-                                            try out.print(alloc, "\tglobal_load_b32 v{d}, v{d}, s[{d}:{d}]\n", .{
-                                                dst.base,
-                                                offset.base,
-                                                src.base,
-                                                src.base + 1,
-                                            });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        .bool => {
-                                            std.debug.assert(dst.count == 1);
-                                            std.debug.assert(src.count == 2);
-                                            try out.print(alloc, "\tglobal_load_u8 v{d}, v{d}, s[{d}:{d}]\n", .{
-                                                dst.base,
-                                                offset.base,
-                                                src.base,
-                                                src.base + 1,
-                                            });
-                                            try out.appendSlice(alloc, "\ts_waitcnt vmcnt(0)\n");
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    }
-                                },
-                                else => unreachable,
-                            }
-                        },
-                        .jump => |j| {
-                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, j.target });
-                        },
-                        .branch => |b| {
-                            const condition = try abi.regFor(b.condition.operand);
-                            std.debug.assert(condition.reg_type == .vgpr);
-                            std.debug.assert(condition.count == 1);
-                            const scalar_scratch = try abi.scratchReg(0, 1, .sgpr);
-                            try out.print(alloc, "\tv_readfirstlane_b32 s{d}, v{d}\n", .{ scalar_scratch.base, condition.base });
-                            // sets scc bit
-                            try out.print(alloc, "\ts_cmp_lg_u32 s{d}, 0\n", .{scalar_scratch.base});
-                            try out.print(alloc, "\ts_cbranch_scc1 {s}_L{d}\n", .{ function.label, b.then_block });
-                            try out.print(alloc, "\ts_branch {s}_L{d}\n", .{ function.label, b.else_block });
-                        },
-                        .select => |s| {
-                            const dst = try abi.regFor(s.dst.operand);
-                            std.debug.assert(dst.count == 1);
-                            std.debug.assert(dst.reg_type == .vgpr);
-                            const condition = try abi.regFor(s.condition.operand);
-                            std.debug.assert(condition.reg_type == .vgpr);
-                            try out.print(alloc, "\tv_cmp_ne_u32 vcc_lo, v{d}, 0\n", .{condition.base});
-                            try out.print(alloc, "v_cndmask_b32 v{d}, ", .{dst.base});
-                            switch (s.else_value) {
-                                .top => |top| {
-                                    const else_value = try abi.regFor(top.operand);
-                                    try out.print(alloc, "v{d}, ", .{else_value.base});
-                                },
-                                .constant => |c| {
-                                    switch (c) {
-                                        .f64 => return error.NotImpl,
-                                        .f32 => |value| {
-                                            const bits: u32 = @bitCast(value);
-                                            try out.print(alloc, "0x{x}", .{bits});
-                                        },
-                                        else => try out.print(alloc, "{d}, ", .{try c.valueAsIntImm()}),
-                                    }
-                                },
-                            }
-                            switch (s.if_value) {
-                                .top => |top| {
-                                    const if_value = try abi.regFor(top.operand);
-                                    try out.print(alloc, "v{d}, vcc_lo\n", .{if_value.base});
-                                },
-                                else => return error.NotImpl,
-                            }
-                        },
-                        .unaryop => |uo| {
-                            switch (uo.op) {
-                                .exp2 => {
-                                    const dst = try abi.regFor(uo.dst.operand);
-                                    const src = try abi.regFor(uo.src.operand);
-                                    switch (uo.src.type) {
-                                        .f32 => {
-                                            std.debug.assert(dst.count == 1);
-                                            std.debug.assert(dst.reg_type == .vgpr);
-                                            std.debug.assert(src.count == 1);
-                                            std.debug.assert(src.reg_type == .vgpr);
-                                            try out.print(alloc, "\tv_exp_f32 v{d}, v{d}\n", .{ dst.base, src.base });
-                                        },
-                                        // TODO: impl
-                                        .bool, .i32 => {
-                                            std.debug.print("swallowing exception from exp(bool, i32)\n", .{});
-                                        },
-                                        else => |e| {
-                                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                            return error.NotImpl;
-                                        },
-                                    }
-                                },
-                                else => |e| {
-                                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                                    return error.NotImpl;
-                                },
-                            }
-                        },
-                        else => |e| {
-                            std.debug.print("cant handle {s}\n", .{@tagName(e)});
-                            return error.NotImpl;
-                        },
-                    },
                     else => |e| {
                         std.debug.print("cant handle {s}\n", .{@tagName(e)});
                         return error.NotImpl;
                     },
-                }
+                },
+                else => |e| {
+                    std.debug.print("cant handle {s}\n", .{@tagName(e)});
+                    return error.NotImpl;
+                },
             }
         }
-        try emitKernelFooter(&out, function.label, alloc);
-        const register_usage = try abi.registerUsage();
-        try emitKernelDescriptor(&out, function.label, register_usage, function.params.len, alloc);
     }
-
-    // try createFooter(&out, alloc);
-
-    return out.toOwnedSlice(alloc);
+    try emitKernelFooter(out, function.label, alloc);
+    const register_usage = try abi.registerUsage();
+    try emitKernelDescriptor(out, function.label, register_usage, function.params.len, lds_bytes, alloc);
 }
 
 fn condForCmp(op: common.ir.CmpOp, t: TypeInfo) []const u8 {
@@ -577,11 +613,14 @@ fn emitKernelDescriptor(
     name: []const u8,
     register_usage: RegisterUsage,
     kernel_param_count: usize,
+    lds_bytes: usize,
     alloc: std.mem.Allocator,
 ) !void {
     try out.appendSlice(alloc, "\t.p2align 6\n");
     try out.print(alloc, ".amdhsa_kernel {s}\n", .{name});
-    try out.appendSlice(alloc, "\t.amdhsa_group_segment_fixed_size 0\n");
+    // local data share size: shared by all threads in a wavefront
+    try out.print(alloc, "\t.amdhsa_group_segment_fixed_size {d}\n", .{lds_bytes});
+    // per lane scratch pad
     try out.appendSlice(alloc, "\t.amdhsa_private_segment_fixed_size 0\n");
     try out.print(alloc, "\t.amdhsa_kernarg_size {d}\n", .{kernel_param_count * 8});
     try out.appendSlice(alloc, "\t.amdhsa_user_sgpr_dispatch_ptr 1\n");

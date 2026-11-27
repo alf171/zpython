@@ -14,6 +14,7 @@ pub const copy = @import("optim/copy.zig");
 pub const dead = @import("optim/dead.zig");
 pub const peephole = @import("optim/peephole.zig");
 pub const hoist = @import("optim/hoist.zig");
+pub const wait = @import("gpu/wait.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

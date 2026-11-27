@@ -36,7 +36,7 @@ pub fn run(program: *Program, alloc_program: *const AllocProgram, alloc: std.mem
 fn runFunction(function: *Function, alloc_program: *const AllocProgram, alloc: std.mem.Allocator) !void {
     for (function.blocks.items) |*block| {
         const instructions = block.instructions.items;
-        var seen = HashMap(SeenIdentity, void).init(alloc);
+        var seen: HashMap(SeenIdentity, void) = .init(alloc);
         // seed seen with what's live from the previous block
         const alloc_block = try alloc_program.getBlockById(block.id, function.id);
         if (alloc_block.end != alloc_block.start) {
